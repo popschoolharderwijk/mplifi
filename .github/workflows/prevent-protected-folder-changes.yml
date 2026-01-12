@@ -1,0 +1,50 @@
+name: Prevent protected folder changes
+
+on:
+  pull_request:
+
+jobs:
+  check-protected-folders:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changes in protected folders
+        run: |
+          ALLOWED_USERS=(
+            "MarByteBeep"
+          )
+
+          PROTECTED_FOLDERS=(
+            ".github/"
+            "tests/"
+          )
+
+          ACTOR="${{ github.actor }}"
+          echo "PR opened by: $ACTOR"
+
+          # Check of actor in allowlist zit
+          for user in "${ALLOWED_USERS[@]}"; do
+            if [[ "$ACTOR" == "$user" ]]; then
+              echo "✅ User '$ACTOR' is allowed to modify protected folders"
+              exit 0
+            fi
+          done
+
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }})
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          for folder in "${PROTECTED_FOLDERS[@]}"; do
+            if echo "$CHANGED_FILES" | grep -q "^${folder}"; then
+              echo "❌ Changes in protected folder '${folder}' are not allowed for user '$ACTOR'"
+              exit 1
+            fi
+          done
+
+          echo "✅ No changes in protected folders detected"
