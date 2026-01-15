@@ -1,0 +1,30 @@
+name: Reset Lovable Branch
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  reset-lovable-branch:
+    if: >
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'lovable'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin main lovable --prune
+          git checkout origin/main
+          git merge -s ours origin/lovable -m "chore: sync main to lovable branch"
+          git push origin HEAD:lovable

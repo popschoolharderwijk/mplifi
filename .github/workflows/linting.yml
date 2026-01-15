@@ -1,0 +1,62 @@
+name: Linting
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: true
+
+      - name: Setup Biome
+        uses: biomejs/setup-biome@v2
+        with:
+          version: latest
+
+      - name: Run Biome and capture output
+        id: biome
+        run: |
+          set +e
+          biome ci . --error-on-warnings 2>&1 | tee >(sed -r "s/\x1B\[[0-9;]*[mK]//g" > .github/biome-errors.txt)
+          BIOME_EXIT_CODE=${PIPESTATUS[0]}
+          set -e
+
+          echo "exit_code=$BIOME_EXIT_CODE" >> "$GITHUB_OUTPUT"
+
+      # =========================
+      # UPDATE BIOME ERRORS
+      # =========================
+      - name: Biome warning
+        if: steps.biome.outputs.exit_code != '0'
+        run: |
+          echo "::warning::Biome CI found issues. See biome-errors.txt"
+
+      - name: Commit biome-errors.txt
+        if: steps.biome.outputs.exit_code != '0'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add .github/biome-errors.txt
+          git commit -m "updated biome linting errors [skip ci]" || echo "Nothing to commit"
+          git push
+
+      - name: Remove biome-errors.txt if clean
+        if: steps.biome.outputs.exit_code == '0'
+        run: |
+          if [ -f .github/biome-errors.txt ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+
+            git rm -f --ignore-unmatch .github/biome-errors.txt
+            git commit -m "no linting errors, removed log [skip ci]" || echo "Nothing to commit"
+            git push
+          fi
