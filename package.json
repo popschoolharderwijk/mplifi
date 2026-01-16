@@ -12,7 +12,9 @@
 		"format": "npx @biomejs/biome format --write",
 		"lint": "npx @biomejs/biome lint --write",
 		"check": "npx @biomejs/biome check --write",
-		"preview": "vite preview"
+		"preview": "vite preview",
+		"test": "bun test --ignore './tests/rls/**'",
+		"test:rls": "bun test ./tests/rls"
 	},
 	"dependencies": {
 		"@biomejs/biome": "^2.3.11",
