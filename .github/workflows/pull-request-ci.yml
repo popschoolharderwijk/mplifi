@@ -1,5 +1,9 @@
 name: Pull Request CI
 
+# TODO: Add migration testing job
+# This will spin up local Supabase, apply migrations, and run SQL tests
+# before allowing merge to main
+
 on:
   pull_request:
     branches:
