@@ -2,11 +2,24 @@ name: Pull Request - RLS Tests
 
 on:
   pull_request:
-    paths:
-      - 'supabase/migrations/**'
 
 jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      migrations: ${{ steps.filter.outputs.migrations }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            migrations:
+              - 'supabase/migrations/**'
+
   pull-request-rls:
+    needs: check-changes
+    if: needs.check-changes.outputs.migrations == 'true'
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
