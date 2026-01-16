@@ -41,15 +41,20 @@ jobs:
           echo "=== Raw CLI output (redacted) ==="
           supabase --experimental branches get "$GITHUB_HEAD_REF" -o env | sed 's/=.*/=***/'
           echo "=== End raw output ==="
-          supabase --experimental branches get "$GITHUB_HEAD_REF" -o env >> $GITHUB_ENV
+          # Parse and clean CLI output - remove quotes and trim whitespace
+          while IFS='=' read -r key value; do
+            # Remove surrounding quotes if present
+            clean_value=$(echo "$value" | sed 's/^"//;s/"$//' | tr -d '\r')
+            echo "${key}=${clean_value}" >> $GITHUB_ENV
+          done < <(supabase --experimental branches get "$GITHUB_HEAD_REF" -o env)
 
       - name: Debug Branch Info
         if: steps.wait_for_preview.outputs.conclusion == 'success'
         run: |
           echo "Branch: $GITHUB_HEAD_REF"
+          echo "SUPABASE_URL value: '${SUPABASE_URL:0:30}...'"
           echo "SUPABASE_URL set: ${{ env.SUPABASE_URL != '' }}"
           echo "SUPABASE_SERVICE_ROLE_KEY set: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' }}"
-          echo "API_URL set: ${{ env.API_URL != '' }}"
 
       - name: Install dependencies
         run: bun install
