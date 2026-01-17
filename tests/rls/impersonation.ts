@@ -1,8 +1,9 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_DEFAULT_KEY = process.env.SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+// Test user UUIDs matching the seeded auth.users
 export const USERS = {
 	site_admin: '00000000-0000-0000-0000-000000000001',
 
@@ -20,23 +21,31 @@ export const USERS = {
 	student_d: '00000000-0000-0000-0000-000000000103',
 } as const;
 
-export type TestUser = keyof typeof USERS | 'anon';
+export type TestUser = keyof typeof USERS;
 
-export function impersonate(user: TestUser): SupabaseClient {
-	if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_DEFAULT_KEY) {
-		throw new Error('Missing keys');
+/**
+ * Execute a SELECT query as a specific user by leveraging the run_as_user()
+ * database function. This properly simulates JWT claims so auth.uid() works
+ * and RLS policies are correctly enforced.
+ *
+ * @param user - The test user to impersonate
+ * @param query - A SELECT query to execute
+ * @returns The query result with data and error
+ */
+export async function queryAs(user: TestUser, query: string) {
+	if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+		throw new Error(
+			'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables',
+		);
 	}
-	return createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_DEFAULT_KEY, {
-		global: {
-			headers:
-				user === 'anon'
-					? {
-							'x-supabase-impersonate-role': 'anon',
-						}
-					: {
-							'x-supabase-impersonate-user-id': USERS[user],
-							'x-supabase-impersonate-role': 'authenticated',
-						},
-		},
+
+	// Use service_role to call the run_as_user function
+	const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+	const { data, error } = await supabase.rpc('run_as_user', {
+		_user_id: USERS[user],
+		_query: query,
 	});
+
+	return { data, error };
 }
