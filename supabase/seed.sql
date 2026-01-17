@@ -10,15 +10,103 @@
 -- ============================================================================
 -- AUTH USERS (all passwords are 'password' in precomputed hash form)
 -- ============================================================================
-INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at)
+INSERT INTO auth.users (
+  id,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  aud,
+  role,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  created_at,
+  updated_at
+)
 VALUES
-  ('11111111-1111-1111-1111-111111111111', 'student1@test.local', '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu', now()),
-  ('11111111-1111-1111-1111-222222222222', 'student2@test.local', '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu', now()),
-  ('22222222-2222-2222-2222-222222222222', 'teacher1@test.local', '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu', now()),
-  ('22222222-2222-2222-2222-333333333333', 'teacher2@test.local', '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu', now()),
-  ('33333333-3333-3333-3333-333333333333', 'staff1@test.local', '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu', now()),
-  ('44444444-4444-4444-4444-444444444444', 'admin@test.local', '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu', now()),
-  ('55555555-5555-5555-5555-555555555555', 'siteadmin@test.local', '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu', now());
+  (
+    '11111111-1111-1111-1111-111111111111',
+    'student1@test.local',
+    '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu',
+    now(),
+    'authenticated',
+    'authenticated',
+    '{"provider": "email", "providers": ["email"]}',
+    '{}',
+    now(),
+    now()
+  ),
+  (
+    '11111111-1111-1111-1111-222222222222',
+    'student2@test.local',
+    '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu',
+    now(),
+    'authenticated',
+    'authenticated',
+    '{"provider": "email", "providers": ["email"]}',
+    '{}',
+    now(),
+    now()
+  ),
+  (
+    '22222222-2222-2222-2222-222222222222',
+    'teacher1@test.local',
+    '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu',
+    now(),
+    'authenticated',
+    'authenticated',
+    '{"provider": "email", "providers": ["email"]}',
+    '{}',
+    now(),
+    now()
+  ),
+  (
+    '22222222-2222-2222-2222-333333333333',
+    'teacher2@test.local',
+    '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu',
+    now(),
+    'authenticated',
+    'authenticated',
+    '{"provider": "email", "providers": ["email"]}',
+    '{}',
+    now(),
+    now()
+  ),
+  (
+    '33333333-3333-3333-3333-333333333333',
+    'staff1@test.local',
+    '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu',
+    now(),
+    'authenticated',
+    'authenticated',
+    '{"provider": "email", "providers": ["email"]}',
+    '{}',
+    now(),
+    now()
+  ),
+  (
+    '44444444-4444-4444-4444-444444444444',
+    'admin@test.local',
+    '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu',
+    now(),
+    'authenticated',
+    'authenticated',
+    '{"provider": "email", "providers": ["email"]}',
+    '{}',
+    now(),
+    now()
+  ),
+  (
+    '55555555-5555-5555-5555-555555555555',
+    'siteadmin@test.local',
+    '$2a$12$gANsk87eU2PYT0RjUxsLW.TM7qoGMrxvO/QU6DM23SkN/uVeVzWGu',
+    now(),
+    'authenticated',
+    'authenticated',
+    '{"provider": "email", "providers": ["email"]}',
+    '{}',
+    now(),
+    now()
+  );
 
 -- ============================================================================
 -- UPDATE PROFILES (SET DISPLAY NAMES)
