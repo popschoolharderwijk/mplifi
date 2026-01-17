@@ -109,6 +109,99 @@ VALUES
   );
 
 -- ============================================================================
+-- AUTH IDENTITIES (required for signInWithPassword to work)
+-- ============================================================================
+INSERT INTO auth.identities (
+  id,
+  provider_id,
+  user_id,
+  identity_data,
+  provider,
+  last_sign_in_at,
+  created_at,
+  updated_at,
+  email
+)
+VALUES
+  (
+    gen_random_uuid(),
+    '11111111-1111-1111-1111-111111111111',
+    '11111111-1111-1111-1111-111111111111',
+    jsonb_build_object('sub', '11111111-1111-1111-1111-111111111111', 'email', 'student1@test.local'),
+    'email',
+    now(),
+    now(),
+    now(),
+    'student1@test.local'
+  ),
+  (
+    gen_random_uuid(),
+    '11111111-1111-1111-1111-222222222222',
+    '11111111-1111-1111-1111-222222222222',
+    jsonb_build_object('sub', '11111111-1111-1111-1111-222222222222', 'email', 'student2@test.local'),
+    'email',
+    now(),
+    now(),
+    now(),
+    'student2@test.local'
+  ),
+  (
+    gen_random_uuid(),
+    '22222222-2222-2222-2222-222222222222',
+    '22222222-2222-2222-2222-222222222222',
+    jsonb_build_object('sub', '22222222-2222-2222-2222-222222222222', 'email', 'teacher1@test.local'),
+    'email',
+    now(),
+    now(),
+    now(),
+    'teacher1@test.local'
+  ),
+  (
+    gen_random_uuid(),
+    '22222222-2222-2222-2222-333333333333',
+    '22222222-2222-2222-2222-333333333333',
+    jsonb_build_object('sub', '22222222-2222-2222-2222-333333333333', 'email', 'teacher2@test.local'),
+    'email',
+    now(),
+    now(),
+    now(),
+    'teacher2@test.local'
+  ),
+  (
+    gen_random_uuid(),
+    '33333333-3333-3333-3333-333333333333',
+    '33333333-3333-3333-3333-333333333333',
+    jsonb_build_object('sub', '33333333-3333-3333-3333-333333333333', 'email', 'staff1@test.local'),
+    'email',
+    now(),
+    now(),
+    now(),
+    'staff1@test.local'
+  ),
+  (
+    gen_random_uuid(),
+    '44444444-4444-4444-4444-444444444444',
+    '44444444-4444-4444-4444-444444444444',
+    jsonb_build_object('sub', '44444444-4444-4444-4444-444444444444', 'email', 'admin@test.local'),
+    'email',
+    now(),
+    now(),
+    now(),
+    'admin@test.local'
+  ),
+  (
+    gen_random_uuid(),
+    '55555555-5555-5555-5555-555555555555',
+    '55555555-5555-5555-5555-555555555555',
+    jsonb_build_object('sub', '55555555-5555-5555-5555-555555555555', 'email', 'siteadmin@test.local'),
+    'email',
+    now(),
+    now(),
+    now(),
+    'siteadmin@test.local'
+  );
+
+-- ============================================================================
 -- UPDATE PROFILES (SET DISPLAY NAMES)
 -- ============================================================================
 UPDATE profiles
