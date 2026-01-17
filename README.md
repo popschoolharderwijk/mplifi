@@ -121,7 +121,7 @@ SUPABASE_SERVICE_ROLE_KEY=<secret key uit Supabase dashboard>
 
 ```bash
 # Run lokaal
-bun test rls
+bun test rls --env-file .env.local
 ```
 
 ---
