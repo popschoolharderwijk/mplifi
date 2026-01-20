@@ -31,331 +31,102 @@
 --   00000000-0000-0000-0000-000000000103
 -- -----------------------------------------------------------------------------
 
--- Pre-computed bcrypt hash for password "password" (cost 10)
--- Generated with: SELECT crypt('password', gen_salt('bf', 10));
 DO $$
-DECLARE
-  password_hash TEXT := '$2a$10$PznXR4PluzW2H4t5oaQV6.gFckmqU0.c0xM.XcrQjGJ0gKWbpWV/m';
 BEGIN
+  -- -------------------------------------------------------------------------
+  -- Create a temporary table for new users
+  -- -------------------------------------------------------------------------
+  CREATE TEMP TABLE new_users (
+    id UUID,
+    email TEXT
+  );
 
--- -----------------------------------------------------------------------------
--- AUTH.USERS
--- -----------------------------------------------------------------------------
-INSERT INTO auth.users (
-  id,
-  instance_id,
-  aud,
-  role,
-  email,
-  encrypted_password,
-  email_confirmed_at,
-  raw_app_meta_data,
-  raw_user_meta_data,
-  created_at,
-  updated_at,
-  confirmation_token,
-  email_change,
-  email_change_token_new,
-  recovery_token
-)
-VALUES
-  -- site_admin
-  (
-    '00000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000000',
-    'authenticated',
-    'authenticated',
-    'site-admin@test.nl',
-    password_hash,
-    now(),
-    '{"provider":"email","providers":["email"]}',
-    '{}',
-    now(),
-    now(),
-    '',
-    '',
-    '',
-    ''
-  ),
-  -- admin one
-  (
-    '00000000-0000-0000-0000-000000000010',
-    '00000000-0000-0000-0000-000000000000',
-    'authenticated',
-    'authenticated',
-    'admin-one@test.nl',
-    password_hash,
-    now(),
-    '{"provider":"email","providers":["email"]}',
-    '{}',
-    now(),
-    now(),
-    '',
-    '',
-    '',
-    ''
-  ),
-  -- admin two
-  (
-    '00000000-0000-0000-0000-000000000011',
-    '00000000-0000-0000-0000-000000000000',
-    'authenticated',
-    'authenticated',
-    'admin-two@test.nl',
-    password_hash,
-    now(),
-    '{"provider":"email","providers":["email"]}',
-    '{}',
-    now(),
-    now(),
-    '',
-    '',
-    '',
-    ''
-  ),
-  -- staff
-  (
-    '00000000-0000-0000-0000-000000000020',
-    '00000000-0000-0000-0000-000000000000',
-    'authenticated',
-    'authenticated',
-    'staff@test.nl',
-    password_hash,
-    now(),
-    '{"provider":"email","providers":["email"]}',
-    '{}',
-    now(),
-    now(),
-    '',
-    '',
-    '',
-    ''
-  ),
-  -- teacher alice
-  (
-    '00000000-0000-0000-0000-000000000030',
-    '00000000-0000-0000-0000-000000000000',
-    'authenticated',
-    'authenticated',
-    'teacher-alice@test.nl',
-    password_hash,
-    now(),
-    '{"provider":"email","providers":["email"]}',
-    '{}',
-    now(),
-    now(),
-    '',
-    '',
-    '',
-    ''
-  ),
-  -- teacher bob
-  (
-    '00000000-0000-0000-0000-000000000031',
-    '00000000-0000-0000-0000-000000000000',
-    'authenticated',
-    'authenticated',
-    'teacher-bob@test.nl',
-    password_hash,
-    now(),
-    '{"provider":"email","providers":["email"]}',
-    '{}',
-    now(),
-    now(),
-    '',
-    '',
-    '',
-    ''
-  ),
-  -- student a
-  (
-    '00000000-0000-0000-0000-000000000100',
-    '00000000-0000-0000-0000-000000000000',
-    'authenticated',
-    'authenticated',
-    'student-a@test.nl',
-    password_hash,
-    now(),
-    '{"provider":"email","providers":["email"]}',
-    '{}',
-    now(),
-    now(),
-    '',
-    '',
-    '',
-    ''
-  ),
-  -- student b
-  (
-    '00000000-0000-0000-0000-000000000101',
-    '00000000-0000-0000-0000-000000000000',
-    'authenticated',
-    'authenticated',
-    'student-b@test.nl',
-    password_hash,
-    now(),
-    '{"provider":"email","providers":["email"]}',
-    '{}',
-    now(),
-    now(),
-    '',
-    '',
-    '',
-    ''
-  ),
-  -- student c
-  (
-    '00000000-0000-0000-0000-000000000102',
-    '00000000-0000-0000-0000-000000000000',
-    'authenticated',
-    'authenticated',
-    'student-c@test.nl',
-    password_hash,
-    now(),
-    '{"provider":"email","providers":["email"]}',
-    '{}',
-    now(),
-    now(),
-    '',
-    '',
-    '',
-    ''
-  ),
-  -- student d
-  (
-    '00000000-0000-0000-0000-000000000103',
-    '00000000-0000-0000-0000-000000000000',
-    'authenticated',
-    'authenticated',
-    'student-d@test.nl',
-    password_hash,
-    now(),
-    '{"provider":"email","providers":["email"]}',
-    '{}',
-    now(),
-    now(),
-    '',
-    '',
-    '',
-    ''
-  )
-ON CONFLICT (id) DO NOTHING;
+  INSERT INTO new_users (id, email)
+  VALUES
+    (UUID '00000000-0000-0000-0000-000000000001', 'site-admin@test.nl'),
+    (UUID '00000000-0000-0000-0000-000000000010', 'admin-one@test.nl'),
+    (UUID '00000000-0000-0000-0000-000000000011', 'admin-two@test.nl'),
+    (UUID '00000000-0000-0000-0000-000000000020', 'staff@test.nl'),
+    (UUID '00000000-0000-0000-0000-000000000030', 'teacher-alice@test.nl'),
+    (UUID '00000000-0000-0000-0000-000000000031', 'teacher-bob@test.nl'),
+    (UUID '00000000-0000-0000-0000-000000000100', 'student-a@test.nl'),
+    (UUID '00000000-0000-0000-0000-000000000101', 'student-b@test.nl'),
+    (UUID '00000000-0000-0000-0000-000000000102', 'student-c@test.nl'),
+    (UUID '00000000-0000-0000-0000-000000000103', 'student-d@test.nl');
 
--- -----------------------------------------------------------------------------
--- AUTH.IDENTITIES
--- -----------------------------------------------------------------------------
-INSERT INTO auth.identities (
-  id,
-  user_id,
-  provider_id,
-  provider,
-  identity_data,
-  last_sign_in_at,
-  created_at,
-  updated_at
-)
-VALUES
-  (
-    '00000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000001',
-    'site-admin@test.nl',
-    'email',
-    '{"sub":"00000000-0000-0000-0000-000000000001","email":"site-admin@test.nl","email_verified":true,"provider":"email"}',
-    now(),
-    now(),
-    now()
-  ),
-  (
-    '00000000-0000-0000-0000-000000000010',
-    '00000000-0000-0000-0000-000000000010',
-    'admin-one@test.nl',
-    'email',
-    '{"sub":"00000000-0000-0000-0000-000000000010","email":"admin-one@test.nl","email_verified":true,"provider":"email"}',
-    now(),
-    now(),
-    now()
-  ),
-  (
-    '00000000-0000-0000-0000-000000000011',
-    '00000000-0000-0000-0000-000000000011',
-    'admin-two@test.nl',
-    'email',
-    '{"sub":"00000000-0000-0000-0000-000000000011","email":"admin-two@test.nl","email_verified":true,"provider":"email"}',
-    now(),
-    now(),
-    now()
-  ),
-  (
-    '00000000-0000-0000-0000-000000000020',
-    '00000000-0000-0000-0000-000000000020',
-    'staff@test.nl',
-    'email',
-    '{"sub":"00000000-0000-0000-0000-000000000020","email":"staff@test.nl","email_verified":true,"provider":"email"}',
-    now(),
-    now(),
-    now()
-  ),
-  (
-    '00000000-0000-0000-0000-000000000030',
-    '00000000-0000-0000-0000-000000000030',
-    'teacher-alice@test.nl',
-    'email',
-    '{"sub":"00000000-0000-0000-0000-000000000030","email":"teacher-alice@test.nl","email_verified":true,"provider":"email"}',
-    now(),
-    now(),
-    now()
-  ),
-  (
-    '00000000-0000-0000-0000-000000000031',
-    '00000000-0000-0000-0000-000000000031',
-    'teacher-bob@test.nl',
-    'email',
-    '{"sub":"00000000-0000-0000-0000-000000000031","email":"teacher-bob@test.nl","email_verified":true,"provider":"email"}',
-    now(),
-    now(),
-    now()
-  ),
-  (
-    '00000000-0000-0000-0000-000000000100',
-    '00000000-0000-0000-0000-000000000100',
-    'student-a@test.nl',
-    'email',
-    '{"sub":"00000000-0000-0000-0000-000000000100","email":"student-a@test.nl","email_verified":true,"provider":"email"}',
-    now(),
-    now(),
-    now()
-  ),
-  (
-    '00000000-0000-0000-0000-000000000101',
-    '00000000-0000-0000-0000-000000000101',
-    'student-b@test.nl',
-    'email',
-    '{"sub":"00000000-0000-0000-0000-000000000101","email":"student-b@test.nl","email_verified":true,"provider":"email"}',
-    now(),
-    now(),
-    now()
-  ),
-  (
-    '00000000-0000-0000-0000-000000000102',
-    '00000000-0000-0000-0000-000000000102',
-    'student-c@test.nl',
-    'email',
-    '{"sub":"00000000-0000-0000-0000-000000000102","email":"student-c@test.nl","email_verified":true,"provider":"email"}',
-    now(),
-    now(),
-    now()
-  ),
-  (
-    '00000000-0000-0000-0000-000000000103',
-    '00000000-0000-0000-0000-000000000103',
-    'student-d@test.nl',
-    'email',
-    '{"sub":"00000000-0000-0000-0000-000000000103","email":"student-d@test.nl","email_verified":true,"provider":"email"}',
-    now(),
-    now(),
-    now()
+  -- -------------------------------------------------------------------------
+  -- INSERT INTO AUTH.USERS
+  -- -------------------------------------------------------------------------
+  INSERT INTO auth.users (
+    id,
+    instance_id,
+    aud,
+    role,
+    email,
+    encrypted_password,
+    email_confirmed_at,
+    raw_app_meta_data,
+    raw_user_meta_data,
+    created_at,
+    updated_at,
+    confirmation_token,
+    email_change,
+    email_change_token_new,
+    recovery_token
   )
-ON CONFLICT (id) DO NOTHING;
+  SELECT
+    id,
+    '00000000-0000-0000-0000-000000000000',            -- instance_id
+    'authenticated',                                    -- aud
+    'authenticated',                                    -- role
+    email,
+    '$2a$10$yBzT6M450XE/0xAgYQHCpu8IMIh0mWzy02C6X231pYCRZm9TSCd5.',  -- encrypted_password
+    now(),                                              -- email_confirmed_at
+    '{"provider":"email","providers":["email"]}',       -- raw_app_meta_data
+    '{}',                                               -- raw_user_meta_data
+    now(),                                              -- created_at
+    now(),                                              -- updated_at
+    '',                                                 -- confirmation_token
+    '',                                                 -- email_change
+    '',                                                 -- email_change_token_new
+    ''                                                  -- recovery_token
+  FROM new_users
+  ON CONFLICT (id) DO NOTHING;
+
+  -- -------------------------------------------------------------------------
+  -- INSERT INTO AUTH.IDENTITIES
+  -- -------------------------------------------------------------------------
+  INSERT INTO auth.identities (
+    id,
+    user_id,
+    provider_id,
+    provider,
+    identity_data,
+    last_sign_in_at,
+    created_at,
+    updated_at
+  )
+  SELECT
+    id,
+    id,                       -- user_id = id
+    email,                     -- provider_id
+    'email',                   -- provider
+    json_build_object(         -- identity_data
+      'sub', id::text,
+      'email', email,
+      'email_verified', true,
+      'provider', 'email'
+    ),
+    now(),                     -- last_sign_in_at
+    now(),                     -- created_at
+    now()                      -- updated_at
+  FROM new_users
+  ON CONFLICT (id) DO NOTHING;
+
+  -- -------------------------------------------------------------------------
+  -- Drop the temporary table
+  -- -------------------------------------------------------------------------
+  DROP TABLE IF EXISTS new_users;
 
 END $$;
 
