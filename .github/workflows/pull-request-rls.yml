@@ -75,7 +75,8 @@ jobs:
       - name: Switch to and seed preview branch
         if: steps.wait_for_preview.outputs.conclusion == 'success'
         run: |
-          supabase unlink
+          # Unlink (ignore errors - keyring not available on CI)
+          supabase unlink || true
 
           # Parse project-ref from SUPABASE_URL
           # https://<projectid>.supabase.co -> projectid
