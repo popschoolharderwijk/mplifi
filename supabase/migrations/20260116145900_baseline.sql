@@ -213,21 +213,9 @@ WITH CHECK (
   AND public.is_student(user_id)
 );
 
--- Admins and site_admins can insert new profiles
-CREATE POLICY profiles_insert_admin
-ON public.profiles FOR INSERT TO authenticated
-WITH CHECK (
-  public.is_admin(auth.uid())
-  OR public.is_site_admin(auth.uid())
-);
-
--- Admins and site_admins can delete profiles
-CREATE POLICY profiles_delete_admin
-ON public.profiles FOR DELETE TO authenticated
-USING (
-  public.is_admin(auth.uid())
-  OR public.is_site_admin(auth.uid())
-);
+-- INSERT and DELETE policies explicitly removed:
+-- Profiles can only be created via handle_new_user() trigger
+-- Profiles can only be deleted via CASCADE when auth.users is deleted
 
 -- =============================================================================
 -- SECTION 6: RLS POLICIES - USER_ROLES
@@ -310,7 +298,7 @@ JOIN public.profiles p
   ON p.user_id = ts.student_id;
 
 -- Grant appropriate permissions
-GRANT SELECT, INSERT, UPDATE ON public.profiles TO authenticated;
+GRANT SELECT, UPDATE ON public.profiles TO authenticated;
 GRANT SELECT ON public.teacher_student_profiles TO authenticated;
 
 -- =============================================================================
