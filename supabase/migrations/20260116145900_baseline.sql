@@ -493,7 +493,7 @@ EXECUTE FUNCTION public.handle_auth_user_email_update();
 --       ↓ CASCADE (same transaction)
 --   DELETE FROM user_roles
 --       ↓ BEFORE DELETE trigger
---   🔴 RAISE EXCEPTION → FULL ROLLBACK
+--   RAISE EXCEPTION → FULL ROLLBACK
 --
 -- Result: auth.users, auth.identities, AND user_roles all remain intact.
 -- No "half-deleted" state is possible.
