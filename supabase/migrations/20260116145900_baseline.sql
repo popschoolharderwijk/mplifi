@@ -47,6 +47,12 @@ CREATE TABLE IF NOT EXISTS public.teacher_students (
   PRIMARY KEY (teacher_id, student_id)
 );
 
+-- Indexes for foreign key lookups (performance optimization)
+CREATE INDEX IF NOT EXISTS idx_teacher_students_teacher_id
+  ON public.teacher_students(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_teacher_students_student_id
+  ON public.teacher_students(student_id);
+
 -- =============================================================================
 -- SECTION 3: ENABLE RLS
 -- =============================================================================
@@ -66,6 +72,8 @@ ALTER TABLE public.teacher_students FORCE ROW LEVEL SECURITY;
 -- All functions use SECURITY DEFINER, STABLE, and fixed search_path
 -- to prevent search_path injection attacks.
 
+-- Internal helper function - do not call directly
+-- Use is_site_admin(), is_admin(), etc. instead
 CREATE OR REPLACE FUNCTION public._has_role(
   _user_id UUID,
   _role app_role
@@ -91,6 +99,7 @@ LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
+SET row_security = off
 AS $$
   SELECT public._has_role(_user_id, 'site_admin');
 $$;
@@ -101,6 +110,7 @@ LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
+SET row_security = off
 AS $$
   SELECT public._has_role(_user_id, 'admin');
 $$;
@@ -111,6 +121,7 @@ LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
+SET row_security = off
 AS $$
   SELECT public._has_role(_user_id, 'staff');
 $$;
@@ -121,6 +132,7 @@ LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
+SET row_security = off
 AS $$
   SELECT public._has_role(_user_id, 'teacher');
 $$;
@@ -131,6 +143,7 @@ LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
+SET row_security = off
 AS $$
   SELECT public._has_role(_user_id, 'student');
 $$;
@@ -145,6 +158,8 @@ REVOKE ALL ON FUNCTION
   public.is_student(UUID)
 FROM PUBLIC;
 
+-- _has_role is an internal helper - no direct grant needed
+-- Public role helper functions are granted to authenticated users
 GRANT EXECUTE ON FUNCTION public.is_site_admin(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_admin(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_staff(UUID) TO authenticated;
@@ -237,22 +252,18 @@ CREATE POLICY roles_select_staff
 ON public.user_roles FOR SELECT TO authenticated
 USING (public.is_staff(auth.uid()));
 
--- Teachers can view their own role and roles of their linked students
+-- Teachers can view roles of their linked students
+-- (Teachers already see their own role via roles_select_own)
 CREATE POLICY roles_select_teacher_students
 ON public.user_roles FOR SELECT TO authenticated
 USING (
   public.is_teacher(auth.uid())
-  AND (
-    user_id = auth.uid()
-    OR (
-      role = 'student'
-      AND EXISTS (
-        SELECT 1
-        FROM public.teacher_students ts
-        WHERE ts.teacher_id = auth.uid()
-          AND ts.student_id = user_roles.user_id
-      )
-    )
+  AND role = 'student'
+  AND EXISTS (
+    SELECT 1
+    FROM public.teacher_students ts
+    WHERE ts.teacher_id = auth.uid()
+      AND ts.student_id = user_roles.user_id
   )
 );
 
@@ -270,11 +281,33 @@ WITH CHECK (public.is_site_admin(auth.uid()));
 -- SECTION 7: RLS POLICIES - TEACHER_STUDENTS
 -- =============================================================================
 
--- Teachers can manage their own student links
-CREATE POLICY teacher_students_manage_own
-ON public.teacher_students FOR ALL TO authenticated
-USING (teacher_id = auth.uid())
-WITH CHECK (teacher_id = auth.uid());
+-- Teachers can view their own student links
+CREATE POLICY teacher_students_select_own
+ON public.teacher_students FOR SELECT TO authenticated
+USING (teacher_id = auth.uid());
+
+-- Teachers can add students (only users with student role)
+CREATE POLICY teacher_students_insert_own
+ON public.teacher_students FOR INSERT TO authenticated
+WITH CHECK (
+  teacher_id = auth.uid()
+  AND public.is_student(student_id)
+);
+
+-- Teachers can remove their own student links
+CREATE POLICY teacher_students_delete_own
+ON public.teacher_students FOR DELETE TO authenticated
+USING (teacher_id = auth.uid());
+
+-- Admins and site_admins can view all teacher-student links
+CREATE POLICY teacher_students_select_admin
+ON public.teacher_students FOR SELECT TO authenticated
+USING (public.is_admin(auth.uid()) OR public.is_site_admin(auth.uid()));
+
+-- Staff can view all teacher-student links
+CREATE POLICY teacher_students_select_staff
+ON public.teacher_students FOR SELECT TO authenticated
+USING (public.is_staff(auth.uid()));
 
 -- =============================================================================
 -- SECTION 8: VIEW - TEACHER_STUDENT_PROFILES (WITH SECURITY INVOKER)
@@ -296,8 +329,12 @@ FROM public.teacher_students ts
 JOIN public.profiles p
   ON p.user_id = ts.student_id;
 
--- Grant appropriate permissions
+-- Grant appropriate permissions on tables
 GRANT SELECT, UPDATE ON public.profiles TO authenticated;
+GRANT SELECT ON public.user_roles TO authenticated;
+GRANT SELECT, INSERT, DELETE ON public.teacher_students TO authenticated;
+
+-- Grant permissions on views
 GRANT SELECT ON public.teacher_student_profiles TO authenticated;
 
 -- =============================================================================
@@ -310,6 +347,7 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
+SET row_security = off
 AS $$
 BEGIN
   NEW.updated_at = now();
@@ -328,6 +366,7 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
+SET row_security = off
 AS $$
 BEGIN
   IF NEW.user_id <> OLD.user_id THEN
@@ -348,6 +387,7 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
+SET row_security = off
 AS $$
 BEGIN
   IF NEW.email IS DISTINCT FROM OLD.email THEN
@@ -373,6 +413,7 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
+SET row_security = off
 AS $$
 BEGIN
   -- use raw_user_meta_data.display_name (can be NULL) for atomic setting of profile name
@@ -401,6 +442,7 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
+SET row_security = off
 AS $$
 BEGIN
   IF NEW.email IS DISTINCT FROM OLD.email THEN
