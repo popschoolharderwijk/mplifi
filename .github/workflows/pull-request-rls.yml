@@ -72,6 +72,12 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Switch to and seed preview branch
+        run: |
+          supabase unlink
+          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_ID }}
+          supabase db push  --include-seed --yes
+
       - name: Run RLS tests
         if: steps.wait_for_preview.outputs.conclusion == 'success'
         run: bun test rls
