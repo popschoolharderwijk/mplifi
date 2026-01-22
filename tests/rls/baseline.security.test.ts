@@ -8,38 +8,56 @@ const EXPECTED_RLS_TABLES = ['profiles', 'user_roles', 'teacher_students'];
 
 const EXPECTED_POLICIES: Record<string, string[]> = {
 	profiles: [
-		'profiles_delete_admin',
-		'profiles_insert_admin',
-		'profiles_select_admin',
+		// SELECT policies
 		'profiles_select_own',
+		'profiles_select_admin',
 		'profiles_select_staff',
 		'profiles_select_teacher_students',
-		'profiles_update_admin',
+		// UPDATE policies
 		'profiles_update_own',
+		'profiles_update_admin',
 		'profiles_update_staff',
+		// Intentionally NO INSERT policy - profiles are only created via handle_new_user() trigger
+		// Intentionally NO DELETE policy - profiles are only removed via CASCADE from auth.users
 	],
 	user_roles: [
-		'roles_insert_site_admin',
-		'roles_select_admin',
+		// SELECT policies
 		'roles_select_own',
+		'roles_select_admin',
 		'roles_select_staff',
 		'roles_select_teacher_students',
+		// UPDATE policy - only site_admin can change roles
 		'roles_update_site_admin',
-		// Intentionally NO delete policy - roles are only removed via CASCADE
+		// Intentionally NO INSERT policy - roles are only created via handle_new_user() trigger
+		// Intentionally NO DELETE policy - roles are only removed via CASCADE from auth.users
 	],
-	teacher_students: ['teacher_students_manage_own'],
+	teacher_students: [
+		// Teachers manage their own student links
+		'teacher_students_select_own',
+		'teacher_students_insert_own',
+		'teacher_students_delete_own',
+		// Admin/staff can view all links
+		'teacher_students_select_admin',
+		'teacher_students_select_staff',
+	],
 };
 
 const EXPECTED_FUNCTIONS = [
+	// Role helper functions
 	'_has_role',
 	'is_site_admin',
 	'is_admin',
 	'is_staff',
 	'is_teacher',
 	'is_student',
+	// User lifecycle
 	'handle_new_user',
+	'handle_auth_user_email_update',
+	// Data integrity triggers
 	'update_updated_at_column',
 	'prevent_user_id_change',
+	'prevent_profile_email_change',
+	'prevent_last_site_admin_removal',
 	// Introspection functions for CI testing
 	'check_rls_enabled',
 	'policy_exists',
