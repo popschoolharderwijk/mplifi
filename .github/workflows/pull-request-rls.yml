@@ -59,10 +59,11 @@ jobs:
             # Remove surrounding quotes if present
             clean_value=$(echo "$value" | sed 's/^"//;s/"$//' | tr -d '\r')
             echo "${key}=${clean_value}" >> $GITHUB_ENV
+            # Alias legacy ANON_KEY to new PUBLISHABLE name (branches get uses old names)
+            if [ "$key" = "SUPABASE_ANON_KEY" ]; then
+              echo "SUPABASE_PUBLISHABLE_DEFAULT_KEY=${clean_value}" >> $GITHUB_ENV
+            fi
           done < <(supabase --experimental branches get "$GITHUB_HEAD_REF" -o env)
-
-          # Alias legacy ANON_KEY to new PUBLISHABLE name (branches get uses old names)
-          echo "SUPABASE_PUBLISHABLE_DEFAULT_KEY=$SUPABASE_ANON_KEY" >> $GITHUB_ENV
 
       - name: Debug Branch Info
         if: steps.wait_for_preview.outputs.conclusion == 'success'
