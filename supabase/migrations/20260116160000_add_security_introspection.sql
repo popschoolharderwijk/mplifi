@@ -107,6 +107,12 @@ REVOKE ALL ON FUNCTION public.policy_exists(TEXT, TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.get_table_policies(TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.function_exists(TEXT) FROM PUBLIC;
 
+-- Explicitly revoke from anon (Supabase's anon role doesn't inherit from PUBLIC revokes)
+REVOKE ALL ON FUNCTION public.check_rls_enabled(TEXT) FROM anon;
+REVOKE ALL ON FUNCTION public.policy_exists(TEXT, TEXT) FROM anon;
+REVOKE ALL ON FUNCTION public.get_table_policies(TEXT) FROM anon;
+REVOKE ALL ON FUNCTION public.function_exists(TEXT) FROM anon;
+
 -- Grant access only to service_role (CI/backend testing)
 GRANT EXECUTE ON FUNCTION public.check_rls_enabled(TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.policy_exists(TEXT, TEXT) TO service_role;

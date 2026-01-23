@@ -156,48 +156,32 @@ describe('RLS: anonymous user access', () => {
 	});
 
 	describe('security functions', () => {
-		it('role helper functions use SECURITY DEFINER (returns correct data)', async () => {
+		it('anon cannot call role helper functions', async () => {
 			const db = createClientAnon();
 
-			// Note: is_site_admin uses SECURITY DEFINER and runs with postgres privileges.
-			// This means it can access user_roles data regardless of who calls it.
-			// This is NOT a security issue because:
-			// 1. Anon cannot see any user_ids (RLS blocks profiles/user_roles)
-			// 2. Without knowing user_ids, the function is useless
-			// 3. The function is only granted to 'authenticated', but PostgREST
-			//    may still allow the RPC call - the important thing is the behavior.
+			// Role helper functions are REVOKE'd from PUBLIC and only granted to authenticated.
+			// Anon should NOT be able to call these functions.
 			const { data, error } = await db.rpc('is_site_admin', {
 				_user_id: '00000000-0000-0000-0000-000000000001',
 			});
 
-			// Function executes via SECURITY DEFINER and returns the correct value
-			// (true for site_admin user_id). This is expected behavior.
-			if (error) {
-				// If Supabase blocks the call, that's also acceptable
-				expect(error).not.toBeNull();
-			} else {
-				// SECURITY DEFINER means the function can access the data
-				expect(data).toBe(true);
-			}
+			// Anon must be blocked from calling this function
+			expect(error).not.toBeNull();
+			expect(data).toBeNull();
 		});
 
-		it('anon cannot get meaningful results from introspection functions', async () => {
+		it('anon cannot call introspection functions', async () => {
 			const db = createClientAnon();
 
-			// Introspection functions are granted to service_role only
-			// Anon should either error or get no meaningful result
+			// Introspection functions are REVOKE'd from PUBLIC and only granted to service_role.
+			// Anon should NOT be able to call these functions.
 			const { data, error } = await db.rpc('check_rls_enabled', {
 				p_table_name: 'profiles',
 			});
 
-			// Either errors OR returns false/null (no permission to see metadata)
-			if (error) {
-				expect(error).not.toBeNull();
-			} else {
-				// If no error, function returns the actual value via SECURITY DEFINER
-				// This is acceptable as long as it's just schema metadata
-				expect(data).toBeDefined();
-			}
+			// Anon must be blocked from calling this function
+			expect(error).not.toBeNull();
+			expect(data).toBeNull();
 		});
 	});
 });

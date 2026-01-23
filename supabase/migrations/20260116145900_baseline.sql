@@ -158,6 +158,16 @@ REVOKE ALL ON FUNCTION
   public.is_student(UUID)
 FROM PUBLIC;
 
+-- Explicitly revoke from anon (Supabase's anon role doesn't inherit from PUBLIC revokes)
+REVOKE ALL ON FUNCTION
+  public._has_role(UUID, app_role),
+  public.is_site_admin(UUID),
+  public.is_admin(UUID),
+  public.is_staff(UUID),
+  public.is_teacher(UUID),
+  public.is_student(UUID)
+FROM anon;
+
 -- _has_role is an internal helper - no direct grant needed
 -- Public role helper functions are granted to authenticated users
 GRANT EXECUTE ON FUNCTION public.is_site_admin(UUID) TO authenticated;
