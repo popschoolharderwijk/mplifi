@@ -30,9 +30,8 @@ Een React + Vite + Supabase boilerplate met volledige CI/CD setup, RLS testing, 
 ### Environment Files
 
 ```
-.env                 # Basis Supabase keys (mcp-dev)
-.env.development     # Development overrides
-.env.production      # Production overrides (niet in repo)
+.env.development     # Development keys (public)
+.env.production      # Production keys (public)
 .env.local           # Lokale secrets (niet in repo, voor RLS tests)
 ```
 
@@ -105,24 +104,7 @@ Verifieert RLS policies
 
 ### Seed Data voor RLS Tests
 
-De preview branch wordt automatisch geseeded met testgebruikers uit `supabase/seed.sql`:
-
-| Role | User ID | Email |
-|------|---------|-------|
-| site_admin | `00000000-...-000001` | site-admin@test.nl |
-| admin | `00000000-...-000010` | admin-one@test.nl |
-| admin | `00000000-...-000011` | admin-two@test.nl |
-| staff | `00000000-...-000020` | staff@test.nl |
-| teacher | `00000000-...-000030` | teacher-alice@test.nl |
-| teacher | `00000000-...-000031` | teacher-bob@test.nl |
-| student | `00000000-...-000100` | student-a@test.nl |
-| student | `00000000-...-000101` | student-b@test.nl |
-| student | `00000000-...-000102` | student-c@test.nl |
-| student | `00000000-...-000103` | student-d@test.nl |
-
-**Wachtwoord voor alle testgebruikers:** `password`
-
-De seed bevat ook teacher-student relaties voor het testen van RLS policies die afhankelijk zijn van deze koppelingen.
+De preview branch wordt automatisch geseeded met testgebruikers uit `supabase/seed.sql`: De seed bevat ook teacher-student relaties voor het testen van RLS policies die afhankelijk zijn van deze koppelingen.
 
 > **Let op**: De Supabase CLI `branches get` command gebruikt nog de legacy naam `SUPABASE_ANON_KEY`. De workflow maakt automatisch een alias naar `SUPABASE_PUBLISHABLE_DEFAULT_KEY` voor forward compatibility.
 
@@ -147,7 +129,7 @@ SUPABASE_SERVICE_ROLE_KEY=<secret key uit Supabase dashboard>
 
 **SUPABASE_SERVICE_ROLE_KEY ophalen:**
 1. Ga naar https://supabase.com/dashboard/project/zdvscmogkfyddnnxzkdu/settings/api-keys
-2. Kopieer de **service_role** key (secret, begint met `eyJ...`)
+2. Kopieer de default secret key ( begint met `sb_secret...`)
 3. Zet in `.env.local`
 
 ```bash
@@ -172,7 +154,7 @@ Nodig voor CI workflows. Toe te voegen via:
 **Stappen om SUPABASE_ACCESS_TOKEN te krijgen:**
 1. Ga naar https://supabase.com/dashboard/account/tokens
 2. Klik "Generate new token"
-3. Geef naam en kopieer token
+3. Geef naam (bv `github-ci`) en kopieer token
 4. Voeg toe als GitHub secret
 
 ### Supabase Edge Function Secrets
