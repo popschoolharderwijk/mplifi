@@ -1,6 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../../src/integrations/supabase/types';
 import type { TestUser } from './test-users';
+
+// Cache authenticated clients per user to avoid rate limiting
+const clientCache = new Map<TestUser, SupabaseClient<Database>>();
 
 export function createClientBypassRLS() {
 	const url = process.env.SUPABASE_URL;
@@ -25,9 +28,28 @@ export function createClientAnon() {
 }
 
 export async function createClientAs(user: TestUser) {
+	// Return cached client if available
+	const cached = clientCache.get(user);
+	if (cached) {
+		return cached;
+	}
+
 	const TEST_PASSWORD = 'password';
 
-	const client = createClientAnon();
+	const url = process.env.SUPABASE_URL;
+	const key = process.env.SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+
+	if (!url || !key) {
+		throw new Error('SUPABASE_URL and SUPABASE_PUBLISHABLE_DEFAULT_KEY must be set');
+	}
+
+	// Create a fresh client for this user (not shared with anon)
+	const client = createClient<Database>(url, key, {
+		auth: {
+			persistSession: false, // Don't persist to storage
+			autoRefreshToken: true,
+		},
+	});
 
 	const { error } = await client.auth.signInWithPassword({
 		email: user,
@@ -37,6 +59,9 @@ export async function createClientAs(user: TestUser) {
 	if (error) {
 		throw new Error(`Failed to sign in as ${user}: ${error.message}`);
 	}
+
+	// Cache the authenticated client
+	clientCache.set(user, client);
 
 	return client;
 }
