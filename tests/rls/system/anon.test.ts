@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { createClientAnon } from './db';
+import { createClientAnon } from '../db';
 
 /**
  * All RLS policies are defined for 'authenticated' role only.
