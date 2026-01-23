@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { fixtures } from './fixtures';
+import { fixtures } from '../fixtures';
 
 const { allProfiles, allUserRoles, userRoleMap } = fixtures;
 

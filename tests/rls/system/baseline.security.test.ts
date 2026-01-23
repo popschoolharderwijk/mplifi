@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { createClientBypassRLS } from './db';
+import { createClientBypassRLS } from '../db';
 
 const supabase = createClientBypassRLS();
 
