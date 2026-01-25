@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -25,12 +25,18 @@ export default function Login() {
 		const { error } = await supabase.auth.signInWithOtp({
 			email,
 			options: {
+				shouldCreateUser: false,
 				emailRedirectTo: `${window.location.origin}/auth/callback`,
 			},
 		});
 
 		if (error) {
-			setError(error.message);
+			// User-friendly error message for unregistered users
+			if (error.message === 'Signups not allowed for otp') {
+				setError('Dit emailadres is niet geregistreerd. Maak eerst een account aan.');
+			} else {
+				setError(error.message);
+			}
 			setState('idle');
 		} else {
 			setState('sent');
@@ -152,6 +158,13 @@ export default function Login() {
 						</button>
 					</div>
 				)}
+
+				<p className="text-center text-sm text-muted-foreground">
+					Nog geen account?{' '}
+					<Link to="/register" className="text-primary hover:underline">
+						Registreren
+					</Link>
+				</p>
 			</div>
 		</div>
 	);
