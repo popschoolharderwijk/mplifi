@@ -55,7 +55,7 @@ git push --force-with-lease origin lovable
 | **Biome Linting** | Code formatting en linting |
 | **Unit Tests** | Tests in `tests/code/` |
 | **Supabase Preview** | Alleen bij migration changes |
-| **RLS Tests** | Alleen bij migration changes |
+| **Database Tests** | RLS + Auth tests (bij migration/test changes) |
 
 ---
 

@@ -58,6 +58,13 @@ Dit past toe:
 > 
 > Echter, Supabase ondersteunt aan de achterkant technisch gezien wel password-based authenticatie via de API. Om misbruik via directe API calls te voorkomen, stellen we de password requirements zo hoog mogelijk in. Een wachtwoord van 32+ karakters met letters, cijfers én symbolen is praktisch onmogelijk te raden of bruteforcen.
 
+> 💡 **Verificatie via tests**
+> 
+> De password policy wordt geverifieerd door `tests/auth/password-signup.test.ts`. Deze test controleert dat:
+> - Wachtwoorden korter dan 32 karakters worden geweigerd
+> - Wachtwoorden zonder symbolen, cijfers, of letters worden geweigerd
+> - Alleen wachtwoorden die aan alle eisen voldoen worden geaccepteerd
+
 ### URL Configuration
 
 **Dashboard** → **Authentication** → **URL Configuration**
@@ -155,6 +162,7 @@ enabled = true  # of false voor production
 - [ ] Migraties toegepast
 - [ ] Email provider ingeschakeld
 - [ ] Password requirements op maximum (32 chars, letters+digits+symbols)
+- [ ] Password policy tests draaien (`bun test tests/auth/password-signup.test.ts`)
 - [ ] Email OTP length op 8
 - [ ] URL configuratie correct
 - [ ] Email templates ingesteld

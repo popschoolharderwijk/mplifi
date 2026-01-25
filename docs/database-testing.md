@@ -1,13 +1,13 @@
-# RLS Testing
+# Database Testing (RLS + Auth)
 
 ## Hoe het werkt
 
 ```
-PR met migrations
+PR met migrations, tests/rls/**, of tests/auth/**
        ↓
 Supabase Preview start (creëert preview branch database)
        ↓
-pull-request-rls.yml wacht op "Supabase Preview" check
+pull-request-database.yml wacht op "Supabase Preview" check
        ↓
 Haalt credentials op: supabase branches get -o env
        ↓
@@ -19,7 +19,7 @@ Seedt preview database: supabase db push --include-seed
        ↓
 Tests draaien tegen preview branch met seed data
        ↓
-Verifieert RLS policies
+Verifieert RLS policies + Auth policies
 ```
 
 ---
@@ -34,7 +34,7 @@ De preview branch wordt automatisch geseeded met testgebruikers uit `supabase/se
 
 ## Wat wordt getest
 
-Alle tests staan in `tests/rls/`:
+### RLS Tests (`tests/rls/`)
 
 - ✅ RLS is enabled op alle verwachte tabellen
 - ✅ Alle verwachte policies bestaan
@@ -43,13 +43,25 @@ Alle tests staan in `tests/rls/`:
 - ✅ Seed data ground truth (correct aantal users per role)
 - ✅ RLS policies werken correct per user role
 
+### Auth Tests (`tests/auth/`)
+
+- ✅ Password policy enforcement (min. 32 chars, letters+digits+symbols)
+- ✅ Wachtwoorden zonder symbolen/cijfers/letters worden geweigerd
+- ✅ Valide wachtwoorden worden geaccepteerd (user unconfirmed)
+
 ---
 
-## Lokaal RLS tests draaien
+## Lokaal tests draaien
 
-Voor lokale RLS tests heb je een `.env.local` nodig. Zie [supabase-setup.md](supabase-setup.md) Stap 6 voor het aanmaken van dit bestand.
+Voor lokale database tests heb je een `.env.local` nodig. Zie [supabase-setup.md](supabase-setup.md) Stap 6 voor het aanmaken van dit bestand.
 
 ```bash
-# Run lokaal
+# Alle database tests
+bun test rls auth --env-file .env.local
+
+# Alleen RLS tests
 bun test rls --env-file .env.local
+
+# Alleen Auth tests
+bun test auth --env-file .env.local
 ```

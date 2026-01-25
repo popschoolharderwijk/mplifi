@@ -6,7 +6,7 @@
 |----------|---------|---------|------|
 | **PR CI** | `pull-request-ci.yml` | PRs naar main | Biome linting |
 | **PR Tests** | `pull-request-test.yml` | Alle PRs | Unit tests (`tests/code/`) |
-| **PR RLS** | `pull-request-rls.yml` | `supabase/migrations/**` | RLS security tests |
+| **PR Database** | `pull-request-database.yml` | `supabase/migrations/**`, `tests/rls/**`, `tests/auth/**` | RLS + Auth tests |
 | **Formatting** | `formatting.yml` | Manual/callable | Auto-format met Biome |
 | **Linting** | `linting.yml` | Manual/callable | Lint + schrijf errors naar `.github/biome-errors.txt` |
 
