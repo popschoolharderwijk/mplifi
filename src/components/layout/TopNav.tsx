@@ -38,19 +38,27 @@ export function TopNav() {
 	const navigate = useNavigate();
 	const [open, setOpen] = useState(false);
 	const [role, setRole] = useState<string | null>(null);
+	const [profile, setProfile] = useState<{ firstname: string | null; lastname: string | null } | null>(null);
 
 	useEffect(() => {
-		async function fetchRole() {
+		async function fetchRoleAndProfile() {
 			if (!user) return;
 
-			const { data } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
+			const [roleResult, profileResult] = await Promise.all([
+				supabase.from('user_roles').select('role').eq('user_id', user.id).single(),
+				supabase.from('profiles').select('firstname, lastname').eq('user_id', user.id).single(),
+			]);
 
-			if (data) {
-				setRole(data.role);
+			if (roleResult.data) {
+				setRole(roleResult.data.role);
+			}
+
+			if (profileResult.data) {
+				setProfile(profileResult.data);
 			}
 		}
 
-		fetchRole();
+		fetchRoleAndProfile();
 	}, [user]);
 
 	// Keyboard shortcut for command palette
@@ -71,7 +79,12 @@ export function TopNav() {
 		navigate('/login');
 	};
 
-	const userInitials = user?.email?.slice(0, 2).toUpperCase() || 'U';
+	const userInitials =
+		profile?.firstname && profile?.lastname
+			? `${profile.firstname[0]}${profile.lastname[0]}`.toUpperCase()
+			: profile?.firstname
+				? profile.firstname.slice(0, 2).toUpperCase()
+				: user?.email?.slice(0, 2).toUpperCase() || 'U';
 
 	return (
 		<>
@@ -116,7 +129,13 @@ export function TopNav() {
 					<DropdownMenuContent className="w-56" align="end" forceMount>
 						<DropdownMenuLabel className="font-normal">
 							<div className="flex flex-col space-y-1">
-								<p className="text-sm font-medium leading-none">{user?.email?.split('@')[0]}</p>
+								<p className="text-sm font-medium leading-none">
+									{profile?.firstname && profile?.lastname
+										? `${profile.firstname} ${profile.lastname}`
+										: profile?.firstname
+											? profile.firstname
+											: user?.email?.split('@')[0]}
+								</p>
 								<p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
 								{role && (
 									<p className="text-xs leading-none text-muted-foreground capitalize mt-0.5">

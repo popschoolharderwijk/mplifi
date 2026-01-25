@@ -39,21 +39,22 @@ BEGIN
   CREATE TEMP TABLE new_users (
     id UUID,
     email TEXT,
-	display_name TEXT
+	firstname TEXT,
+	lastname TEXT
   );
 
-  INSERT INTO new_users (id, email, display_name)
+  INSERT INTO new_users (id, email, firstname, lastname)
   VALUES
-    (UUID '00000000-0000-0000-0000-000000000001', 'site-admin@test.nl', 'Site Admin'),
-    (UUID '00000000-0000-0000-0000-000000000010', 'admin-one@test.nl', 'Admin One'),
-    (UUID '00000000-0000-0000-0000-000000000011', 'admin-two@test.nl', 'Admin Two'),
-    (UUID '00000000-0000-0000-0000-000000000020', 'staff@test.nl', 'Staff'),
-    (UUID '00000000-0000-0000-0000-000000000030', 'teacher-alice@test.nl', 'Teacher Alice'),
-    (UUID '00000000-0000-0000-0000-000000000031', 'teacher-bob@test.nl', 'Teacher Box'),
-    (UUID '00000000-0000-0000-0000-000000000100', 'student-a@test.nl', 'Student A'),
-    (UUID '00000000-0000-0000-0000-000000000101', 'student-b@test.nl', 'Student B'),
-    (UUID '00000000-0000-0000-0000-000000000102', 'student-c@test.nl', 'Student C'),
-    (UUID '00000000-0000-0000-0000-000000000103', 'student-d@test.nl', 'Student D');
+    (UUID '00000000-0000-0000-0000-000000000001', 'site-admin@test.nl', 'Site', 'Admin'),
+    (UUID '00000000-0000-0000-0000-000000000010', 'admin-one@test.nl', 'Admin', 'One'),
+    (UUID '00000000-0000-0000-0000-000000000011', 'admin-two@test.nl', 'Admin', 'Two'),
+    (UUID '00000000-0000-0000-0000-000000000020', 'staff@test.nl', 'Staff', NULL),
+    (UUID '00000000-0000-0000-0000-000000000030', 'teacher-alice@test.nl', 'Teacher', 'Alice'),
+    (UUID '00000000-0000-0000-0000-000000000031', 'teacher-bob@test.nl', 'Teacher', 'Box'),
+    (UUID '00000000-0000-0000-0000-000000000100', 'student-a@test.nl', 'Student', 'A'),
+    (UUID '00000000-0000-0000-0000-000000000101', 'student-b@test.nl', 'Student', 'B'),
+    (UUID '00000000-0000-0000-0000-000000000102', 'student-c@test.nl', 'Student', 'C'),
+    (UUID '00000000-0000-0000-0000-000000000103', 'student-d@test.nl', 'Student', 'D');
 
   -- -------------------------------------------------------------------------
   -- INSERT INTO AUTH.USERS
@@ -85,7 +86,8 @@ BEGIN
     now(),                                              -- email_confirmed_at
     '{"provider":"email","providers":["email"]}',       -- raw_app_meta_data
 	json_build_object(         							-- raw_user_meta_data
-		'display_name', display_name
+		'firstname', firstname,
+		'lastname', lastname
     ),
     now(),                                              -- created_at
     now(),                                              -- updated_at

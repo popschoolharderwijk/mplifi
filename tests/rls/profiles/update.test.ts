@@ -12,16 +12,17 @@ describe('RLS: profiles UPDATE - own profile', () => {
 
 		const { data, error } = await db
 			.from('profiles')
-			.update({ display_name: 'Updated Student A' })
+			.update({ firstname: 'Updated', lastname: 'Student A' })
 			.eq('user_id', profile.user_id)
 			.select();
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(1);
-		expect(data?.[0]?.display_name).toBe('Updated Student A');
+		expect(data?.[0]?.firstname).toBe('Updated');
+		expect(data?.[0]?.lastname).toBe('Student A');
 
 		// Restore original
-		await db.from('profiles').update({ display_name: 'Student A' }).eq('user_id', profile.user_id);
+		await db.from('profiles').update({ firstname: 'Student', lastname: 'A' }).eq('user_id', profile.user_id);
 	});
 
 	it('teacher can update own profile', async () => {
@@ -30,16 +31,17 @@ describe('RLS: profiles UPDATE - own profile', () => {
 
 		const { data, error } = await db
 			.from('profiles')
-			.update({ display_name: 'Updated Alice' })
+			.update({ firstname: 'Updated', lastname: 'Alice' })
 			.eq('user_id', profile.user_id)
 			.select();
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(1);
-		expect(data?.[0]?.display_name).toBe('Updated Alice');
+		expect(data?.[0]?.firstname).toBe('Updated');
+		expect(data?.[0]?.lastname).toBe('Alice');
 
 		// Restore original
-		await db.from('profiles').update({ display_name: 'Teacher Alice' }).eq('user_id', profile.user_id);
+		await db.from('profiles').update({ firstname: 'Teacher', lastname: 'Alice' }).eq('user_id', profile.user_id);
 	});
 
 	it('staff can update own profile', async () => {
@@ -48,16 +50,17 @@ describe('RLS: profiles UPDATE - own profile', () => {
 
 		const { data, error } = await db
 			.from('profiles')
-			.update({ display_name: 'Updated Staff' })
+			.update({ firstname: 'Updated', lastname: 'Staff' })
 			.eq('user_id', profile.user_id)
 			.select();
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(1);
-		expect(data?.[0]?.display_name).toBe('Updated Staff');
+		expect(data?.[0]?.firstname).toBe('Updated');
+		expect(data?.[0]?.lastname).toBe('Staff');
 
 		// Restore original
-		await db.from('profiles').update({ display_name: 'Staff' }).eq('user_id', profile.user_id);
+		await db.from('profiles').update({ firstname: 'Staff', lastname: null }).eq('user_id', profile.user_id);
 	});
 
 	it('admin can update own profile', async () => {
@@ -66,16 +69,17 @@ describe('RLS: profiles UPDATE - own profile', () => {
 
 		const { data, error } = await db
 			.from('profiles')
-			.update({ display_name: 'Updated Admin' })
+			.update({ firstname: 'Updated', lastname: 'Admin' })
 			.eq('user_id', profile.user_id)
 			.select();
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(1);
-		expect(data?.[0]?.display_name).toBe('Updated Admin');
+		expect(data?.[0]?.firstname).toBe('Updated');
+		expect(data?.[0]?.lastname).toBe('Admin');
 
 		// Restore original
-		await db.from('profiles').update({ display_name: 'Admin One' }).eq('user_id', profile.user_id);
+		await db.from('profiles').update({ firstname: 'Admin', lastname: 'One' }).eq('user_id', profile.user_id);
 	});
 
 	it('site_admin can update own profile', async () => {
@@ -84,16 +88,17 @@ describe('RLS: profiles UPDATE - own profile', () => {
 
 		const { data, error } = await db
 			.from('profiles')
-			.update({ display_name: 'Updated Site Admin' })
+			.update({ firstname: 'Updated', lastname: 'Site Admin' })
 			.eq('user_id', profile.user_id)
 			.select();
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(1);
-		expect(data?.[0]?.display_name).toBe('Updated Site Admin');
+		expect(data?.[0]?.firstname).toBe('Updated');
+		expect(data?.[0]?.lastname).toBe('Site Admin');
 
 		// Restore original
-		await db.from('profiles').update({ display_name: 'Site Admin' }).eq('user_id', profile.user_id);
+		await db.from('profiles').update({ firstname: 'Site', lastname: 'Admin' }).eq('user_id', profile.user_id);
 	});
 });
 
@@ -104,7 +109,7 @@ describe('RLS: profiles UPDATE - other profiles', () => {
 
 		const { data, error } = await db
 			.from('profiles')
-			.update({ display_name: 'Hacked' })
+			.update({ firstname: 'Hacked', lastname: null })
 			.eq('user_id', targetUserId)
 			.select();
 
@@ -119,7 +124,7 @@ describe('RLS: profiles UPDATE - other profiles', () => {
 
 		const { data, error } = await db
 			.from('profiles')
-			.update({ display_name: 'Hacked' })
+			.update({ firstname: 'Hacked', lastname: null })
 			.eq('user_id', studentUserId)
 			.select();
 
@@ -134,16 +139,20 @@ describe('RLS: profiles UPDATE - other profiles', () => {
 
 		const { data, error } = await db
 			.from('profiles')
-			.update({ display_name: 'Staff Updated' })
+			.update({ firstname: 'Staff', lastname: 'Updated' })
 			.eq('user_id', studentUserId)
 			.select();
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(1);
-		expect(data?.[0]?.display_name).toBe('Staff Updated');
+		expect(data?.[0]?.firstname).toBe('Staff');
+		expect(data?.[0]?.lastname).toBe('Updated');
 
 		// Restore original
-		await db.from('profiles').update({ display_name: originalProfile.display_name }).eq('user_id', studentUserId);
+		await db
+			.from('profiles')
+			.update({ firstname: originalProfile.firstname, lastname: originalProfile.lastname })
+			.eq('user_id', studentUserId);
 	});
 
 	it('staff cannot update non-student profiles', async () => {
@@ -153,7 +162,7 @@ describe('RLS: profiles UPDATE - other profiles', () => {
 
 		const { data, error } = await db
 			.from('profiles')
-			.update({ display_name: 'Hacked' })
+			.update({ firstname: 'Hacked', lastname: null })
 			.eq('user_id', teacherUserId)
 			.select();
 
@@ -168,16 +177,20 @@ describe('RLS: profiles UPDATE - other profiles', () => {
 
 		const { data, error } = await db
 			.from('profiles')
-			.update({ display_name: 'Admin Updated' })
+			.update({ firstname: 'Admin', lastname: 'Updated' })
 			.eq('user_id', teacherUserId)
 			.select();
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(1);
-		expect(data?.[0]?.display_name).toBe('Admin Updated');
+		expect(data?.[0]?.firstname).toBe('Admin');
+		expect(data?.[0]?.lastname).toBe('Updated');
 
 		// Restore original - note: seed has typo "Teacher Box" instead of "Teacher Bob"
-		await db.from('profiles').update({ display_name: originalProfile.display_name }).eq('user_id', teacherUserId);
+		await db
+			.from('profiles')
+			.update({ firstname: originalProfile.firstname, lastname: originalProfile.lastname })
+			.eq('user_id', teacherUserId);
 	});
 
 	it('site_admin can update any profile', async () => {
@@ -187,15 +200,19 @@ describe('RLS: profiles UPDATE - other profiles', () => {
 
 		const { data, error } = await db
 			.from('profiles')
-			.update({ display_name: 'Site Admin Updated' })
+			.update({ firstname: 'Site Admin', lastname: 'Updated' })
 			.eq('user_id', staffUserId)
 			.select();
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(1);
-		expect(data?.[0]?.display_name).toBe('Site Admin Updated');
+		expect(data?.[0]?.firstname).toBe('Site Admin');
+		expect(data?.[0]?.lastname).toBe('Updated');
 
 		// Restore original
-		await db.from('profiles').update({ display_name: originalProfile.display_name }).eq('user_id', staffUserId);
+		await db
+			.from('profiles')
+			.update({ firstname: originalProfile.firstname, lastname: originalProfile.lastname })
+			.eq('user_id', staffUserId);
 	});
 });

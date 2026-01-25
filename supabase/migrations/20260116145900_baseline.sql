@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
-  display_name TEXT,
+  firstname TEXT,
+  lastname TEXT,
   avatar_url TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -338,7 +339,8 @@ CREATE OR REPLACE VIEW public.teacher_student_profiles
 WITH (security_invoker=on) AS
 SELECT
   p.user_id     AS student_id,
-  p.display_name,
+  p.firstname,
+  p.lastname,
   p.avatar_url,
   p.email,
   p.created_at,
@@ -439,9 +441,9 @@ SET search_path = public
 SET row_security = off
 AS $$
 BEGIN
-  -- use raw_user_meta_data.display_name (can be NULL) for atomic setting of profile name
-  INSERT INTO public.profiles (user_id, email, display_name)
-  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'display_name')
+  -- use raw_user_meta_data.firstname and lastname (can be NULL) for atomic setting of profile name
+  INSERT INTO public.profiles (user_id, email, firstname, lastname)
+  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'firstname', NEW.raw_user_meta_data->>'lastname')
   ON CONFLICT (user_id) DO NOTHING;
 
   INSERT INTO public.user_roles (user_id, role)

@@ -15,7 +15,8 @@ describe('RLS: profiles INSERT - blocked for all roles', () => {
 	const newProfileData = {
 		user_id: '00000000-0000-0000-0000-999999999999',
 		email: 'fake@test.nl',
-		display_name: 'Fake User',
+		firstname: 'Fake',
+		lastname: 'User',
 	};
 
 	it('student cannot insert profile', async () => {

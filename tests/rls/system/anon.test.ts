@@ -38,7 +38,7 @@ describe('RLS: anonymous user access', () => {
 
 			const { data, error } = await db
 				.from('profiles')
-				.update({ display_name: 'Hacked' })
+				.update({ firstname: 'Hacked', lastname: null })
 				.eq('email', 'student-a@test.nl')
 				.select();
 
