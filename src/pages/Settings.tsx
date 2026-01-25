@@ -117,10 +117,10 @@ export default function Settings() {
 			toast.error('Fout bij opslaan', {
 				description: error.message,
 			});
-		} else {
+		} else if (profile) {
 			// Update local state
 			setProfile({
-				...profile!,
+				...profile,
 				first_name: formData.first_name || null,
 				last_name: formData.last_name || null,
 				phone_number: normalizedPhone,
@@ -187,8 +187,8 @@ export default function Settings() {
 			toast.error('Fout bij opslaan avatar', {
 				description: updateError.message,
 			});
-		} else {
-			setProfile({ ...profile!, avatar_url: avatarUrlWithCacheBust });
+		} else if (profile) {
+			setProfile({ ...profile, avatar_url: avatarUrlWithCacheBust });
 			toast.success('Avatar opgeslagen!');
 			// Notify TopNav to refresh profile data
 			window.dispatchEvent(new Event('profile-updated'));
@@ -233,8 +233,8 @@ export default function Settings() {
 			toast.error('Fout bij verwijderen avatar', {
 				description: updateError.message,
 			});
-		} else {
-			setProfile({ ...profile!, avatar_url: null });
+		} else if (profile) {
+			setProfile({ ...profile, avatar_url: null });
 			toast.success('Avatar verwijderd!');
 			// Notify TopNav to refresh profile data
 			window.dispatchEvent(new Event('profile-updated'));

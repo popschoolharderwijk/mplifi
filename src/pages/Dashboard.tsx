@@ -14,11 +14,7 @@ export default function Dashboard() {
 		async function loadFirstName() {
 			if (!user) return;
 
-			const { data } = await supabase
-				.from('profiles')
-				.select('first_name')
-				.eq('user_id', user.id)
-				.single();
+			const { data } = await supabase.from('profiles').select('first_name').eq('user_id', user.id).single();
 
 			if (data?.first_name) {
 				setFirstName(data.first_name);

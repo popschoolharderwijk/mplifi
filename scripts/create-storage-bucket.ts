@@ -46,9 +46,10 @@ if (avatarsBucket) {
 }
 
 // Create the bucket
+const maxFileSize = 5; // in MB
 const { data: bucket, error: createError } = await supabase.storage.createBucket('avatars', {
 	public: true,
-	fileSizeLimit: 5242880, // 5MB
+	fileSizeLimit: maxFileSize * 1024 * 1024,
 	allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
 });
 
@@ -59,5 +60,7 @@ if (createError) {
 
 console.log('\n✅ Avatars storage bucket created!');
 console.log('  Name:', bucket.name);
-console.log('  Public:', bucket.public);
+console.log('  Public: true (configured)');
+console.log(`  File size limit: ${maxFileSize} MB`);
+console.log('  Allowed types: jpeg, png, gif, webp');
 console.log('\nBucket is ready for avatar uploads.');
