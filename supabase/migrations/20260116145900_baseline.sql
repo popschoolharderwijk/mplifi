@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   email TEXT NOT NULL,
   firstname TEXT,
   lastname TEXT,
+  phone_number TEXT CHECK (phone_number IS NULL OR (phone_number ~ '^[0-9]{10}$')),
   avatar_url TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
