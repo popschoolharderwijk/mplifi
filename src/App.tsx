@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { AuthProvider } from './components/AuthProvider';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -35,6 +36,7 @@ const App = () => (
 
 					<Route path="*" element={<NotFound />} />
 				</Routes>
+				<Toaster />
 			</AuthProvider>
 		</ThemeProvider>
 	</BrowserRouter>

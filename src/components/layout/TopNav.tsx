@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { LuLogOut, LuMoon, LuSearch, LuSettings, LuSun } from 'react-icons/lu';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/components/ThemeProvider';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
 	CommandDialog,
@@ -38,7 +38,11 @@ export function TopNav() {
 	const navigate = useNavigate();
 	const [open, setOpen] = useState(false);
 	const [role, setRole] = useState<string | null>(null);
-	const [profile, setProfile] = useState<{ first_name: string | null; last_name: string | null } | null>(null);
+	const [profile, setProfile] = useState<{
+		first_name: string | null;
+		last_name: string | null;
+		avatar_url: string | null;
+	} | null>(null);
 
 	useEffect(() => {
 		async function fetchRoleAndProfile() {
@@ -46,7 +50,7 @@ export function TopNav() {
 
 			const [roleResult, profileResult] = await Promise.all([
 				supabase.from('user_roles').select('role').eq('user_id', user.id).single(),
-				supabase.from('profiles').select('first_name, last_name').eq('user_id', user.id).single(),
+				supabase.from('profiles').select('first_name, last_name, avatar_url').eq('user_id', user.id).single(),
 			]);
 
 			if (roleResult.data) {
@@ -59,6 +63,18 @@ export function TopNav() {
 		}
 
 		fetchRoleAndProfile();
+
+		// Listen for profile updates from Settings page
+		const handleProfileUpdate = () => {
+			fetchRoleAndProfile();
+		};
+
+		window.addEventListener('profile-updated', handleProfileUpdate);
+
+		return () => {
+			window.removeEventListener('profile-updated', handleProfileUpdate);
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [user]);
 
 	// Keyboard shortcut for command palette
@@ -120,6 +136,7 @@ export function TopNav() {
 					<DropdownMenuTrigger asChild>
 						<Button variant="ghost" className="relative h-9 w-9 rounded-full">
 							<Avatar className="h-9 w-9">
+								<AvatarImage src={profile?.avatar_url || undefined} alt="Avatar" />
 								<AvatarFallback className="bg-primary text-primary-foreground text-sm">
 									{userInitials}
 								</AvatarFallback>

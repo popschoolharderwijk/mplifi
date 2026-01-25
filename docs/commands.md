@@ -38,6 +38,30 @@ supabase gen types typescript --project-id <project-id> > src/integrations/supab
 
 ---
 
+## Storage Buckets
+
+```bash
+# Maak avatars storage bucket aan (vereist .env.local met SUPABASE_URL en SUPABASE_SERVICE_ROLE_KEY)
+bun run create-storage-bucket
+```
+
+> ⚠️ Storage buckets kunnen niet via SQL migraties worden aangemaakt. Run dit script **voor** je de storage RLS migratie toepast.
+
+---
+
+## User Management
+
+```bash
+# Maak nieuwe gebruiker aan (passwordless, alleen OTP/Magic Link)
+# Configureer in .env.local:
+#   CREATE_USER_EMAIL=user@example.com
+#   CREATE_USER_FIRST_NAME=Voornaam
+#   CREATE_USER_LAST_NAME=Achternaam
+bun run createuser
+```
+
+---
+
 ## Testing
 
 ```bash

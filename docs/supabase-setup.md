@@ -17,7 +17,34 @@ Stappenplan om een lege Supabase server werkend te krijgen met deze applicatie.
 
 ---
 
-## Stap 2: Migraties Toepassen
+## Stap 2: Storage Buckets Aanmaken
+
+Storage buckets kunnen **niet** via SQL migraties worden aangemaakt, dus moeten apart geconfigureerd worden **voordat** je de migraties toepast.
+
+**Optie A: Via script (aanbevolen)**
+
+```bash
+bun run create-storage-bucket
+```
+
+Dit script:
+- Maakt de `avatars` bucket aan
+- Configureert als public bucket
+- Stelt max bestandsgrootte in (5MB)
+- Beperkt tot image types (jpeg, png, gif, webp)
+
+**Optie B: Via Dashboard**
+
+1. **Dashboard** → **Storage** → **New bucket**
+2. Configureer:
+   - **Name**: `avatars`
+   - **Public bucket**: ✅ Enabled
+   - **Allowed MIME types**: `image/jpeg, image/png, image/gif, image/webp`
+   - **File size limit**: `5MB`
+
+---
+
+## Stap 3: Migraties Toepassen
 
 ```bash
 # Link aan het nieuwe project
@@ -30,10 +57,11 @@ supabase db push
 Dit past toe:
 - `20260116145900_baseline.sql` - Basis tabellen en RLS
 - `20260116160000_add_security_introspection.sql` - Security helper functies
+- `20260117000000_create_avatars_storage.sql` - Storage bucket RLS policies
 
 ---
 
-## Stap 3: Authentication Configureren
+## Stap 4: Authentication Configureren
 
 ### Providers inschakelen
 
@@ -83,7 +111,7 @@ Dit past toe:
 
 ---
 
-## Stap 4: Email Templates
+## Stap 5: Email Templates
 
 Zie [email-templates.md](email-templates.md) voor:
 - Magic Link template instellen
@@ -91,7 +119,7 @@ Zie [email-templates.md](email-templates.md) voor:
 
 ---
 
-## Stap 5: API Keys Ophalen
+## Stap 6: API Keys Ophalen
 
 **Dashboard** → **Project Settings** → **API**
 
@@ -102,7 +130,7 @@ Noteer:
 
 ---
 
-## Stap 6: Environment Files Aanmaken
+## Stap 7: Environment Files Aanmaken
 
 ### Voor development (.env.development)
 
@@ -120,7 +148,7 @@ SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 
 ---
 
-## Stap 7: Secrets Configureren
+## Stap 8: Secrets Configureren
 
 Zie [secrets.md](secrets.md) voor:
 - GitHub Secrets (voor CI/CD)
@@ -128,7 +156,7 @@ Zie [secrets.md](secrets.md) voor:
 
 ---
 
-## Stap 8: GitHub Integratie (voor Production)
+## Stap 9: GitHub Integratie (voor Production)
 
 Voor Supabase branching en preview deployments:
 
@@ -142,7 +170,7 @@ Voor Supabase branching en preview deployments:
 
 ---
 
-## Stap 9: Config.toml Bijwerken
+## Stap 10: Config.toml Bijwerken
 
 Update `supabase/config.toml` met de nieuwe project ID:
 
@@ -159,7 +187,8 @@ enabled = true  # of false voor production
 ## Checklist
 
 - [ ] Project aangemaakt
-- [ ] Migraties toegepast
+- [ ] Storage bucket `avatars` aangemaakt (`bun run create-storage-bucket`)
+- [ ] Migraties toegepast (`supabase db push`)
 - [ ] Email provider ingeschakeld
 - [ ] Password requirements op maximum (32 chars, letters+digits+symbols)
 - [ ] Password policy tests draaien (`bun test tests/auth/password-signup.test.ts`)
