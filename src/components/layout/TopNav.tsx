@@ -38,7 +38,7 @@ export function TopNav() {
 	const navigate = useNavigate();
 	const [open, setOpen] = useState(false);
 	const [role, setRole] = useState<string | null>(null);
-	const [profile, setProfile] = useState<{ firstname: string | null; lastname: string | null } | null>(null);
+	const [profile, setProfile] = useState<{ first_name: string | null; last_name: string | null } | null>(null);
 
 	useEffect(() => {
 		async function fetchRoleAndProfile() {
@@ -46,7 +46,7 @@ export function TopNav() {
 
 			const [roleResult, profileResult] = await Promise.all([
 				supabase.from('user_roles').select('role').eq('user_id', user.id).single(),
-				supabase.from('profiles').select('firstname, lastname').eq('user_id', user.id).single(),
+				supabase.from('profiles').select('first_name, last_name').eq('user_id', user.id).single(),
 			]);
 
 			if (roleResult.data) {
@@ -80,10 +80,10 @@ export function TopNav() {
 	};
 
 	const userInitials =
-		profile?.firstname && profile?.lastname
-			? `${profile.firstname[0]}${profile.lastname[0]}`.toUpperCase()
-			: profile?.firstname
-				? profile.firstname.slice(0, 2).toUpperCase()
+		profile?.first_name && profile?.last_name
+			? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
+			: profile?.first_name
+				? profile.first_name.slice(0, 2).toUpperCase()
 				: user?.email?.slice(0, 2).toUpperCase() || 'U';
 
 	return (
@@ -130,10 +130,10 @@ export function TopNav() {
 						<DropdownMenuLabel className="font-normal">
 							<div className="flex flex-col space-y-1">
 								<p className="text-sm font-medium leading-none">
-									{profile?.firstname && profile?.lastname
-										? `${profile.firstname} ${profile.lastname}`
-										: profile?.firstname
-											? profile.firstname
+									{profile?.first_name && profile?.last_name
+										? `${profile.first_name} ${profile.last_name}`
+										: profile?.first_name
+											? profile.first_name
 											: user?.email?.split('@')[0]}
 								</p>
 								<p className="text-xs leading-none text-muted-foreground">{user?.email}</p>

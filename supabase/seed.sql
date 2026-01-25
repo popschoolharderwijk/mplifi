@@ -39,22 +39,23 @@ BEGIN
   CREATE TEMP TABLE new_users (
     id UUID,
     email TEXT,
-	firstname TEXT,
-	lastname TEXT
+	first_name TEXT,
+	last_name TEXT,
+	phone_number TEXT
   );
 
-  INSERT INTO new_users (id, email, firstname, lastname)
+  INSERT INTO new_users (id, email, first_name, last_name, phone_number)
   VALUES
-    (UUID '00000000-0000-0000-0000-000000000001', 'site-admin@test.nl', 'Site', 'Admin'),
-    (UUID '00000000-0000-0000-0000-000000000010', 'admin-one@test.nl', 'Admin', 'One'),
-    (UUID '00000000-0000-0000-0000-000000000011', 'admin-two@test.nl', 'Admin', 'Two'),
-    (UUID '00000000-0000-0000-0000-000000000020', 'staff@test.nl', 'Staff', NULL),
-    (UUID '00000000-0000-0000-0000-000000000030', 'teacher-alice@test.nl', 'Teacher', 'Alice'),
-    (UUID '00000000-0000-0000-0000-000000000031', 'teacher-bob@test.nl', 'Teacher', 'Box'),
-    (UUID '00000000-0000-0000-0000-000000000100', 'student-a@test.nl', 'Student', 'A'),
-    (UUID '00000000-0000-0000-0000-000000000101', 'student-b@test.nl', 'Student', 'B'),
-    (UUID '00000000-0000-0000-0000-000000000102', 'student-c@test.nl', 'Student', 'C'),
-    (UUID '00000000-0000-0000-0000-000000000103', 'student-d@test.nl', 'Student', 'D');
+    (UUID '00000000-0000-0000-0000-000000000001', 'site-admin@test.nl', 'Site', 'Admin', '0612345678'),
+    (UUID '00000000-0000-0000-0000-000000000010', 'admin-one@test.nl', 'Admin', 'One', '0623456789'),
+    (UUID '00000000-0000-0000-0000-000000000011', 'admin-two@test.nl', 'Admin', 'Two', NULL),
+    (UUID '00000000-0000-0000-0000-000000000020', 'staff@test.nl', 'Staff', NULL, '0634567890'),
+    (UUID '00000000-0000-0000-0000-000000000030', 'teacher-alice@test.nl', 'Teacher', 'Alice', '0645678901'),
+    (UUID '00000000-0000-0000-0000-000000000031', 'teacher-bob@test.nl', 'Teacher', 'Box', NULL),
+    (UUID '00000000-0000-0000-0000-000000000100', 'student-a@test.nl', 'Student', 'A', '0656789012'),
+    (UUID '00000000-0000-0000-0000-000000000101', 'student-b@test.nl', 'Student', 'B', NULL),
+    (UUID '00000000-0000-0000-0000-000000000102', 'student-c@test.nl', 'Student', 'C', '0667890123'),
+    (UUID '00000000-0000-0000-0000-000000000103', 'student-d@test.nl', 'Student', 'D', NULL);
 
   -- -------------------------------------------------------------------------
   -- INSERT INTO AUTH.USERS
@@ -86,8 +87,8 @@ BEGIN
     now(),                                              -- email_confirmed_at
     '{"provider":"email","providers":["email"]}',       -- raw_app_meta_data
 	json_build_object(         							-- raw_user_meta_data
-		'firstname', firstname,
-		'lastname', lastname
+		'first_name', first_name,
+		'last_name', last_name
     ),
     now(),                                              -- created_at
     now(),                                              -- updated_at
@@ -145,6 +146,20 @@ UPDATE public.user_roles SET role = 'staff' WHERE user_id = '00000000-0000-0000-
 UPDATE public.user_roles SET role = 'teacher' WHERE user_id = '00000000-0000-0000-0000-000000000030';
 UPDATE public.user_roles SET role = 'teacher' WHERE user_id = '00000000-0000-0000-0000-000000000031';
 -- Students keep the default 'student' role from handle_new_user trigger
+
+-- -----------------------------------------------------------------------------
+-- PHONE NUMBERS (update profiles with phone numbers)
+-- -----------------------------------------------------------------------------
+UPDATE public.profiles SET phone_number = '0612345678' WHERE user_id = '00000000-0000-0000-0000-000000000001';
+UPDATE public.profiles SET phone_number = '0623456789' WHERE user_id = '00000000-0000-0000-0000-000000000010';
+UPDATE public.profiles SET phone_number = NULL WHERE user_id = '00000000-0000-0000-0000-000000000011';
+UPDATE public.profiles SET phone_number = '0634567890' WHERE user_id = '00000000-0000-0000-0000-000000000020';
+UPDATE public.profiles SET phone_number = '0645678901' WHERE user_id = '00000000-0000-0000-0000-000000000030';
+UPDATE public.profiles SET phone_number = NULL WHERE user_id = '00000000-0000-0000-0000-000000000031';
+UPDATE public.profiles SET phone_number = '0656789012' WHERE user_id = '00000000-0000-0000-0000-000000000100';
+UPDATE public.profiles SET phone_number = NULL WHERE user_id = '00000000-0000-0000-0000-000000000101';
+UPDATE public.profiles SET phone_number = '0667890123' WHERE user_id = '00000000-0000-0000-0000-000000000102';
+UPDATE public.profiles SET phone_number = NULL WHERE user_id = '00000000-0000-0000-0000-000000000103';
 
 -- -----------------------------------------------------------------------------
 -- TEACHER ↔ STUDENT RELATIONSHIPS
