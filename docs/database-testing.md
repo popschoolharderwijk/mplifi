@@ -2,22 +2,20 @@
 
 ## Hoe het werkt
 
+Tests draaien tegen een **lokale Supabase instance** in CI:
+
 ```
-PR met migrations, tests/rls/**, of tests/auth/**
+PR met wijzigingen in supabase/** of tests/**
        ↓
-Supabase Preview start (creëert preview branch database)
+pull-request-test-code-and-supabase.yml triggert
        ↓
-pull-request-database.yml wacht op "Supabase Preview" check
+Start lokale Supabase (supabase start -x ...)
        ↓
-Haalt credentials op: supabase branches get -o env
+Exporteert credentials van draaiende instance
        ↓
-Maakt key alias: SUPABASE_ANON_KEY → SUPABASE_PUBLISHABLE_DEFAULT_KEY
+Draait seed.sql (test users + relaties)
        ↓
-Linkt CLI naar preview branch (niet hoofdproject!)
-       ↓
-Seedt preview database: supabase db push --include-seed
-       ↓
-Tests draaien tegen preview branch met seed data
+Tests draaien tegen lokale Supabase
        ↓
 Verifieert RLS policies + Auth policies
 ```
@@ -26,9 +24,7 @@ Verifieert RLS policies + Auth policies
 
 ## Seed Data voor RLS Tests
 
-De preview branch wordt automatisch geseeded met testgebruikers uit `supabase/seed.sql`. De seed bevat ook teacher-student relaties voor het testen van RLS policies die afhankelijk zijn van deze koppelingen.
-
-> **Let op**: De Supabase CLI `branches get` command gebruikt nog de legacy naam `SUPABASE_ANON_KEY`. De workflow maakt automatisch een alias naar `SUPABASE_PUBLISHABLE_DEFAULT_KEY` voor forward compatibility.
+De lokale Supabase wordt automatisch geseeded met testgebruikers uit `supabase/seed.sql`. De seed bevat ook teacher-student relaties voor het testen van RLS policies die afhankelijk zijn van deze koppelingen.
 
 ---
 
@@ -48,12 +44,23 @@ De preview branch wordt automatisch geseeded met testgebruikers uit `supabase/se
 - ✅ Password policy enforcement (min. 32 chars, letters+digits+symbols)
 - ✅ Wachtwoorden zonder symbolen/cijfers/letters worden geweigerd
 - ✅ Valide wachtwoorden worden geaccepteerd (user unconfirmed)
+- ✅ OTP/Magic Link sign-in flow
 
 ---
 
 ## Lokaal tests draaien
 
-Voor lokale database tests heb je een `.env` bestand nodig. Zie [supabase-setup.md](supabase-setup.md) Stap 7 voor het aanmaken van dit bestand.
+Start eerst lokale Supabase:
+
+```bash
+# Start Supabase (minimale services voor testing)
+supabase start -x realtime,storage-api,imgproxy,edge-runtime,logflare,vector,studio,postgres-meta,supavisor
+
+# Of start alle services
+supabase start
+```
+
+Dan tests draaien:
 
 ```bash
 # Alle database tests
@@ -65,3 +72,9 @@ bun test rls
 # Alleen Auth tests
 bun test auth
 ```
+
+---
+
+## Environment Variables
+
+Voor lokaal testen zijn credentials automatisch beschikbaar via `supabase status`. Voor CI, zie [secrets.md](./secrets.md).

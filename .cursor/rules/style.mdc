@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+
+* Documentation (in ./docs/) should always be written in Dutch. 
+* Code and code comments should always be written in English
+* Front-end UI Elements should always be written in Dutch
+* Tools, CLI tools should always be completely writting in English (output, input and code)

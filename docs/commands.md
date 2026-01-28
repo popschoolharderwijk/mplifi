@@ -26,11 +26,20 @@ git push --force origin main
 # Link project
 supabase link --project-ref <project-id>
 
-# Get branch credentials (voor CI)
-supabase --experimental branches get <branch-name> -o env
+# Start lokale Supabase
+supabase start
 
-# Push migraties
+# Start lokale Supabase (minimaal voor tests)
+supabase start -x realtime,storage-api,imgproxy,edge-runtime,logflare,vector,studio,postgres-meta,supavisor
+
+# Stop lokale Supabase
+supabase stop
+
+# Push migraties naar remote
 supabase db push
+
+# Push config naar remote
+supabase config push
 
 # Generate types
 supabase gen types typescript --project-id <project-id> > src/integrations/supabase/types.ts
@@ -65,14 +74,17 @@ bun run createuser
 ## Testing
 
 ```bash
-# Unit tests
+# Unit tests (geen Supabase nodig)
 bun test code
 
-# RLS tests op remote dev server
-bun test rls --env-file .env
+# RLS tests (lokale Supabase moet draaien)
+bun test rls
+
+# Auth tests (lokale Supabase moet draaien)
+bun test auth
 
 # Alle tests
-bun test --env-file .env
+bun test
 ```
 
 ---

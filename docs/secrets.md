@@ -1,54 +1,45 @@
-# Secrets Configuration
+# Secrets Configuratie
 
 ## GitHub Secrets
 
-Required for CI workflows. Add via:
+Nodig voor CI workflows. Toe te voegen via:
 **GitHub** → Settings → Secrets and variables → Actions → New repository secret
 
-| Secret | Value | Used by |
-|--------|-------|---------|
-| `SUPABASE_ACCESS_TOKEN` | Personal access token from Supabase | CLI authentication |
-| `SUPABASE_PROJECT_ID` | `bnagepkxryauifzyoxgo` | Production project ref |
-| `RESEND_API_KEY` | API key from Resend.com | Email sending in tests |
+| Secret | Waarde | Gebruik |
+|--------|--------|---------|
+| `RESEND_API_KEY` | API key van Resend.com | Email verzenden in tests (SMTP config) |
 
-### SUPABASE_ACCESS_TOKEN
+### RESEND_API_KEY verkrijgen
 
-1. Go to https://supabase.com/dashboard/account/tokens
-2. Click "Generate new token"
-3. Name it (e.g. `github-ci`) and copy the token
-4. Add as GitHub secret
-
-### RESEND_API_KEY
-
-1. Go to https://resend.com/api-keys
-2. Create a new API key
-3. Add as GitHub secret
+1. Ga naar https://resend.com/api-keys
+2. Maak een nieuwe API key aan
+3. Voeg toe als GitHub secret
 
 ---
 
-## Local Supabase Credentials (CI)
+## Lokale Supabase Credentials (CI)
 
-For local Supabase testing in CI, credentials are **dynamically fetched** from the running instance using `supabase status -o json`. This ensures the JWT keys always match the local instance's secret.
+Voor lokale Supabase testing in CI worden credentials **dynamisch opgehaald** van de draaiende instance via `supabase status -o json`. Dit zorgt ervoor dat JWT keys altijd matchen met de secret van de lokale instance.
 
-| Variable | Source | Notes |
-|----------|--------|-------|
-| `SUPABASE_URL` | `supabase status` → `API_URL` | Local API endpoint |
-| `SUPABASE_PUBLISHABLE_DEFAULT_KEY` | `supabase status` → `ANON_KEY` | Anon key from running instance |
-| `SUPABASE_SERVICE_ROLE_KEY` | `supabase status` → `SERVICE_ROLE_KEY` | Service key from running instance |
+| Variabele | Bron | Notities |
+|-----------|------|----------|
+| `SUPABASE_URL` | `supabase status` → `API_URL` | Lokale API endpoint |
+| `SUPABASE_PUBLISHABLE_DEFAULT_KEY` | `supabase status` → `ANON_KEY` | Anon key van draaiende instance |
+| `SUPABASE_SERVICE_ROLE_KEY` | `supabase status` → `SERVICE_ROLE_KEY` | Service key van draaiende instance |
 
-See `.github/workflows/pull-request-supabase.yml` for implementation.
+Zie `.github/workflows/pull-request-test-code-and-supabase.yml` voor implementatie.
 
-⚠️ **Never commit production keys!** Production credentials should always be stored in GitHub Secrets or Supabase Dashboard.
+⚠️ **Commit nooit production keys!** Production credentials horen in GitHub Secrets of Supabase Dashboard.
 
 ---
 
 ## Supabase Edge Function Secrets
 
-For Edge Functions. Add via:
+Voor Edge Functions. Toe te voegen via:
 **Supabase Dashboard** → Project Settings → Edge Functions → Secrets
 
-| Secret | Description |
-|--------|-------------|
+| Secret | Beschrijving |
+|--------|--------------|
 | `SUPABASE_URL` | Project URL |
 | `SUPABASE_ANON_KEY` | Anon/public key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (⚠️ NEVER use `VITE_` prefix!) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (⚠️ NOOIT `VITE_` prefix!) |

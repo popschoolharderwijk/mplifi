@@ -163,21 +163,7 @@ Zie [secrets.md](secrets.md) voor:
 
 ---
 
-## Stap 9: GitHub Integratie (voor Production)
-
-Voor Supabase branching en preview deployments:
-
-1. **Dashboard** → **Project Settings** → **Integrations**
-2. Klik "GitHub" → "Connect"
-3. Selecteer repository
-4. Configureer:
-   - **Production branch**: `main`
-   - **Preview branches**: Enabled
-   - **Supabase changes only**: ✅ (preview alleen bij migration changes)
-
----
-
-## Stap 10: Config.toml Bijwerken
+## Stap 9: Config.toml Bijwerken
 
 Update `supabase/config.toml` met de nieuwe project ID en auth settings:
 
@@ -225,4 +211,3 @@ supabase config push
 - [ ] Config gepusht naar remote (`supabase config push`)
 - [ ] API keys opgehaald
 - [ ] Environment files aangemaakt (`.env`)
-- [ ] GitHub integratie (production)
