@@ -2,6 +2,9 @@ name: Pull Request - Supabase
 
 on:
   pull_request:
+    paths:
+      - 'supabase/**'
+      - 'tests/**'
   workflow_dispatch:
 
 jobs:
@@ -24,12 +27,6 @@ jobs:
         uses: supabase/setup-cli@v1
         with:
           version: latest
-
-      - name: Cache Docker images
-        uses: ScribeMD/docker-cache@0.5.0
-        with:
-          # Increment version (v1 -> v2) to reset cache after major Supabase CLI updates
-          key: docker-${{ runner.os }}-supabase-v1
 
       - name: Install dependencies
         run: bun install

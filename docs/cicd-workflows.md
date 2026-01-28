@@ -6,8 +6,7 @@
 |----------|------|---------|---------|
 | **PR CI** | `pull-request-ci.yml` | PRs to main | Biome linting |
 | **PR Tests** | `pull-request-test.yml` | All PRs | Unit tests (`tests/code/`) |
-| **PR Database** | `pull-request-database.yml` | `supabase/migrations/**`, `tests/rls/**`, `tests/auth/**` | RLS + Auth tests on preview branch |
-| **PR Supabase** | `pull-request-supabase.yml` | All PRs + manual | Full test suite on local Supabase |
+| **PR Supabase** | `pull-request-supabase.yml` | `supabase/**`, `tests/**` + manual | Full test suite on local Supabase |
 | **Formatting** | `formatting.yml` | Manual/callable | Auto-format with Biome |
 | **Linting** | `linting.yml` | Manual/callable | Lint + write errors to `.github/biome-errors.txt` |
 
@@ -15,11 +14,11 @@
 
 Runs all tests against a local Supabase instance in GitHub Actions:
 
-- **Docker caching**: Uses `ScribeMD/docker-cache` to cache Supabase Docker images (~2-3GB)
-- **First run**: Downloads all images (~3-5 min)
-- **Subsequent runs**: Restores from cache (~30-60 sec)
-- **Environment**: Uses standard local Supabase credentials (safe to commit, see [secrets.md](./secrets.md))
-- **Required secret**: `RESEND_API_KEY` for email tests
+- **Path filter**: Only runs when `supabase/**` or `tests/**` files change
+- **Manual trigger**: Can also be triggered manually via `workflow_dispatch`
+- **Docker images**: Downloads Supabase images on each run (~3-5 min)
+- **Environment**: Credentials are dynamically fetched from running Supabase instance (see [secrets.md](./secrets.md))
+- **Required secret**: `RESEND_API_KEY` for email tests (SMTP config)
 
 ---
 
@@ -42,5 +41,6 @@ Located in `.github/workflows-disabled/`:
 
 | Workflow | Reason disabled |
 |----------|-----------------|
+| `pull-request-database.yml` | Replaced by `pull-request-supabase.yml` (local Supabase instead of preview branches) |
 | `reset-lovable-branch.yml` | Manual trigger, not needed in normal flow |
 | `prevent-protected-folder-changes.yml` | Replaced by branch protection rules |
