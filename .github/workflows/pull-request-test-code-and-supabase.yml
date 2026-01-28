@@ -19,7 +19,7 @@ jobs:
               - 'supabase/**'
               - 'tests/**'
 
-  test-all:
+  pull-request-test-code-and-supabase:
     needs: check-changes
     if: needs.check-changes.outputs.should_run == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
