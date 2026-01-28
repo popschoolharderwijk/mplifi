@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+
+* Remember the development platform (Windows). Use PowerShell-compatible commands:
+  - ❌ `cd dir && bun dev` (Unix)
+  - ✅ `cd dir; bun dev` (PowerShell)
+  - ✅ Or run commands separately
