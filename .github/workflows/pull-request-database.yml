@@ -102,7 +102,7 @@ jobs:
           fi
 
           # Push and seed
-          supabase db push --include-seed --yes
+          # supabase db push --include-seed --yes
 
       - name: Run RLS tests
         if: steps.wait_for_preview.outputs.conclusion == 'success'

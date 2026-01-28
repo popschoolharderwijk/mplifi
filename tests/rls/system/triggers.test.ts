@@ -48,20 +48,24 @@ describe('Triggers: profiles immutability', () => {
 		// Update a valid field
 		const { data, error } = await db
 			.from('profiles')
-			.update({ display_name: 'Trigger Test' })
+			.update({ first_name: 'Trigger', last_name: 'Test' })
 			.eq('user_id', profile.user_id)
 			.select();
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(1);
-		expect(data?.[0]?.display_name).toBe('Trigger Test');
+		expect(data?.[0]?.first_name).toBe('Trigger');
+		expect(data?.[0]?.last_name).toBe('Test');
 
 		// Verify updated_at changed
 		const newUpdatedAt = data?.[0]?.updated_at;
 		expect(new Date(newUpdatedAt ?? 0).getTime()).toBeGreaterThan(new Date(originalUpdatedAt).getTime());
 
 		// Restore original name
-		await db.from('profiles').update({ display_name: profile.display_name }).eq('user_id', profile.user_id);
+		await db
+			.from('profiles')
+			.update({ first_name: profile.first_name, last_name: profile.last_name })
+			.eq('user_id', profile.user_id);
 	});
 });
 

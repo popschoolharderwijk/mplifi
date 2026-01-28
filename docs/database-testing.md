@@ -53,15 +53,15 @@ De preview branch wordt automatisch geseeded met testgebruikers uit `supabase/se
 
 ## Lokaal tests draaien
 
-Voor lokale database tests heb je een `.env.local` nodig. Zie [supabase-setup.md](supabase-setup.md) Stap 6 voor het aanmaken van dit bestand.
+Voor lokale database tests heb je een `.env` bestand nodig. Zie [supabase-setup.md](supabase-setup.md) Stap 7 voor het aanmaken van dit bestand.
 
 ```bash
 # Alle database tests
-bun test rls auth --env-file .env.local
+bun test rls auth 
 
 # Alleen RLS tests
-bun test rls --env-file .env.local
+bun test rls
 
 # Alleen Auth tests
-bun test auth --env-file .env.local
+bun test auth
 ```

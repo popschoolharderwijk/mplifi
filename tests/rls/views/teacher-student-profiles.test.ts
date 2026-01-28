@@ -97,7 +97,8 @@ describe('RLS: teacher_student_profiles VIEW (security_invoker)', () => {
 		const row = data?.[0];
 		if (row) {
 			expect(row).toHaveProperty('student_id');
-			expect(row).toHaveProperty('display_name');
+			expect(row).toHaveProperty('first_name');
+			expect(row).toHaveProperty('last_name');
 			expect(row).toHaveProperty('avatar_url');
 			expect(row).toHaveProperty('email');
 			expect(row).toHaveProperty('created_at');

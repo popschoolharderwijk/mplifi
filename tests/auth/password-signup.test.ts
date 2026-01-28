@@ -45,6 +45,11 @@ describe('Password policy enforcement', () => {
 			password: shortPassword,
 		});
 
+		// Track for cleanup if user was unexpectedly created
+		if (data.user?.id) {
+			createdUserIds.push(data.user.id);
+		}
+
 		expect(error).not.toBeNull();
 		expect(error?.message).toMatch(/password/i);
 		expect(data.user).toBeNull();
@@ -61,6 +66,11 @@ describe('Password policy enforcement', () => {
 			email: testEmail,
 			password: noSymbolsPassword,
 		});
+
+		// Track for cleanup if user was unexpectedly created
+		if (data.user?.id) {
+			createdUserIds.push(data.user.id);
+		}
 
 		expect(error).not.toBeNull();
 		expect(error?.message).toMatch(/password/i);
@@ -79,6 +89,11 @@ describe('Password policy enforcement', () => {
 			password: noDigitsPassword,
 		});
 
+		// Track for cleanup if user was unexpectedly created
+		if (data.user?.id) {
+			createdUserIds.push(data.user.id);
+		}
+
 		expect(error).not.toBeNull();
 		expect(error?.message).toMatch(/password/i);
 		expect(data.user).toBeNull();
@@ -96,6 +111,11 @@ describe('Password policy enforcement', () => {
 			password: noUppercasePassword,
 		});
 
+		// Track for cleanup if user was unexpectedly created
+		if (data.user?.id) {
+			createdUserIds.push(data.user.id);
+		}
+
 		expect(error).not.toBeNull();
 		expect(error?.message).toMatch(/password/i);
 		expect(data.user).toBeNull();
@@ -112,6 +132,11 @@ describe('Password policy enforcement', () => {
 			email: testEmail,
 			password: noLowercasePassword,
 		});
+
+		// Track for cleanup if user was unexpectedly created
+		if (data.user?.id) {
+			createdUserIds.push(data.user.id);
+		}
 
 		expect(error).not.toBeNull();
 		expect(error?.message).toMatch(/password/i);

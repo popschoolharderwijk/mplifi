@@ -1,30 +1,44 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { AuthProvider } from './components/AuthProvider';
+import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { ThemeProvider } from './components/ThemeProvider';
 import AuthCallback from './pages/AuthCallback';
-import Index from './pages/Index';
+import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
-import Register from './pages/Register';
+import Settings from './pages/Settings';
+import Students from './pages/Students';
+import Teachers from './pages/Teachers';
 
 const App = () => (
 	<BrowserRouter>
-		<AuthProvider>
-			<Routes>
-				<Route path="/login" element={<Login />} />
-				<Route path="/register" element={<Register />} />
-				<Route path="/auth/callback" element={<AuthCallback />} />
-				<Route
-					path="/"
-					element={
-						<ProtectedRoute>
-							<Index />
-						</ProtectedRoute>
-					}
-				/>
-				<Route path="*" element={<NotFound />} />
-			</Routes>
-		</AuthProvider>
+		<ThemeProvider defaultTheme="system">
+			<AuthProvider>
+				<Routes>
+					<Route path="/login" element={<Login />} />
+					<Route path="/auth/callback" element={<AuthCallback />} />
+
+					{/* Protected dashboard routes */}
+					<Route
+						element={
+							<ProtectedRoute>
+								<DashboardLayout />
+							</ProtectedRoute>
+						}
+					>
+						<Route path="/" element={<Dashboard />} />
+						<Route path="/students" element={<Students />} />
+						<Route path="/teachers" element={<Teachers />} />
+						<Route path="/settings" element={<Settings />} />
+					</Route>
+
+					<Route path="*" element={<NotFound />} />
+				</Routes>
+				<Toaster />
+			</AuthProvider>
+		</ThemeProvider>
 	</BrowserRouter>
 );
 

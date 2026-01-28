@@ -1,4 +1,4 @@
-project_id = "zdvscmogkfyddnnxzkdu"
+project_id = "mcp"
 
 [remotes.dev]
 project_id = "zdvscmogkfyddnnxzkdu"
@@ -11,3 +11,68 @@ project_id = "bnagepkxryauifzyoxgo"
 
 [remotes.prod.db.seed]
 enabled = false
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+# -------------
+# Auth defaults
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+minimum_password_length = 32
+password_requirements= "lower_upper_letters_digits_symbols"
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true
+max_frequency = "1s"
+otp_length = 8
+otp_expiry = 1800
+
+[auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 465
+user = "resend"
+pass = "env(RESEND_API_KEY)"
+admin_email = "noreply@popschoolharderwijk.nl"
+sender_name = "Popschool Harderwijk"
+
+[auth.rate_limit]
+email_sent = 500
+# Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
+sms_sent = 30
+# Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
+anonymous_users = 1
+# Number of sessions that can be refreshed in a 5 minute interval per IP address.
+token_refresh = 150
+# Number of sign up and sign-in requests that can be made in a 5 minute interval per IP address (excludes anonymous users).
+sign_in_sign_ups = 30
+# Number of OTP / Magic link verifications that can be made in a 5 minute interval per IP address.
+token_verifications = 30
+# Number of Web3 logins that can be made in a 5 minute interval per IP address.
+web3 = 30
+
+# -------------
+# Remote Auth Overrides
+# These settings override [auth] defaults when pushing to remote projects
+
+[remotes.dev.auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://098d4be4-b790-4fca-9806-d5dd653b8946.lovableproject.com/**", "https://id-preview--098d4be4-b790-4fca-9806-d5dd653b8946.lovable.app/**"]
+
+[remotes.prod.auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://098d4be4-b790-4fca-9806-d5dd653b8946.lovableproject.com/**", "https://id-preview--098d4be4-b790-4fca-9806-d5dd653b8946.lovable.app/**"]
+
+[remotes.prod.auth.rate_limit]
+email_sent = 200
