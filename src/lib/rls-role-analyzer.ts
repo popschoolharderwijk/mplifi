@@ -33,170 +33,73 @@ export interface PermissionEntry {
 	policies: string[];
 }
 
+export type PermissionCategory = 'select' | 'update' | 'insert' | 'delete';
+
+export interface GroupedPermission {
+	id: string;
+	category: PermissionCategory;
+	table: string;
+	description: string;
+	checkPolicies: (policies: RLSPolicy[]) => Map<AppRole, PermissionLevel>;
+}
+
+/**
+ * Category display names
+ */
+export const CATEGORY_DISPLAY: Record<PermissionCategory, string> = {
+	select: 'Bekijken',
+	update: 'Wijzigen',
+	insert: 'Toevoegen',
+	delete: 'Verwijderen',
+};
+
+/**
+ * Helper to create a default permission map
+ */
+function createDefaultMap(): Map<AppRole, PermissionLevel> {
+	const result = new Map<AppRole, PermissionLevel>();
+	for (const role of ALL_ROLES) {
+		result.set(role, 'none');
+	}
+	return result;
+}
+
 /**
  * Grouped permission descriptions for the matrix (user-friendly)
  */
-export const GROUPED_PERMISSIONS: Array<{
-	id: string;
-	description: string;
-	checkPolicies: (policies: RLSPolicy[]) => Map<AppRole, PermissionLevel>;
-}> = [
-	{
-		id: 'view_all_profiles',
-		description: 'Alle profielen bekijken',
-		checkPolicies: (policies) => {
-			const result = new Map<AppRole, PermissionLevel>();
-			for (const role of ALL_ROLES) {
-				result.set(role, 'none');
-			}
-
-			for (const policy of policies) {
-				if (policy.table_name !== 'profiles' || policy.command !== 'SELECT') continue;
-
-				const expr = policy.using_expression.toLowerCase();
-
-				if (expr.includes('is_site_admin') || expr.includes('is_admin')) {
-					result.set('site_admin', 'full');
-					result.set('admin', 'full');
-				}
-				if (expr.includes('is_staff')) {
-					result.set('staff', 'full');
-				}
-			}
-
-			return result;
-		},
-	},
+export const GROUPED_PERMISSIONS: GroupedPermission[] = [
+	// =====================================================
+	// PROFILES - SELECT
+	// =====================================================
 	{
 		id: 'view_own_profile',
-		description: 'Eigen profiel bekijken',
+		category: 'select',
+		table: 'profiles',
+		description: 'Eigen profiel',
 		checkPolicies: (policies) => {
-			const result = new Map<AppRole, PermissionLevel>();
-			for (const role of ALL_ROLES) {
-				result.set(role, 'none');
-			}
-
+			const result = createDefaultMap();
 			for (const policy of policies) {
 				if (policy.table_name !== 'profiles' || policy.command !== 'SELECT') continue;
-
 				const expr = policy.using_expression.toLowerCase();
-
-				// auth.uid() = user_id means own profile access
-				if (expr.includes('auth.uid()') && expr.includes('user_id')) {
-					for (const role of ALL_ROLES) {
-						result.set(role, 'own');
-					}
-				}
-			}
-
-			return result;
-		},
-	},
-	{
-		id: 'view_student_profiles',
-		description: 'Leerlingen van docent bekijken',
-		checkPolicies: (policies) => {
-			const result = new Map<AppRole, PermissionLevel>();
-			for (const role of ALL_ROLES) {
-				result.set(role, 'none');
-			}
-
-			for (const policy of policies) {
-				if (policy.table_name !== 'profiles' || policy.command !== 'SELECT') continue;
-
-				const expr = policy.using_expression.toLowerCase();
-
-				if (expr.includes('is_teacher') && expr.includes('teacher_students')) {
-					result.set('teacher', 'limited');
-				}
-			}
-
-			return result;
-		},
-	},
-	{
-		id: 'edit_all_profiles',
-		description: 'Alle profielen bewerken',
-		checkPolicies: (policies) => {
-			const result = new Map<AppRole, PermissionLevel>();
-			for (const role of ALL_ROLES) {
-				result.set(role, 'none');
-			}
-
-			for (const policy of policies) {
-				if (policy.table_name !== 'profiles' || policy.command !== 'UPDATE') continue;
-
-				const expr = policy.using_expression.toLowerCase();
-
-				if (expr.includes('is_site_admin') || expr.includes('is_admin')) {
-					result.set('site_admin', 'full');
-					result.set('admin', 'full');
-				}
-			}
-
-			return result;
-		},
-	},
-	{
-		id: 'edit_student_profiles',
-		description: 'Leerling profielen bewerken',
-		checkPolicies: (policies) => {
-			const result = new Map<AppRole, PermissionLevel>();
-			for (const role of ALL_ROLES) {
-				result.set(role, 'none');
-			}
-
-			for (const policy of policies) {
-				if (policy.table_name !== 'profiles' || policy.command !== 'UPDATE') continue;
-
-				const expr = policy.using_expression.toLowerCase();
-
-				if (expr.includes('is_staff') && expr.includes('is_student')) {
-					result.set('staff', 'limited');
-				}
-			}
-
-			return result;
-		},
-	},
-	{
-		id: 'edit_own_profile',
-		description: 'Eigen profiel bewerken',
-		checkPolicies: (policies) => {
-			const result = new Map<AppRole, PermissionLevel>();
-			for (const role of ALL_ROLES) {
-				result.set(role, 'none');
-			}
-
-			for (const policy of policies) {
-				if (policy.table_name !== 'profiles' || policy.command !== 'UPDATE') continue;
-
-				const expr = policy.using_expression.toLowerCase();
-
 				if (expr.includes('auth.uid()') && expr.includes('user_id') && !expr.includes('is_')) {
 					for (const role of ALL_ROLES) {
 						result.set(role, 'own');
 					}
 				}
 			}
-
 			return result;
 		},
 	},
 	{
-		id: 'view_all_roles',
-		description: 'Alle rollen bekijken',
+		id: 'view_all_profiles',
+		category: 'select',
+		table: 'profiles',
+		description: 'Alle profielen',
 		checkPolicies: (policies) => {
-			const result = new Map<AppRole, PermissionLevel>();
-			for (const role of ALL_ROLES) {
-				result.set(role, 'none');
-			}
-
+			const result = createDefaultMap();
 			for (const policy of policies) {
-				if (policy.table_name !== 'user_roles' || policy.command !== 'SELECT') continue;
-
+				if (policy.table_name !== 'profiles' || policy.command !== 'SELECT') continue;
 				const expr = policy.using_expression.toLowerCase();
-
 				if (expr.includes('is_site_admin') || expr.includes('is_admin')) {
 					result.set('site_admin', 'full');
 					result.set('admin', 'full');
@@ -205,92 +108,115 @@ export const GROUPED_PERMISSIONS: Array<{
 					result.set('staff', 'full');
 				}
 			}
-
 			return result;
 		},
 	},
 	{
-		id: 'view_own_role',
-		description: 'Eigen rol bekijken',
+		id: 'view_student_profiles',
+		category: 'select',
+		table: 'profiles',
+		description: 'Leerling profielen (eigen)',
 		checkPolicies: (policies) => {
-			const result = new Map<AppRole, PermissionLevel>();
-			for (const role of ALL_ROLES) {
-				result.set(role, 'none');
+			const result = createDefaultMap();
+			for (const policy of policies) {
+				if (policy.table_name !== 'profiles' || policy.command !== 'SELECT') continue;
+				const expr = policy.using_expression.toLowerCase();
+				if (expr.includes('is_teacher') && expr.includes('teacher_students')) {
+					result.set('teacher', 'limited');
+				}
 			}
-
+			return result;
+		},
+	},
+	// =====================================================
+	// PROFILES - UPDATE
+	// =====================================================
+	{
+		id: 'edit_own_profile',
+		category: 'update',
+		table: 'profiles',
+		description: 'Eigen profiel',
+		checkPolicies: (policies) => {
+			const result = createDefaultMap();
+			for (const policy of policies) {
+				if (policy.table_name !== 'profiles' || policy.command !== 'UPDATE') continue;
+				const expr = policy.using_expression.toLowerCase();
+				if (expr.includes('auth.uid()') && expr.includes('user_id') && !expr.includes('is_')) {
+					for (const role of ALL_ROLES) {
+						result.set(role, 'own');
+					}
+				}
+			}
+			return result;
+		},
+	},
+	{
+		id: 'edit_all_profiles',
+		category: 'update',
+		table: 'profiles',
+		description: 'Alle profielen',
+		checkPolicies: (policies) => {
+			const result = createDefaultMap();
+			for (const policy of policies) {
+				if (policy.table_name !== 'profiles' || policy.command !== 'UPDATE') continue;
+				const expr = policy.using_expression.toLowerCase();
+				if (expr.includes('is_site_admin') || expr.includes('is_admin')) {
+					result.set('site_admin', 'full');
+					result.set('admin', 'full');
+				}
+			}
+			return result;
+		},
+	},
+	{
+		id: 'edit_student_profiles',
+		category: 'update',
+		table: 'profiles',
+		description: 'Leerling profielen',
+		checkPolicies: (policies) => {
+			const result = createDefaultMap();
+			for (const policy of policies) {
+				if (policy.table_name !== 'profiles' || policy.command !== 'UPDATE') continue;
+				const expr = policy.using_expression.toLowerCase();
+				if (expr.includes('is_staff') && expr.includes('is_student')) {
+					result.set('staff', 'limited');
+				}
+			}
+			return result;
+		},
+	},
+	// =====================================================
+	// USER_ROLES - SELECT
+	// =====================================================
+	{
+		id: 'view_own_role',
+		category: 'select',
+		table: 'user_roles',
+		description: 'Eigen rol',
+		checkPolicies: (policies) => {
+			const result = createDefaultMap();
 			for (const policy of policies) {
 				if (policy.table_name !== 'user_roles' || policy.command !== 'SELECT') continue;
-
 				const expr = policy.using_expression.toLowerCase();
-
 				if (expr.includes('auth.uid()') && expr.includes('user_id')) {
 					for (const role of ALL_ROLES) {
 						result.set(role, 'own');
 					}
 				}
 			}
-
 			return result;
 		},
 	},
 	{
-		id: 'change_roles',
-		description: 'Rollen wijzigen',
+		id: 'view_all_roles',
+		category: 'select',
+		table: 'user_roles',
+		description: 'Alle rollen',
 		checkPolicies: (policies) => {
-			const result = new Map<AppRole, PermissionLevel>();
-			for (const role of ALL_ROLES) {
-				result.set(role, 'none');
-			}
-
+			const result = createDefaultMap();
 			for (const policy of policies) {
-				if (policy.table_name !== 'user_roles' || policy.command !== 'UPDATE') continue;
-
+				if (policy.table_name !== 'user_roles' || policy.command !== 'SELECT') continue;
 				const expr = policy.using_expression.toLowerCase();
-
-				if (expr.includes('is_site_admin')) {
-					result.set('site_admin', 'limited'); // Limited because can't change own role
-				}
-			}
-
-			return result;
-		},
-	},
-	{
-		id: 'view_own_students',
-		description: 'Eigen leerlingen bekijken',
-		checkPolicies: (policies) => {
-			const result = new Map<AppRole, PermissionLevel>();
-			for (const role of ALL_ROLES) {
-				result.set(role, 'none');
-			}
-
-			for (const policy of policies) {
-				if (policy.table_name !== 'teacher_students' || policy.command !== 'SELECT') continue;
-
-				const expr = policy.using_expression.toLowerCase();
-
-				if (expr.includes('teacher_id') && expr.includes('auth.uid()')) {
-					result.set('teacher', 'own');
-				}
-			}
-
-			return result;
-		},
-	},
-	{
-		id: 'view_all_student_links',
-		description: 'Alle docent-leerling koppelingen bekijken',
-		checkPolicies: (policies) => {
-			const result = new Map<AppRole, PermissionLevel>();
-			for (const role of ALL_ROLES) {
-				result.set(role, 'none');
-			}
-
-			for (const policy of policies) {
-				if (policy.table_name !== 'teacher_students' || policy.command !== 'SELECT') continue;
-
-				const expr = policy.using_expression.toLowerCase();
-
 				if (expr.includes('is_site_admin') || expr.includes('is_admin')) {
 					result.set('site_admin', 'full');
 					result.set('admin', 'full');
@@ -299,67 +225,199 @@ export const GROUPED_PERMISSIONS: Array<{
 					result.set('staff', 'full');
 				}
 			}
-
 			return result;
 		},
 	},
 	{
-		id: 'link_students',
-		description: 'Leerlingen aan zichzelf koppelen',
+		id: 'view_student_roles',
+		category: 'select',
+		table: 'user_roles',
+		description: 'Leerling rollen (eigen)',
 		checkPolicies: (policies) => {
-			const result = new Map<AppRole, PermissionLevel>();
-			for (const role of ALL_ROLES) {
-				result.set(role, 'none');
-			}
-
+			const result = createDefaultMap();
 			for (const policy of policies) {
-				if (policy.table_name !== 'teacher_students' || policy.command !== 'INSERT') continue;
-
-				const expr = (policy.using_expression + ' ' + policy.with_check_expression).toLowerCase();
-
-				if (expr.includes('is_teacher') && expr.includes('teacher_id')) {
-					result.set('teacher', 'own');
+				if (policy.table_name !== 'user_roles' || policy.command !== 'SELECT') continue;
+				const expr = policy.using_expression.toLowerCase();
+				if (expr.includes('is_teacher') && expr.includes('teacher_students')) {
+					result.set('teacher', 'limited');
 				}
 			}
-
 			return result;
 		},
 	},
+	// =====================================================
+	// USER_ROLES - UPDATE
+	// =====================================================
 	{
-		id: 'unlink_students',
-		description: 'Leerlingen van zichzelf ontkoppelen',
+		id: 'change_roles',
+		category: 'update',
+		table: 'user_roles',
+		description: 'Rollen wijzigen',
 		checkPolicies: (policies) => {
-			const result = new Map<AppRole, PermissionLevel>();
-			for (const role of ALL_ROLES) {
-				result.set(role, 'none');
-			}
-
+			const result = createDefaultMap();
 			for (const policy of policies) {
-				if (policy.table_name !== 'teacher_students' || policy.command !== 'DELETE') continue;
-
+				if (policy.table_name !== 'user_roles' || policy.command !== 'UPDATE') continue;
 				const expr = policy.using_expression.toLowerCase();
-
+				if (expr.includes('is_site_admin')) {
+					result.set('site_admin', 'limited'); // Limited because can't change own role
+				}
+			}
+			return result;
+		},
+	},
+	// =====================================================
+	// TEACHER_STUDENTS - SELECT
+	// =====================================================
+	{
+		id: 'view_own_students',
+		category: 'select',
+		table: 'teacher_students',
+		description: 'Eigen leerlingen',
+		checkPolicies: (policies) => {
+			const result = createDefaultMap();
+			for (const policy of policies) {
+				if (policy.table_name !== 'teacher_students' || policy.command !== 'SELECT') continue;
+				const expr = policy.using_expression.toLowerCase();
 				if (expr.includes('teacher_id') && expr.includes('auth.uid()')) {
 					result.set('teacher', 'own');
 				}
 			}
-
+			return result;
+		},
+	},
+	{
+		id: 'view_all_student_links',
+		category: 'select',
+		table: 'teacher_students',
+		description: 'Alle koppelingen',
+		checkPolicies: (policies) => {
+			const result = createDefaultMap();
+			for (const policy of policies) {
+				if (policy.table_name !== 'teacher_students' || policy.command !== 'SELECT') continue;
+				const expr = policy.using_expression.toLowerCase();
+				if (expr.includes('is_site_admin') || expr.includes('is_admin')) {
+					result.set('site_admin', 'full');
+					result.set('admin', 'full');
+				}
+				if (expr.includes('is_staff')) {
+					result.set('staff', 'full');
+				}
+			}
+			return result;
+		},
+	},
+	// =====================================================
+	// TEACHER_STUDENTS - INSERT
+	// =====================================================
+	{
+		id: 'link_students',
+		category: 'insert',
+		table: 'teacher_students',
+		description: 'Leerlingen koppelen',
+		checkPolicies: (policies) => {
+			const result = createDefaultMap();
+			for (const policy of policies) {
+				if (policy.table_name !== 'teacher_students' || policy.command !== 'INSERT') continue;
+				const expr = (policy.using_expression + ' ' + policy.with_check_expression).toLowerCase();
+				if (expr.includes('is_teacher') && expr.includes('teacher_id')) {
+					result.set('teacher', 'own');
+				}
+			}
+			return result;
+		},
+	},
+	// =====================================================
+	// TEACHER_STUDENTS - DELETE
+	// =====================================================
+	{
+		id: 'unlink_students',
+		category: 'delete',
+		table: 'teacher_students',
+		description: 'Leerlingen ontkoppelen',
+		checkPolicies: (policies) => {
+			const result = createDefaultMap();
+			for (const policy of policies) {
+				if (policy.table_name !== 'teacher_students' || policy.command !== 'DELETE') continue;
+				const expr = policy.using_expression.toLowerCase();
+				if (expr.includes('teacher_id') && expr.includes('auth.uid()')) {
+					result.set('teacher', 'own');
+				}
+			}
+			return result;
+		},
+	},
+	// =====================================================
+	// AUTH.USERS - DELETE (via can_delete_user function)
+	// =====================================================
+	// These are not RLS policies but authorization function logic.
+	// The can_delete_user() function in the database defines these rules.
+	{
+		id: 'delete_own_account',
+		category: 'delete',
+		table: 'auth.users',
+		description: 'Eigen account verwijderen',
+		checkPolicies: () => {
+			// All authenticated users can delete their own account
+			// This is defined in can_delete_user(): _requester_id = _target_id
+			const result = createDefaultMap();
+			for (const role of ALL_ROLES) {
+				result.set(role, 'own');
+			}
+			return result;
+		},
+	},
+	{
+		id: 'delete_other_accounts',
+		category: 'delete',
+		table: 'auth.users',
+		description: 'Andere accounts verwijderen',
+		checkPolicies: () => {
+			// Admin and site_admin can delete any user's account
+			// This is defined in can_delete_user(): is_admin() OR is_site_admin()
+			const result = createDefaultMap();
+			result.set('site_admin', 'full');
+			result.set('admin', 'full');
 			return result;
 		},
 	},
 ];
 
+export interface AnalyzedPermission {
+	id: string;
+	category: PermissionCategory;
+	table: string;
+	description: string;
+	permissions: Map<AppRole, PermissionLevel>;
+}
+
 /**
  * Analyze policies and generate the role permission matrix
  */
-export function analyzeRolePermissions(
-	policies: RLSPolicy[],
-): Array<{ id: string; description: string; permissions: Map<AppRole, PermissionLevel> }> {
+export function analyzeRolePermissions(policies: RLSPolicy[]): AnalyzedPermission[] {
 	return GROUPED_PERMISSIONS.map((permission) => ({
 		id: permission.id,
+		category: permission.category,
+		table: permission.table,
 		description: permission.description,
 		permissions: permission.checkPolicies(policies),
 	}));
+}
+
+/**
+ * Group analyzed permissions by category
+ */
+export function groupPermissionsByCategory(
+	permissions: AnalyzedPermission[],
+): Map<PermissionCategory, AnalyzedPermission[]> {
+	const grouped = new Map<PermissionCategory, AnalyzedPermission[]>();
+
+	for (const permission of permissions) {
+		const existing = grouped.get(permission.category) || [];
+		existing.push(permission);
+		grouped.set(permission.category, existing);
+	}
+
+	return grouped;
 }
 
 /**

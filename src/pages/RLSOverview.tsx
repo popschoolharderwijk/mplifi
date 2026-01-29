@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { LuCheck, LuMinus, LuSearch, LuShield, LuUsers, LuX } from 'react-icons/lu';
+import { Fragment, useEffect, useState } from 'react';
+import { LuCheck, LuChevronDown, LuChevronRight, LuMinus, LuSearch, LuShield, LuUsers, LuX } from 'react-icons/lu';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +9,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { analyzeRolePermissions, getPermissionDisplay, type PermissionLevel } from '@/lib/rls-role-analyzer';
+import {
+	analyzeRolePermissions,
+	CATEGORY_DISPLAY,
+	getPermissionDisplay,
+	groupPermissionsByCategory,
+	type PermissionCategory,
+	type PermissionLevel,
+} from '@/lib/rls-role-analyzer';
 import { fetchTestMapping, type TestInfo } from '@/lib/rls-test-parser';
 import { ALL_ROLES, getRoleDisplayName, RoleHeader } from '@/lib/role-icons';
 
@@ -38,10 +45,60 @@ function PermissionIcon({ level }: { level: PermissionLevel }) {
 }
 
 /**
+ * Category styling for visual distinction
+ */
+const CATEGORY_STYLES: Record<PermissionCategory, { bg: string; border: string; icon: string }> = {
+	select: {
+		bg: 'bg-blue-500/10',
+		border: 'border-l-blue-500',
+		icon: '👁️',
+	},
+	update: {
+		bg: 'bg-amber-500/10',
+		border: 'border-l-amber-500',
+		icon: '✏️',
+	},
+	insert: {
+		bg: 'bg-green-500/10',
+		border: 'border-l-green-500',
+		icon: '➕',
+	},
+	delete: {
+		bg: 'bg-red-500/10',
+		border: 'border-l-red-500',
+		icon: '🗑️',
+	},
+};
+
+/**
  * Roles Comparison Matrix Component
  */
 function RolesComparisonMatrix({ policies }: { policies: RLSPolicy[] }) {
 	const permissions = analyzeRolePermissions(policies);
+	const groupedPermissions = groupPermissionsByCategory(permissions);
+
+	// Define category order
+	const categoryOrder: PermissionCategory[] = ['select', 'update', 'insert', 'delete'];
+
+	// Track which categories are expanded (all expanded by default)
+	const [expandedCategories, setExpandedCategories] = useState<Set<PermissionCategory>>(new Set(categoryOrder));
+
+	// Toggle category expansion
+	const toggleCategory = (category: PermissionCategory) => {
+		setExpandedCategories((prev) => {
+			const newSet = new Set(prev);
+			if (newSet.has(category)) {
+				newSet.delete(category);
+			} else {
+				newSet.add(category);
+			}
+			return newSet;
+		});
+	};
+
+	// Expand/collapse all
+	const expandAll = () => setExpandedCategories(new Set(categoryOrder));
+	const collapseAll = () => setExpandedCategories(new Set());
 
 	if (policies.length === 0) {
 		return null;
@@ -50,62 +107,131 @@ function RolesComparisonMatrix({ policies }: { policies: RLSPolicy[] }) {
 	return (
 		<Card>
 			<CardHeader>
-				<div className="flex items-center gap-2">
-					<LuUsers className="h-5 w-5 text-primary" />
-					<div>
-						<CardTitle>Rollen Vergelijking</CardTitle>
-						<CardDescription>Overzicht van rechten per rol</CardDescription>
+				<div className="flex items-center justify-between">
+					<div className="flex items-center gap-2">
+						<LuUsers className="h-5 w-5 text-primary" />
+						<div>
+							<CardTitle>Rollen Vergelijking</CardTitle>
+							<CardDescription>Overzicht van rechten per rol, gegroepeerd per operatie</CardDescription>
+						</div>
+					</div>
+					{/* Expand/Collapse buttons */}
+					<div className="flex gap-2 text-xs">
+						<button
+							type="button"
+							onClick={expandAll}
+							className="px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
+						>
+							Alles uitklappen
+						</button>
+						<button
+							type="button"
+							onClick={collapseAll}
+							className="px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
+						>
+							Alles inklappen
+						</button>
 					</div>
 				</div>
 			</CardHeader>
 			<CardContent>
 				<TooltipProvider>
-					<div className="overflow-x-auto">
+					<div className="overflow-auto max-h-[500px]">
 						<table className="w-full border-collapse">
-							<thead>
-								<tr className="border-b bg-muted/50">
-									<th className="sticky left-0 z-10 bg-muted/50 p-3 text-left font-semibold">
-										Functie
+							<thead className="sticky top-0 z-20">
+								<tr className="border-b bg-muted">
+									<th className="sticky left-0 z-30 bg-muted p-3 text-left font-semibold min-w-[200px]">
+										Tabel / Recht
 									</th>
 									{ALL_ROLES.map((role) => (
-										<th key={role} className="p-3 text-center font-semibold whitespace-nowrap">
+										<th
+											key={role}
+											className="p-3 text-center font-semibold whitespace-nowrap bg-muted"
+										>
 											<RoleHeader role={role} />
 										</th>
 									))}
 								</tr>
 							</thead>
 							<tbody>
-								{permissions.map((permission, idx) => (
-									<tr
-										key={permission.id}
-										className={`border-b hover:bg-muted/30 ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'}`}
-									>
-										<td className="sticky left-0 z-10 bg-inherit p-3 text-sm font-medium">
-											{permission.description}
-										</td>
-										{ALL_ROLES.map((role) => {
-											const level = permission.permissions.get(role) || 'none';
-											const display = getPermissionDisplay(level);
+								{categoryOrder.map((category) => {
+									const categoryPermissions = groupedPermissions.get(category) || [];
+									if (categoryPermissions.length === 0) return null;
 
-											return (
-												<td key={role} className="p-3 text-center">
-													<Tooltip>
-														<TooltipTrigger asChild>
-															<div className="flex items-center justify-center">
-																<PermissionIcon level={level} />
-															</div>
-														</TooltipTrigger>
-														<TooltipContent>
-															<p>
-																{getRoleDisplayName(role)}: {display.label}
-															</p>
-														</TooltipContent>
-													</Tooltip>
+									const style = CATEGORY_STYLES[category];
+									const isExpanded = expandedCategories.has(category);
+
+									return (
+										<Fragment key={category}>
+											{/* Category header row - clickable */}
+											<tr
+												className={`${style.bg} cursor-pointer hover:opacity-80 transition-opacity`}
+												onClick={() => toggleCategory(category)}
+											>
+												<td
+													colSpan={ALL_ROLES.length + 1}
+													className={`p-3 font-bold text-sm border-l-4 ${style.border}`}
+												>
+													<div className="flex items-center gap-2">
+														{isExpanded ? (
+															<LuChevronDown className="h-4 w-4" />
+														) : (
+															<LuChevronRight className="h-4 w-4" />
+														)}
+														<span>{style.icon}</span>
+														<span>{CATEGORY_DISPLAY[category]}</span>
+														<span className="text-xs font-normal text-muted-foreground ml-2">
+															({categoryPermissions.length})
+														</span>
+													</div>
 												</td>
-											);
-										})}
-									</tr>
-								))}
+											</tr>
+											{/* Permission rows for this category - only show if expanded */}
+											{isExpanded &&
+												categoryPermissions.map((permission, idx) => (
+													<tr
+														key={permission.id}
+														className={`border-b hover:bg-muted/30 ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'}`}
+													>
+														<td
+															className={`sticky left-0 z-10 bg-inherit p-3 text-sm border-l-4 ${style.border}`}
+														>
+															<div className="flex flex-col pl-6">
+																<span className="font-medium">
+																	{permission.description}
+																</span>
+																<span className="text-xs text-muted-foreground">
+																	{permission.table}
+																</span>
+															</div>
+														</td>
+														{ALL_ROLES.map((role) => {
+															const level = permission.permissions.get(role) || 'none';
+															const display = getPermissionDisplay(level);
+
+															return (
+																<td key={role} className="p-3 text-center">
+																	<Tooltip>
+																		<TooltipTrigger asChild>
+																			<div className="flex items-center justify-center">
+																				<PermissionIcon level={level} />
+																			</div>
+																		</TooltipTrigger>
+																		<TooltipContent>
+																			<p>
+																				{getRoleDisplayName(role)}:{' '}
+																				{display.label}
+																			</p>
+																		</TooltipContent>
+																	</Tooltip>
+																</td>
+															);
+														})}
+													</tr>
+												))}
+										</Fragment>
+									);
+								})}
 							</tbody>
 						</table>
 					</div>
@@ -125,6 +251,16 @@ function RolesComparisonMatrix({ policies }: { policies: RLSPolicy[] }) {
 						<LuX className="h-4 w-4 text-red-600 dark:text-red-400" />
 						<span>Geen toegang</span>
 					</div>
+				</div>
+
+				{/* Category Legend */}
+				<div className="mt-2 flex flex-wrap gap-4 text-xs text-muted-foreground border-t pt-2">
+					{categoryOrder.map((category) => (
+						<div key={category} className="flex items-center gap-1">
+							<span>{CATEGORY_STYLES[category].icon}</span>
+							<span>{CATEGORY_DISPLAY[category]}</span>
+						</div>
+					))}
 				</div>
 			</CardContent>
 		</Card>

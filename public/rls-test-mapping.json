@@ -1,234 +1,234 @@
 {
-  "profiles_select_own": [
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/select.test.ts",
-      "describeBlock": "RLS: profiles SELECT",
-      "testName": "teacher sees own profile and their linked students only",
-      "tableName": "profiles",
-      "operation": "SELECT"
-    },
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/select.test.ts",
-      "describeBlock": "RLS: profiles SELECT",
-      "testName": "student sees only own profile",
-      "tableName": "profiles",
-      "operation": "SELECT"
-    }
-  ],
-  "profiles_select_admin": [
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/select.test.ts",
-      "describeBlock": "RLS: profiles SELECT",
-      "testName": "site_admin sees all profiles",
-      "tableName": "profiles",
-      "operation": "SELECT"
-    },
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/select.test.ts",
-      "describeBlock": "RLS: profiles SELECT",
-      "testName": "admin sees all profiles",
-      "tableName": "profiles",
-      "operation": "SELECT"
-    }
-  ],
-  "profiles_select_staff": [
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/select.test.ts",
-      "describeBlock": "RLS: profiles SELECT",
-      "testName": "staff sees all profiles",
-      "tableName": "profiles",
-      "operation": "SELECT"
-    }
-  ],
-  "profiles_select_teacher_students": [
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/select.test.ts",
-      "describeBlock": "RLS: profiles SELECT",
-      "testName": "teacher sees own profile and their linked students only",
-      "tableName": "profiles",
-      "operation": "SELECT"
-    },
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/select.test.ts",
-      "describeBlock": "RLS: profiles SELECT",
-      "testName": "teacher cannot see students of other teachers",
-      "tableName": "profiles",
-      "operation": "SELECT"
-    }
-  ],
-  "profiles_update_own": [
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/update.test.ts",
-      "describeBlock": "RLS: profiles UPDATE - own profile",
-      "testName": "student can update own profile",
-      "tableName": "profiles",
-      "operation": "UPDATE"
-    },
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/update.test.ts",
-      "describeBlock": "RLS: profiles UPDATE - own profile",
-      "testName": "teacher can update own profile",
-      "tableName": "profiles",
-      "operation": "UPDATE"
-    },
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/update.test.ts",
-      "describeBlock": "RLS: profiles UPDATE - own profile",
-      "testName": "staff can update own profile",
-      "tableName": "profiles",
-      "operation": "UPDATE"
-    },
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/update.test.ts",
-      "describeBlock": "RLS: profiles UPDATE - own profile",
-      "testName": "admin can update own profile",
-      "tableName": "profiles",
-      "operation": "UPDATE"
-    },
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/update.test.ts",
-      "describeBlock": "RLS: profiles UPDATE - own profile",
-      "testName": "site_admin can update own profile",
-      "tableName": "profiles",
-      "operation": "UPDATE"
-    }
-  ],
-  "profiles_update_admin": [
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/update.test.ts",
-      "describeBlock": "RLS: profiles UPDATE - own profile",
-      "testName": "admin can update own profile",
-      "tableName": "profiles",
-      "operation": "UPDATE"
-    },
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/update.test.ts",
-      "describeBlock": "RLS: profiles UPDATE - own profile",
-      "testName": "site_admin can update own profile",
-      "tableName": "profiles",
-      "operation": "UPDATE"
-    },
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/update.test.ts",
-      "describeBlock": "RLS: profiles UPDATE - other profiles",
-      "testName": "admin can update any profile",
-      "tableName": "profiles",
-      "operation": "UPDATE"
-    },
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/update.test.ts",
-      "describeBlock": "RLS: profiles UPDATE - other profiles",
-      "testName": "site_admin can update any profile",
-      "tableName": "profiles",
-      "operation": "UPDATE"
-    }
-  ],
-  "profiles_update_staff": [
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/update.test.ts",
-      "describeBlock": "RLS: profiles UPDATE - own profile",
-      "testName": "staff can update own profile",
-      "tableName": "profiles",
-      "operation": "UPDATE"
-    },
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/update.test.ts",
-      "describeBlock": "RLS: profiles UPDATE - other profiles",
-      "testName": "staff can update student profiles",
-      "tableName": "profiles",
-      "operation": "UPDATE"
-    },
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/profiles/update.test.ts",
-      "describeBlock": "RLS: profiles UPDATE - other profiles",
-      "testName": "staff cannot update non-student profiles",
-      "tableName": "profiles",
-      "operation": "UPDATE"
-    }
-  ],
-  "roles_select_own": [
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/user-roles/select.test.ts",
-      "describeBlock": "RLS: user_roles SELECT",
-      "testName": "teacher sees own role and linked students roles",
-      "tableName": "user_roles",
-      "operation": "SELECT"
-    },
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/user-roles/select.test.ts",
-      "describeBlock": "RLS: user_roles SELECT",
-      "testName": "student sees only own role",
-      "tableName": "user_roles",
-      "operation": "SELECT"
-    }
-  ],
-  "roles_select_admin": [
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/user-roles/select.test.ts",
-      "describeBlock": "RLS: user_roles SELECT",
-      "testName": "site_admin sees all user roles",
-      "tableName": "user_roles",
-      "operation": "SELECT"
-    },
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/user-roles/select.test.ts",
-      "describeBlock": "RLS: user_roles SELECT",
-      "testName": "admin sees all user roles",
-      "tableName": "user_roles",
-      "operation": "SELECT"
-    }
-  ],
-  "roles_select_staff": [
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/user-roles/select.test.ts",
-      "describeBlock": "RLS: user_roles SELECT",
-      "testName": "staff sees all user roles",
-      "tableName": "user_roles",
-      "operation": "SELECT"
-    }
-  ],
-  "roles_select_teacher_students": [
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/user-roles/select.test.ts",
-      "describeBlock": "RLS: user_roles SELECT",
-      "testName": "teacher sees own role and linked students roles",
-      "tableName": "user_roles",
-      "operation": "SELECT"
-    },
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/user-roles/select.test.ts",
-      "describeBlock": "RLS: user_roles SELECT",
-      "testName": "teacher cannot see roles of students not linked to them",
-      "tableName": "user_roles",
-      "operation": "SELECT"
-    },
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/user-roles/select.test.ts",
-      "describeBlock": "RLS: user_roles SELECT",
-      "testName": "teacher cannot see other teacher roles",
-      "tableName": "user_roles",
-      "operation": "SELECT"
-    }
-  ],
-  "roles_update_site_admin": [
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/user-roles/update.test.ts",
-      "describeBlock": "RLS: user_roles UPDATE - other users",
-      "testName": "site_admin can update other user roles",
-      "tableName": "user_roles",
-      "operation": "UPDATE"
-    },
-    {
-      "filePath": "C:/git/popschool/mcp/tests/rls/user-roles/update.test.ts",
-      "describeBlock": "RLS: user_roles UPDATE - own role",
-      "testName": "site_admin cannot demote themselves",
-      "tableName": "user_roles",
-      "operation": "UPDATE"
-    }
-  ],
-  "teacher_students_select_own": [],
-  "teacher_students_insert_own": [],
-  "teacher_students_delete_own": [],
-  "teacher_students_select_admin": [],
-  "teacher_students_select_staff": []
+	"profiles_select_own": [
+		{
+			"filePath": "rls/profiles/select.test.ts",
+			"describeBlock": "RLS: profiles SELECT",
+			"testName": "teacher sees own profile and their linked students only",
+			"tableName": "profiles",
+			"operation": "SELECT"
+		},
+		{
+			"filePath": "rls/profiles/select.test.ts",
+			"describeBlock": "RLS: profiles SELECT",
+			"testName": "student sees only own profile",
+			"tableName": "profiles",
+			"operation": "SELECT"
+		}
+	],
+	"profiles_select_admin": [
+		{
+			"filePath": "rls/profiles/select.test.ts",
+			"describeBlock": "RLS: profiles SELECT",
+			"testName": "site_admin sees all profiles",
+			"tableName": "profiles",
+			"operation": "SELECT"
+		},
+		{
+			"filePath": "rls/profiles/select.test.ts",
+			"describeBlock": "RLS: profiles SELECT",
+			"testName": "admin sees all profiles",
+			"tableName": "profiles",
+			"operation": "SELECT"
+		}
+	],
+	"profiles_select_staff": [
+		{
+			"filePath": "rls/profiles/select.test.ts",
+			"describeBlock": "RLS: profiles SELECT",
+			"testName": "staff sees all profiles",
+			"tableName": "profiles",
+			"operation": "SELECT"
+		}
+	],
+	"profiles_select_teacher_students": [
+		{
+			"filePath": "rls/profiles/select.test.ts",
+			"describeBlock": "RLS: profiles SELECT",
+			"testName": "teacher sees own profile and their linked students only",
+			"tableName": "profiles",
+			"operation": "SELECT"
+		},
+		{
+			"filePath": "rls/profiles/select.test.ts",
+			"describeBlock": "RLS: profiles SELECT",
+			"testName": "teacher cannot see students of other teachers",
+			"tableName": "profiles",
+			"operation": "SELECT"
+		}
+	],
+	"profiles_update_own": [
+		{
+			"filePath": "rls/profiles/update.test.ts",
+			"describeBlock": "RLS: profiles UPDATE - own profile",
+			"testName": "student can update own profile",
+			"tableName": "profiles",
+			"operation": "UPDATE"
+		},
+		{
+			"filePath": "rls/profiles/update.test.ts",
+			"describeBlock": "RLS: profiles UPDATE - own profile",
+			"testName": "teacher can update own profile",
+			"tableName": "profiles",
+			"operation": "UPDATE"
+		},
+		{
+			"filePath": "rls/profiles/update.test.ts",
+			"describeBlock": "RLS: profiles UPDATE - own profile",
+			"testName": "staff can update own profile",
+			"tableName": "profiles",
+			"operation": "UPDATE"
+		},
+		{
+			"filePath": "rls/profiles/update.test.ts",
+			"describeBlock": "RLS: profiles UPDATE - own profile",
+			"testName": "admin can update own profile",
+			"tableName": "profiles",
+			"operation": "UPDATE"
+		},
+		{
+			"filePath": "rls/profiles/update.test.ts",
+			"describeBlock": "RLS: profiles UPDATE - own profile",
+			"testName": "site_admin can update own profile",
+			"tableName": "profiles",
+			"operation": "UPDATE"
+		}
+	],
+	"profiles_update_admin": [
+		{
+			"filePath": "rls/profiles/update.test.ts",
+			"describeBlock": "RLS: profiles UPDATE - own profile",
+			"testName": "admin can update own profile",
+			"tableName": "profiles",
+			"operation": "UPDATE"
+		},
+		{
+			"filePath": "rls/profiles/update.test.ts",
+			"describeBlock": "RLS: profiles UPDATE - own profile",
+			"testName": "site_admin can update own profile",
+			"tableName": "profiles",
+			"operation": "UPDATE"
+		},
+		{
+			"filePath": "rls/profiles/update.test.ts",
+			"describeBlock": "RLS: profiles UPDATE - other profiles",
+			"testName": "admin can update any profile",
+			"tableName": "profiles",
+			"operation": "UPDATE"
+		},
+		{
+			"filePath": "rls/profiles/update.test.ts",
+			"describeBlock": "RLS: profiles UPDATE - other profiles",
+			"testName": "site_admin can update any profile",
+			"tableName": "profiles",
+			"operation": "UPDATE"
+		}
+	],
+	"profiles_update_staff": [
+		{
+			"filePath": "rls/profiles/update.test.ts",
+			"describeBlock": "RLS: profiles UPDATE - own profile",
+			"testName": "staff can update own profile",
+			"tableName": "profiles",
+			"operation": "UPDATE"
+		},
+		{
+			"filePath": "rls/profiles/update.test.ts",
+			"describeBlock": "RLS: profiles UPDATE - other profiles",
+			"testName": "staff can update student profiles",
+			"tableName": "profiles",
+			"operation": "UPDATE"
+		},
+		{
+			"filePath": "rls/profiles/update.test.ts",
+			"describeBlock": "RLS: profiles UPDATE - other profiles",
+			"testName": "staff cannot update non-student profiles",
+			"tableName": "profiles",
+			"operation": "UPDATE"
+		}
+	],
+	"roles_select_own": [
+		{
+			"filePath": "rls/user-roles/select.test.ts",
+			"describeBlock": "RLS: user_roles SELECT",
+			"testName": "teacher sees own role and linked students roles",
+			"tableName": "user_roles",
+			"operation": "SELECT"
+		},
+		{
+			"filePath": "rls/user-roles/select.test.ts",
+			"describeBlock": "RLS: user_roles SELECT",
+			"testName": "student sees only own role",
+			"tableName": "user_roles",
+			"operation": "SELECT"
+		}
+	],
+	"roles_select_admin": [
+		{
+			"filePath": "rls/user-roles/select.test.ts",
+			"describeBlock": "RLS: user_roles SELECT",
+			"testName": "site_admin sees all user roles",
+			"tableName": "user_roles",
+			"operation": "SELECT"
+		},
+		{
+			"filePath": "rls/user-roles/select.test.ts",
+			"describeBlock": "RLS: user_roles SELECT",
+			"testName": "admin sees all user roles",
+			"tableName": "user_roles",
+			"operation": "SELECT"
+		}
+	],
+	"roles_select_staff": [
+		{
+			"filePath": "rls/user-roles/select.test.ts",
+			"describeBlock": "RLS: user_roles SELECT",
+			"testName": "staff sees all user roles",
+			"tableName": "user_roles",
+			"operation": "SELECT"
+		}
+	],
+	"roles_select_teacher_students": [
+		{
+			"filePath": "rls/user-roles/select.test.ts",
+			"describeBlock": "RLS: user_roles SELECT",
+			"testName": "teacher sees own role and linked students roles",
+			"tableName": "user_roles",
+			"operation": "SELECT"
+		},
+		{
+			"filePath": "rls/user-roles/select.test.ts",
+			"describeBlock": "RLS: user_roles SELECT",
+			"testName": "teacher cannot see roles of students not linked to them",
+			"tableName": "user_roles",
+			"operation": "SELECT"
+		},
+		{
+			"filePath": "rls/user-roles/select.test.ts",
+			"describeBlock": "RLS: user_roles SELECT",
+			"testName": "teacher cannot see other teacher roles",
+			"tableName": "user_roles",
+			"operation": "SELECT"
+		}
+	],
+	"roles_update_site_admin": [
+		{
+			"filePath": "rls/user-roles/update.test.ts",
+			"describeBlock": "RLS: user_roles UPDATE - other users",
+			"testName": "site_admin can update other user roles",
+			"tableName": "user_roles",
+			"operation": "UPDATE"
+		},
+		{
+			"filePath": "rls/user-roles/update.test.ts",
+			"describeBlock": "RLS: user_roles UPDATE - own role",
+			"testName": "site_admin cannot demote themselves",
+			"tableName": "user_roles",
+			"operation": "UPDATE"
+		}
+	],
+	"teacher_students_select_own": [],
+	"teacher_students_insert_own": [],
+	"teacher_students_delete_own": [],
+	"teacher_students_select_admin": [],
+	"teacher_students_select_staff": []
 }

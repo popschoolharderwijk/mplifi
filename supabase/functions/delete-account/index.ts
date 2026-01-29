@@ -3,8 +3,9 @@
 // 1. Self-deletion: User deletes their own account (no userId in body)
 // 2. Admin deletion: Admin/site_admin deletes another user's account (userId in body)
 //
-// Uses admin API to delete from auth.users, which CASCADE deletes profile and roles
-// The database trigger `protect_last_site_admin` prevents deleting the last site_admin
+// Permission check is delegated to database function `can_delete_user()` for consistency.
+// Uses admin API to delete from auth.users, which CASCADE deletes profile and roles.
+// The database trigger `protect_last_site_admin` prevents deleting the last site_admin.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
@@ -64,34 +65,31 @@ Deno.serve(async (req) => {
 			// Empty body is fine - means self-deletion
 		}
 
-		// If userId is provided, check if requester has permission to delete others
-		if (body.userId && body.userId !== requestingUser.id) {
-			// Check if requesting user is admin or site_admin
-			const { data: roleData, error: roleError } = await supabaseAdmin
-				.from('user_roles')
-				.select('role')
-				.eq('user_id', requestingUser.id)
-				.single();
-
-			if (roleError || !roleData) {
-				return new Response(JSON.stringify({ error: 'Could not verify permissions' }), {
-					status: 403,
-					headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-				});
-			}
-
-			const allowedRoles = ['admin', 'site_admin'];
-			if (!allowedRoles.includes(roleData.role)) {
-				return new Response(
-					JSON.stringify({ error: 'Je hebt geen rechten om andere accounts te verwijderen.' }),
-					{
-						status: 403,
-						headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-					},
-				);
-			}
-
+		// If userId is provided, set it as the target
+		if (body.userId) {
 			targetUserId = body.userId;
+		}
+
+		// Check permission via database function (single source of truth)
+		// This handles both self-deletion and admin deletion rules
+		const { data: canDelete, error: permError } = await supabaseAdmin.rpc('can_delete_user', {
+			_requester_id: requestingUser.id,
+			_target_id: targetUserId,
+		});
+
+		if (permError) {
+			console.error('Permission check error:', permError);
+			return new Response(JSON.stringify({ error: 'Could not verify permissions' }), {
+				status: 403,
+				headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+			});
+		}
+
+		if (!canDelete) {
+			return new Response(JSON.stringify({ error: 'Je hebt geen rechten om dit account te verwijderen.' }), {
+				status: 403,
+				headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+			});
 		}
 
 		// Delete the target user (CASCADE will remove profile, user_roles, etc.)

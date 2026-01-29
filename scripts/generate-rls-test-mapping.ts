@@ -4,8 +4,8 @@
  * that can be imported by the frontend.
  */
 
-import { readdir, readFile, writeFile } from 'fs/promises';
-import { join } from 'path';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
 interface TestInfo {
 	filePath: string;
@@ -43,20 +43,18 @@ function parseTestFile(content: string, filePath: string): TestInfo[] {
 	const itRegex = /it\(['"]([^'"]+)['"]/g;
 
 	const describeBlocks: Array<{ block: string; startIndex: number }> = [];
-	let describeMatch;
 
-	while ((describeMatch = describeRegex.exec(content)) !== null) {
+	for (const describeMatch of content.matchAll(describeRegex)) {
 		describeBlocks.push({
 			block: describeMatch[1],
-			startIndex: describeMatch.index,
+			startIndex: describeMatch.index ?? 0,
 		});
 	}
 
 	// Find all it blocks and associate them with their describe block
-	let itMatch;
-	while ((itMatch = itRegex.exec(content)) !== null) {
+	for (const itMatch of content.matchAll(itRegex)) {
 		const testName = itMatch[1];
-		const testIndex = itMatch.index;
+		const testIndex = itMatch.index ?? 0;
 
 		// Find the closest describe block before this test
 		let currentDescribe = '';
@@ -73,7 +71,7 @@ function parseTestFile(content: string, filePath: string): TestInfo[] {
 		const operation = rlsMatch?.[2];
 
 		tests.push({
-			filePath: filePath.replace(/\\/g, '/'), // Normalize path separators
+			filePath,
 			describeBlock: currentDescribe,
 			testName,
 			tableName,
@@ -85,14 +83,20 @@ function parseTestFile(content: string, filePath: string): TestInfo[] {
 }
 
 async function generateMapping() {
-	const testsDir = join(process.cwd(), 'tests', 'rls');
-	const testFiles = await findTestFiles(testsDir);
+	const testsBaseDir = join(process.cwd(), 'tests');
+	const rlsTestsDir = join(testsBaseDir, 'rls');
+	const testFiles = await findTestFiles(rlsTestsDir);
 
 	const allTests: TestInfo[] = [];
 
 	for (const filePath of testFiles) {
 		const content = await readFile(filePath, 'utf-8');
-		const tests = parseTestFile(content, filePath);
+		// Make path relative from tests directory
+		const relativePath = filePath
+			.replace(testsBaseDir, '')
+			.replace(/^[/\\]/, '')
+			.replace(/\\/g, '/');
+		const tests = parseTestFile(content, relativePath);
 		allTests.push(...tests);
 	}
 
@@ -166,7 +170,10 @@ async function generateMapping() {
 
 				if (policySuffix === 'own' && (testLower.includes('own') || testLower.includes('sees only'))) {
 					isRelevant = true;
-				} else if (policySuffix === 'admin' && (testLower.includes('admin') || testLower.includes('site_admin'))) {
+				} else if (
+					policySuffix === 'admin' &&
+					(testLower.includes('admin') || testLower.includes('site_admin'))
+				) {
 					isRelevant = true;
 				} else if (policySuffix === 'staff' && testLower.includes('staff')) {
 					isRelevant = true;

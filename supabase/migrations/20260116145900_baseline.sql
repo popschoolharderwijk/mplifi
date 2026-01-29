@@ -185,6 +185,43 @@ ALTER FUNCTION public.is_teacher(UUID) OWNER TO postgres;
 ALTER FUNCTION public.is_student(UUID) OWNER TO postgres;
 
 -- =============================================================================
+-- SECTION 4b: AUTHORIZATION HELPER FUNCTIONS
+-- =============================================================================
+-- These functions centralize permission checks that are used by Edge Functions.
+-- This keeps authorization logic in the database (single source of truth).
+
+-- Check if a user can delete another user's account
+-- Rules:
+-- - Users can always delete their own account (self-deletion)
+-- - Admin and site_admin can delete any user's account
+CREATE OR REPLACE FUNCTION public.can_delete_user(
+  _requester_id UUID,
+  _target_id UUID
+)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+SET row_security = off
+AS $$
+  SELECT
+    -- Self-deletion is always allowed
+    _requester_id = _target_id
+    OR
+    -- Admin and site_admin can delete anyone
+    public.is_admin(_requester_id)
+    OR
+    public.is_site_admin(_requester_id);
+$$;
+
+-- Security: only authenticated users can call this
+REVOKE ALL ON FUNCTION public.can_delete_user(UUID, UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.can_delete_user(UUID, UUID) FROM anon;
+GRANT EXECUTE ON FUNCTION public.can_delete_user(UUID, UUID) TO authenticated;
+ALTER FUNCTION public.can_delete_user(UUID, UUID) OWNER TO postgres;
+
+-- =============================================================================
 -- SECTION 5: RLS POLICIES - PROFILES
 -- =============================================================================
 

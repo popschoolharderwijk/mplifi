@@ -28,22 +28,20 @@ export function parseTestFile(content: string, filePath: string): TestInfo[] {
 	const describeRegex = /describe\(['"]([^'"]+)['"]/g;
 	const itRegex = /it\(['"]([^'"]+)['"]/g;
 
-	let describeMatch;
 	const describeBlocks: Array<{ block: string; startIndex: number }> = [];
 
 	// Find all describe blocks
-	while ((describeMatch = describeRegex.exec(content)) !== null) {
+	for (const describeMatch of content.matchAll(describeRegex)) {
 		describeBlocks.push({
 			block: describeMatch[1],
-			startIndex: describeMatch.index,
+			startIndex: describeMatch.index ?? 0,
 		});
 	}
 
 	// Find all it blocks and associate them with their describe block
-	let itMatch;
-	while ((itMatch = itRegex.exec(content)) !== null) {
+	for (const itMatch of content.matchAll(itRegex)) {
 		const testName = itMatch[1];
-		const testIndex = itMatch.index;
+		const testIndex = itMatch.index ?? 0;
 
 		// Find the closest describe block before this test
 		let currentDescribe = '';
@@ -76,7 +74,7 @@ export function parseTestFile(content: string, filePath: string): TestInfo[] {
  */
 export function mapPoliciesToTests(
 	policies: Array<{ table_name: string; policy_name: string; command: string }>,
-	tests: TestInfo[]
+	tests: TestInfo[],
 ): Map<string, TestInfo[]> {
 	const mapping = new Map<string, TestInfo[]>();
 
@@ -111,8 +109,7 @@ export function mapPoliciesToTests(
 				(normalizedTable === 'roles' && policyTable === 'user_roles' && policyName.startsWith('roles_'));
 
 			const operationMatch =
-				policyCommand === normalizedOperation ||
-				policyName.includes(normalizedOperation.toLowerCase());
+				policyCommand === normalizedOperation || policyName.includes(normalizedOperation.toLowerCase());
 
 			if (tableMatch && operationMatch) {
 				const existing = mapping.get(policy.policy_name) || [];
@@ -133,10 +130,7 @@ export function mapPoliciesToTests(
 			const policyName = policy.policy_name.toLowerCase();
 
 			// Direct matches: "site_admin sees all profiles" -> profiles_select_admin
-			if (
-				(testLower.includes('site_admin') || testLower.includes('admin')) &&
-				policyName.includes('admin')
-			) {
+			if ((testLower.includes('site_admin') || testLower.includes('admin')) && policyName.includes('admin')) {
 				const existing = mapping.get(policy.policy_name) || [];
 				if (!existing.some((t) => t.filePath === test.filePath && t.testName === test.testName)) {
 					existing.push(test);
