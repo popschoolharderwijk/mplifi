@@ -1,0 +1,7 @@
+---
+alwaysApply: true
+---
+
+* Only apply after big changes (multiple files, many lines). Skip for small fixes (typos, single line changes)
+* When applying: run `biome check --write .` to auto-format, then `biome ci` to verify
+* Fix reported issues and repeat until `biome ci` passes
