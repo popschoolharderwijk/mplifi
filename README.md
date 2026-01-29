@@ -13,8 +13,8 @@ Een React + Vite + Supabase boilerplate met volledige CI/CD setup, RLS testing, 
 ## Quick Start
 
 ```bash
-# Install dependencies
-bun install
+# Install dependencies (use npm, not bun - bun install has issues with esbuild on Windows)
+npm install
 
 # Run development server
 bun dev

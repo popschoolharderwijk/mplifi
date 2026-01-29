@@ -58,6 +58,58 @@ supabase functions deploy <function-name>
 supabase functions deploy
 ```
 
+### Beschikbare Edge Functions
+
+| Function | Doel | Vereiste secrets |
+|----------|------|------------------|
+| `delete-account` | AVG: accounts verwijderen (self-service + admin) | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (automatisch beschikbaar) |
+
+**Gebruik `delete-account`:**
+- Zonder body: gebruiker verwijdert eigen account
+- Met `{ "userId": "..." }`: admin/site_admin verwijdert ander account
+
+### Edge Functions Structuur
+
+Edge Functions gebruiken een gedeelde CORS helper voor browser invocations:
+
+- **`_shared/cors.ts`**: Gedeelde CORS headers voor alle Edge Functions
+  - Gebaseerd op [Supabase's aanbevolen CORS setup](https://supabase.com/docs/guides/functions/cors)
+  - Gebruikt `'*'` voor `Access-Control-Allow-Origin` (development)
+  - Alle Edge Functions importeren `corsHeaders` uit `../_shared/cors.ts`
+
+**Nieuwe Edge Function aanmaken:**
+1. Maak folder aan in `supabase/functions/<function-name>/`
+2. Maak `index.ts` aan
+3. Importeer `corsHeaders` uit `../_shared/cors.ts`
+4. Handle OPTIONS requests voor CORS preflight
+5. Gebruik `corsHeaders` in alle Response headers
+
+**Voorbeeld:**
+```typescript
+import { corsHeaders } from '../_shared/cors.ts';
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+  
+  return new Response(JSON.stringify({ data: '...' }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+});
+```
+
+### Edge Function Configuratie
+
+Edge Functions kunnen geconfigureerd worden in `supabase/config.toml`:
+
+```toml
+[functions.delete-account]
+verify_jwt = false  # Of true voor gateway-level JWT verificatie
+```
+
+> ⚠️ **Let op**: Met `verify_jwt = false` moet de Edge Function zelf JWT validatie uitvoeren. De gateway blokkeert dan geen requests.
+
 ---
 
 ## Checklist

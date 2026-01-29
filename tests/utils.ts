@@ -2,6 +2,19 @@
  * Shared test utilities and helper functions.
  */
 
+import type { User } from '@supabase/supabase-js';
+
+/**
+ * Helper to safely extract user from createUser response.
+ * Throws if user is undefined (should never happen on successful creation).
+ */
+export function requireUser(data: { user: User | null }): User {
+	if (!data.user) {
+		throw new Error('Expected user to be defined after creation');
+	}
+	return data.user;
+}
+
 /**
  * Email domain for dynamically generated test accounts.
  * Using real domain since production Supabase rejects @example.com

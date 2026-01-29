@@ -38,8 +38,26 @@ Zie `.github/workflows/pull-request-test-code-and-supabase.yml` voor implementat
 Voor Edge Functions. Toe te voegen via:
 **Supabase Dashboard** → Project Settings → Edge Functions → Secrets
 
-| Secret | Beschrijving |
-|--------|--------------|
-| `SUPABASE_URL` | Project URL |
-| `SUPABASE_ANON_KEY` | Anon/public key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (⚠️ NOOIT `VITE_` prefix!) |
+### Automatisch Beschikbare Environment Variables
+
+Supabase stelt automatisch de volgende environment variables beschikbaar in Edge Functions (geen handmatige configuratie nodig):
+
+| Variabele | Beschrijving | Bron |
+|-----------|--------------|------|
+| `SUPABASE_URL` | Project API URL | Automatisch geïnjecteerd |
+| `SUPABASE_ANON_KEY` | Anon/public key | Automatisch geïnjecteerd |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key | Automatisch geïnjecteerd |
+| `SUPABASE_DB_URL` | Database connection string | Automatisch geïnjecteerd |
+
+> 💡 **Tip**: Deze variabelen zijn altijd beschikbaar via `Deno.env.get()`. Je hoeft ze niet handmatig toe te voegen als secrets.
+
+### Optionele Secrets
+
+Voor custom configuratie kun je extra secrets toevoegen:
+
+| Secret | Beschrijving | Voorbeeld |
+|--------|--------------|-----------|
+| `CUSTOM_API_KEY` | Externe API key | Voor integraties met derde partijen |
+| `ALLOWED_ORIGINS` | Comma-separated origins voor CORS | `"http://localhost:5173,https://app.example.com"` |
+
+> ⚠️ **Belangrijk**: De automatisch beschikbare variabelen hebben **geen** `VITE_` prefix. Gebruik altijd de exacte namen zoals hierboven.

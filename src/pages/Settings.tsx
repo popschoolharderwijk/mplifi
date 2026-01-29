@@ -1,10 +1,20 @@
 import { useEffect, useState } from 'react';
-import { LuMonitor, LuMoon, LuSun, LuTrash2, LuUpload } from 'react-icons/lu';
+import { LuMonitor, LuMoon, LuSun, LuTrash2, LuTriangleAlert, LuUpload } from 'react-icons/lu';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useTheme } from '@/components/ThemeProvider';
+import { Alert } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,6 +24,7 @@ import { cn } from '@/lib/utils';
 export default function Settings() {
 	const { theme, setTheme } = useTheme();
 	const { user } = useAuth();
+	const navigate = useNavigate();
 	const [loading, setLoading] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [profile, setProfile] = useState<{
@@ -34,6 +45,11 @@ export default function Settings() {
 		last_name?: string;
 		phone_number?: string;
 	}>({});
+
+	// Delete account state
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
+	const [deleting, setDeleting] = useState(false);
 
 	// Load profile data
 	useEffect(() => {
@@ -243,6 +259,62 @@ export default function Settings() {
 		setSaving(false);
 	};
 
+	const handleDeleteAccount = async () => {
+		if (!user) return;
+
+		setDeleting(true);
+
+		try {
+			// Get current session for authorization
+			const {
+				data: { session },
+			} = await supabase.auth.getSession();
+
+			if (!session) {
+				toast.error('Sessie verlopen', {
+					description: 'Log opnieuw in en probeer het nogmaals.',
+				});
+				setDeleting(false);
+				return;
+			}
+
+			// Call the Edge Function using supabase.functions.invoke (handles auth automatically)
+			const { data, error: invokeError } = await supabase.functions.invoke('delete-account', {
+				method: 'POST',
+			});
+
+			if (invokeError) {
+				// Handle specific error for last site_admin
+				if (data?.code === 'last_site_admin') {
+					toast.error('Kan account niet verwijderen', {
+						description: data.error,
+					});
+				} else {
+					toast.error('Fout bij verwijderen account', {
+						description: invokeError.message || 'Er is een onbekende fout opgetreden.',
+					});
+				}
+				setDeleting(false);
+				return;
+			}
+
+			// Success - sign out and redirect
+			toast.success('Account verwijderd', {
+				description: 'Je account en alle bijbehorende gegevens zijn verwijderd.',
+			});
+
+			// Sign out and redirect to login
+			await supabase.auth.signOut();
+			navigate('/login');
+		} catch (error) {
+			console.error('Error deleting account:', error);
+			toast.error('Fout bij verwijderen account', {
+				description: 'Er is een netwerkfout opgetreden. Probeer het later opnieuw.',
+			});
+			setDeleting(false);
+		}
+	};
+
 	const userInitials =
 		profile?.first_name && profile?.last_name
 			? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
@@ -406,6 +478,84 @@ export default function Settings() {
 					</div>
 				</CardContent>
 			</Card>
+
+			{/* Danger Zone - Delete Account */}
+			<Card className="border-destructive/50">
+				<CardHeader>
+					<CardTitle className="text-destructive">Gevarenzone</CardTitle>
+					<CardDescription>Onomkeerbare acties voor je account</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<div className="flex items-center justify-between">
+						<div>
+							<p className="font-medium">Account verwijderen</p>
+							<p className="text-sm text-muted-foreground">
+								Verwijder je account en alle bijbehorende gegevens permanent.
+							</p>
+						</div>
+						<Button variant="destructive" onClick={() => setDeleteDialogOpen(true)} disabled={deleting}>
+							<LuTrash2 className="mr-2 h-4 w-4" />
+							Verwijder account
+						</Button>
+					</div>
+				</CardContent>
+			</Card>
+
+			{/* Delete Account Confirmation Dialog */}
+			<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-2 text-destructive">
+							<LuTriangleAlert className="h-5 w-5" />
+							Account verwijderen
+						</DialogTitle>
+						<DialogDescription>
+							Dit is een onomkeerbare actie. Al je gegevens worden permanent verwijderd, inclusief je
+							profiel, instellingen en alle gekoppelde data.
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="space-y-4 py-4">
+						<Alert variant="error" title="Let op!">
+							Na het verwijderen van je account kun je dit niet meer ongedaan maken.
+						</Alert>
+
+						<div className="space-y-2">
+							<Label htmlFor="confirm-email">
+								Typ je e-mailadres ter bevestiging: <span className="font-mono">{user?.email}</span>
+							</Label>
+							<Input
+								id="confirm-email"
+								type="email"
+								value={deleteConfirmEmail}
+								onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+								placeholder="Voer je e-mailadres in"
+								disabled={deleting}
+							/>
+						</div>
+					</div>
+
+					<DialogFooter>
+						<Button
+							variant="outline"
+							onClick={() => {
+								setDeleteDialogOpen(false);
+								setDeleteConfirmEmail('');
+							}}
+							disabled={deleting}
+						>
+							Annuleren
+						</Button>
+						<Button
+							variant="destructive"
+							onClick={handleDeleteAccount}
+							disabled={deleting || deleteConfirmEmail !== user?.email}
+						>
+							{deleting ? 'Verwijderen...' : 'Definitief verwijderen'}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

@@ -3,5 +3,10 @@
 		"source.organizeImports": "never",
 		"source.organizeImports.biome": "explicit",
 		"source.fixAll.biome": "explicit"
-	}
+	},
+	"deno.enable": false,
+	"deno.enablePaths": ["supabase/functions"],
+	"deno.disablePaths": ["src", "tests", "scripts"],
+	"deno.lint": true,
+	"deno.unstable": true
 }

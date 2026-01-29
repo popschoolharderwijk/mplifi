@@ -76,3 +76,9 @@ additional_redirect_urls = ["https://098d4be4-b790-4fca-9806-d5dd653b8946.lovabl
 
 [remotes.prod.auth.rate_limit]
 email_sent = 200
+
+# ---------
+# Edge function settings
+
+[functions.delete-account]
+verify_jwt = false
