@@ -31,7 +31,7 @@ bun test
 | Supabase server setup | [docs/supabase-setup.md](docs/supabase-setup.md) |
 | Git branching strategy | [docs/git-branching.md](docs/git-branching.md) |
 | CI/CD workflows | [docs/cicd-workflows.md](docs/cicd-workflows.md) |
-| RLS testing | [docs/rls-testing.md](docs/rls-testing.md) |
+| Database testing (RLS + Auth) | [docs/database-testing.md](docs/database-testing.md) |
 | Secrets configuratie | [docs/secrets.md](docs/secrets.md) |
 | Deployment | [docs/deployment.md](docs/deployment.md) |
 | Merge workflow (Lovable → Main) | [docs/merge-workflow.md](docs/merge-workflow.md) |

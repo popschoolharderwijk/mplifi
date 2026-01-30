@@ -17,11 +17,11 @@ export const TestUsers = {
 	TEACHER_ALICE: 'teacher-alice@test.nl',
 	TEACHER_BOB: 'teacher-bob@test.nl',
 
-	// Students
-	STUDENT_A: 'student-a@test.nl',
-	STUDENT_B: 'student-b@test.nl',
-	STUDENT_C: 'student-c@test.nl',
-	STUDENT_D: 'student-d@test.nl',
+	// Users without explicit role
+	USER_A: 'student-a@test.nl',
+	USER_B: 'student-b@test.nl',
+	USER_C: 'student-c@test.nl',
+	USER_D: 'student-d@test.nl',
 } as const;
 
 export type TestUser = (typeof TestUsers)[keyof typeof TestUsers];

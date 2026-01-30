@@ -33,33 +33,18 @@ describe('RLS: user_roles SELECT', () => {
 		expect(data).toHaveLength(allUserRoles.length);
 	});
 
-	it('teacher sees own role and linked students roles', async () => {
+	it('teacher sees only own role', async () => {
 		const db = await createClientAs(TestUsers.TEACHER_ALICE);
 
 		const { data, error } = await db.from('user_roles').select('*');
 
 		expect(error).toBeNull();
-		// Teacher Alice: own role + 2 linked students (A & B) = 3
-		expect(data).toHaveLength(3);
+		// Teacher sees only their own role
+		expect(data).toHaveLength(1);
 
-		// Verify we see the correct user_ids
-		const userIds = data?.map((r) => r.user_id) ?? [];
-		expect(userIds).toContain(requireUserId(TestUsers.TEACHER_ALICE));
-		expect(userIds).toContain(requireUserId(TestUsers.STUDENT_A));
-		expect(userIds).toContain(requireUserId(TestUsers.STUDENT_B));
-	});
-
-	it('teacher cannot see roles of students not linked to them', async () => {
-		const db = await createClientAs(TestUsers.TEACHER_ALICE);
-
-		const { data, error } = await db.from('user_roles').select('*');
-
-		expect(error).toBeNull();
-
-		const userIds = data?.map((r) => r.user_id) ?? [];
-		// Teacher Alice should NOT see Student C & D (linked to Teacher Bob)
-		expect(userIds).not.toContain(requireUserId(TestUsers.STUDENT_C));
-		expect(userIds).not.toContain(requireUserId(TestUsers.STUDENT_D));
+		const [role] = data ?? [];
+		expect(role?.user_id).toBe(requireUserId(TestUsers.TEACHER_ALICE));
+		expect(role?.role).toBe('teacher');
 	});
 
 	it('teacher cannot see other teacher roles', async () => {
@@ -73,22 +58,19 @@ describe('RLS: user_roles SELECT', () => {
 		expect(userIds).not.toContain(requireUserId(TestUsers.TEACHER_BOB));
 	});
 
-	it('student sees only own role', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+	it('user without role sees nothing in user_roles', async () => {
+		const db = await createClientAs(TestUsers.USER_A);
 
 		const { data, error } = await db.from('user_roles').select('*');
 
 		expect(error).toBeNull();
-		expect(data).toHaveLength(1);
-
-		const [role] = data ?? [];
-		expect(role?.user_id).toBe(requireUserId(TestUsers.STUDENT_A));
-		expect(role?.role).toBe('student');
+		// Users without a role have no entry in user_roles, so they see nothing
+		expect(data).toHaveLength(0);
 	});
 
-	it('student cannot see other user roles', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const otherUserId = requireUserId(TestUsers.STUDENT_B);
+	it('user without role cannot see other user roles', async () => {
+		const db = await createClientAs(TestUsers.USER_A);
+		const otherUserId = requireUserId(TestUsers.TEACHER_ALICE);
 
 		const { data, error } = await db.from('user_roles').select('*').eq('user_id', otherUserId);
 

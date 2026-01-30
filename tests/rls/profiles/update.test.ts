@@ -6,20 +6,20 @@ import { TestUsers } from '../test-users';
 const { requireProfile, requireUserId } = fixtures;
 
 describe('RLS: profiles UPDATE - own profile', () => {
-	it('student can update own profile', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const profile = requireProfile(TestUsers.STUDENT_A);
+	it('user without role can update own profile', async () => {
+		const db = await createClientAs(TestUsers.USER_A);
+		const profile = requireProfile(TestUsers.USER_A);
 
 		const { data, error } = await db
 			.from('profiles')
-			.update({ first_name: 'Updated', last_name: 'Student A' })
+			.update({ first_name: 'Updated', last_name: 'User A' })
 			.eq('user_id', profile.user_id)
 			.select();
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(1);
 		expect(data?.[0]?.first_name).toBe('Updated');
-		expect(data?.[0]?.last_name).toBe('Student A');
+		expect(data?.[0]?.last_name).toBe('User A');
 
 		// Restore original
 		await db.from('profiles').update({ first_name: 'Student', last_name: 'A' }).eq('user_id', profile.user_id);
@@ -103,9 +103,9 @@ describe('RLS: profiles UPDATE - own profile', () => {
 });
 
 describe('RLS: profiles UPDATE - other profiles', () => {
-	it('student cannot update other profiles', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const targetUserId = requireUserId(TestUsers.STUDENT_B);
+	it('user without role cannot update other profiles', async () => {
+		const db = await createClientAs(TestUsers.USER_A);
+		const targetUserId = requireUserId(TestUsers.USER_B);
 
 		const { data, error } = await db
 			.from('profiles')
@@ -117,45 +117,21 @@ describe('RLS: profiles UPDATE - other profiles', () => {
 		expect(data).toHaveLength(0);
 	});
 
-	it('teacher cannot update student profiles (no policy)', async () => {
+	it('teacher cannot update other profiles', async () => {
 		const db = await createClientAs(TestUsers.TEACHER_ALICE);
-		// Teacher Alice teaches Student A & B, but has no UPDATE policy for students
-		const studentUserId = requireUserId(TestUsers.STUDENT_A);
+		const targetUserId = requireUserId(TestUsers.USER_A);
 
 		const { data, error } = await db
 			.from('profiles')
 			.update({ first_name: 'Hacked', last_name: null })
-			.eq('user_id', studentUserId)
+			.eq('user_id', targetUserId)
 			.select();
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(0);
 	});
 
-	it('staff can update student profiles', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
-		const studentUserId = requireUserId(TestUsers.STUDENT_C);
-		const originalProfile = requireProfile(TestUsers.STUDENT_C);
-
-		const { data, error } = await db
-			.from('profiles')
-			.update({ first_name: 'Staff', last_name: 'Updated' })
-			.eq('user_id', studentUserId)
-			.select();
-
-		expect(error).toBeNull();
-		expect(data).toHaveLength(1);
-		expect(data?.[0]?.first_name).toBe('Staff');
-		expect(data?.[0]?.last_name).toBe('Updated');
-
-		// Restore original
-		await db
-			.from('profiles')
-			.update({ first_name: originalProfile.first_name, last_name: originalProfile.last_name })
-			.eq('user_id', studentUserId);
-	});
-
-	it('staff cannot update non-student profiles', async () => {
+	it('staff cannot update other profiles', async () => {
 		const db = await createClientAs(TestUsers.STAFF);
 		// Try to update teacher profile
 		const teacherUserId = requireUserId(TestUsers.TEACHER_ALICE);

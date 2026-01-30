@@ -37,50 +37,35 @@ export type Database = {
 				Row: {
 					avatar_url: string | null;
 					created_at: string;
+					email: string;
 					first_name: string | null;
+					id: string;
 					last_name: string | null;
 					phone_number: string | null;
-					email: string;
-					id: string;
 					updated_at: string;
 					user_id: string;
 				};
 				Insert: {
 					avatar_url?: string | null;
 					created_at?: string;
+					email: string;
 					first_name?: string | null;
+					id?: string;
 					last_name?: string | null;
 					phone_number?: string | null;
-					email: string;
-					id?: string;
 					updated_at?: string;
 					user_id: string;
 				};
 				Update: {
 					avatar_url?: string | null;
 					created_at?: string;
+					email?: string;
 					first_name?: string | null;
+					id?: string;
 					last_name?: string | null;
 					phone_number?: string | null;
-					email?: string;
-					id?: string;
 					updated_at?: string;
 					user_id?: string;
-				};
-				Relationships: [];
-			};
-			teacher_students: {
-				Row: {
-					student_id: string;
-					teacher_id: string;
-				};
-				Insert: {
-					student_id: string;
-					teacher_id: string;
-				};
-				Update: {
-					student_id?: string;
-					teacher_id?: string;
 				};
 				Relationships: [];
 			};
@@ -92,7 +77,7 @@ export type Database = {
 				};
 				Insert: {
 					created_at?: string;
-					role?: Database['public']['Enums']['app_role'];
+					role: Database['public']['Enums']['app_role'];
 					user_id: string;
 				};
 				Update: {
@@ -104,18 +89,7 @@ export type Database = {
 			};
 		};
 		Views: {
-			teacher_student_profiles: {
-				Row: {
-					avatar_url: string | null;
-					created_at: string | null;
-					first_name: string | null;
-					last_name: string | null;
-					email: string | null;
-					student_id: string | null;
-					teacher_id: string | null;
-				};
-				Relationships: [];
-			};
+			[_ in never]: never;
 		};
 		Functions: {
 			_has_role: {
@@ -125,13 +99,16 @@ export type Database = {
 				};
 				Returns: boolean;
 			};
+			can_delete_user: {
+				Args: { _requester_id: string; _target_id: string };
+				Returns: boolean;
+			};
 			check_rls_enabled: { Args: { p_table_name: string }; Returns: boolean };
 			function_exists: { Args: { p_fn_name: string }; Returns: boolean };
 			get_table_policies: { Args: { p_table_name: string }; Returns: string[] };
 			is_admin: { Args: { _user_id: string }; Returns: boolean };
 			is_site_admin: { Args: { _user_id: string }; Returns: boolean };
 			is_staff: { Args: { _user_id: string }; Returns: boolean };
-			is_student: { Args: { _user_id: string }; Returns: boolean };
 			is_teacher: { Args: { _user_id: string }; Returns: boolean };
 			policy_exists: {
 				Args: { p_policy_name: string; p_table_name: string };
@@ -139,7 +116,7 @@ export type Database = {
 			};
 		};
 		Enums: {
-			app_role: 'site_admin' | 'admin' | 'staff' | 'teacher' | 'student';
+			app_role: 'site_admin' | 'admin' | 'staff' | 'teacher';
 		};
 		CompositeTypes: {
 			[_ in never]: never;
@@ -262,7 +239,7 @@ export const Constants = {
 	},
 	public: {
 		Enums: {
-			app_role: ['site_admin', 'admin', 'staff', 'teacher', 'student'],
+			app_role: ['site_admin', 'admin', 'staff', 'teacher'],
 		},
 	},
 } as const;

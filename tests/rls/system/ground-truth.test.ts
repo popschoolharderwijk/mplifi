@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'bun:test';
 import { fixtures } from '../fixtures';
 
-const { allProfiles, allUserRoles, userRoleMap } = fixtures;
+const { allProfiles, allUserRoles } = fixtures;
 
 describe('RLS: verify ground truth', () => {
 	it('should have exactly 10 profiles', () => {
 		expect(allProfiles).toHaveLength(10);
 	});
 
-	it('should have exactly 10 user roles', () => {
-		expect(allUserRoles).toHaveLength(10);
+	it('should have exactly 6 user roles (only explicit roles)', () => {
+		// Only site_admin, admin (2), staff, teacher (2) have explicit roles
+		// Users A-D have no role entry
+		expect(allUserRoles).toHaveLength(6);
 	});
 
 	it('should have 1 site_admin', () => {
@@ -32,11 +34,6 @@ describe('RLS: verify ground truth', () => {
 		expect(teachers).toHaveLength(2);
 	});
 
-	it('should have 4 students', () => {
-		const students = allUserRoles.filter((ur) => ur.role === 'student');
-		expect(students).toHaveLength(4);
-	});
-
 	it('should have profiles for all user roles', () => {
 		// Every user_role should have a corresponding profile
 		for (const userRole of allUserRoles) {
@@ -46,13 +43,14 @@ describe('RLS: verify ground truth', () => {
 		}
 	});
 
-	it('should have user roles for all profiles', () => {
-		// Every profile should have a corresponding user_role
-		for (const profile of allProfiles) {
-			const userRole = allUserRoles.find((ur) => ur.user_id === profile.user_id);
-			expect(userRole).toBeDefined();
-			expect(userRole?.user_id).toBe(profile.user_id);
-		}
+	it('should have 4 users without explicit roles', () => {
+		// Users A-D exist in profiles but have no entry in user_roles
+		const userIdsWithRoles = new Set(allUserRoles.map((ur) => ur.user_id));
+		const profilesWithoutRoles = allProfiles.filter((p) => !userIdsWithRoles.has(p.user_id));
+		expect(profilesWithoutRoles).toHaveLength(4);
+
+		const emails = profilesWithoutRoles.map((p) => p.email).sort();
+		expect(emails).toEqual(['student-a@test.nl', 'student-b@test.nl', 'student-c@test.nl', 'student-d@test.nl']);
 	});
 
 	it('should have correct email for site_admin', () => {
@@ -61,15 +59,5 @@ describe('RLS: verify ground truth', () => {
 		if (!siteAdminRole) return;
 		const siteAdminProfile = allProfiles.find((p) => p.user_id === siteAdminRole.user_id);
 		expect(siteAdminProfile?.email).toBe('site-admin@test.nl');
-	});
-
-	it('should have correct emails for students', () => {
-		const studentProfiles = allProfiles.filter((p) => {
-			const role = userRoleMap.get(p.user_id);
-			return role === 'student';
-		});
-		expect(studentProfiles).toHaveLength(4);
-		const emails = studentProfiles.map((p) => p.email).sort();
-		expect(emails).toEqual(['student-a@test.nl', 'student-b@test.nl', 'student-c@test.nl', 'student-d@test.nl']);
 	});
 });

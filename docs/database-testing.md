@@ -24,7 +24,7 @@ Verifieert RLS policies + Auth policies
 
 ## Seed Data voor RLS Tests
 
-De lokale Supabase wordt automatisch geseeded met testgebruikers uit `supabase/seed.sql`. De seed bevat ook teacher-student relaties voor het testen van RLS policies die afhankelijk zijn van deze koppelingen.
+De lokale Supabase wordt automatisch geseeded met testgebruikers uit `supabase/seed.sql`. De seed bevat gebruikers met verschillende rollen (site_admin, admin, staff, teacher) en gebruikers zonder rol voor het testen van RLS policies.
 
 ---
 

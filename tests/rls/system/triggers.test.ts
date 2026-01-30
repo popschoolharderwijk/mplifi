@@ -7,8 +7,8 @@ const { requireProfile, allUserRoles } = fixtures;
 
 describe('Triggers: profiles immutability', () => {
 	it('user_id cannot be changed', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const profile = requireProfile(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.USER_A);
+		const profile = requireProfile(TestUsers.USER_A);
 		const fakeUserId = '00000000-0000-0000-0000-999999999999';
 
 		const { error } = await db
@@ -23,8 +23,8 @@ describe('Triggers: profiles immutability', () => {
 	});
 
 	it('email cannot be changed directly on profiles', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const profile = requireProfile(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.USER_A);
+		const profile = requireProfile(TestUsers.USER_A);
 
 		const { error } = await db
 			.from('profiles')
@@ -38,8 +38,8 @@ describe('Triggers: profiles immutability', () => {
 	});
 
 	it('updated_at is automatically updated on profile change', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const profile = requireProfile(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.USER_A);
+		const profile = requireProfile(TestUsers.USER_A);
 		const originalUpdatedAt = profile.updated_at;
 
 		// Wait a moment to ensure time difference

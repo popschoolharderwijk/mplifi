@@ -24,7 +24,7 @@
 --   00000000-0000-0000-0000-000000000030
 --   00000000-0000-0000-0000-000000000031
 --
--- students
+-- users without any role
 --   00000000-0000-0000-0000-000000000100
 --   00000000-0000-0000-0000-000000000101
 --   00000000-0000-0000-0000-000000000102
@@ -79,7 +79,7 @@ BEGIN
   )
   SELECT
     id,
-    '00000000-0000-0000-0000-000000000000',            -- instance_id
+    '00000000-0000-0000-0000-000000000000',             -- instance_id
     'authenticated',                                    -- aud
     'authenticated',                                    -- role
     email,
@@ -130,6 +130,16 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
 
   -- -------------------------------------------------------------------------
+  -- UPDATE PROFILES WITH PHONE NUMBERS
+  -- -------------------------------------------------------------------------
+  -- The handle_new_user trigger created profiles, now update with phone numbers
+  UPDATE public.profiles p
+  SET phone_number = nu.phone_number
+  FROM new_users nu
+  WHERE p.user_id = nu.id
+    AND nu.phone_number IS NOT NULL;
+
+  -- -------------------------------------------------------------------------
   -- Drop the temporary table
   -- -------------------------------------------------------------------------
   DROP TABLE IF EXISTS new_users;
@@ -137,46 +147,17 @@ BEGIN
 END $$;
 
 -- -----------------------------------------------------------------------------
--- USER ROLES (update from default 'student' to correct role)
+-- USER ROLES (only for users with explicit roles)
 -- -----------------------------------------------------------------------------
-UPDATE public.user_roles SET role = 'site_admin' WHERE user_id = '00000000-0000-0000-0000-000000000001';
-UPDATE public.user_roles SET role = 'admin' WHERE user_id = '00000000-0000-0000-0000-000000000010';
-UPDATE public.user_roles SET role = 'admin' WHERE user_id = '00000000-0000-0000-0000-000000000011';
-UPDATE public.user_roles SET role = 'staff' WHERE user_id = '00000000-0000-0000-0000-000000000020';
-UPDATE public.user_roles SET role = 'teacher' WHERE user_id = '00000000-0000-0000-0000-000000000030';
-UPDATE public.user_roles SET role = 'teacher' WHERE user_id = '00000000-0000-0000-0000-000000000031';
--- Students keep the default 'student' role from handle_new_user trigger
-
--- -----------------------------------------------------------------------------
--- PHONE NUMBERS (update profiles with phone numbers)
--- -----------------------------------------------------------------------------
-UPDATE public.profiles SET phone_number = '0612345678' WHERE user_id = '00000000-0000-0000-0000-000000000001';
-UPDATE public.profiles SET phone_number = '0623456789' WHERE user_id = '00000000-0000-0000-0000-000000000010';
-UPDATE public.profiles SET phone_number = NULL WHERE user_id = '00000000-0000-0000-0000-000000000011';
-UPDATE public.profiles SET phone_number = '0634567890' WHERE user_id = '00000000-0000-0000-0000-000000000020';
-UPDATE public.profiles SET phone_number = '0645678901' WHERE user_id = '00000000-0000-0000-0000-000000000030';
-UPDATE public.profiles SET phone_number = NULL WHERE user_id = '00000000-0000-0000-0000-000000000031';
-UPDATE public.profiles SET phone_number = '0656789012' WHERE user_id = '00000000-0000-0000-0000-000000000100';
-UPDATE public.profiles SET phone_number = NULL WHERE user_id = '00000000-0000-0000-0000-000000000101';
-UPDATE public.profiles SET phone_number = '0667890123' WHERE user_id = '00000000-0000-0000-0000-000000000102';
-UPDATE public.profiles SET phone_number = NULL WHERE user_id = '00000000-0000-0000-0000-000000000103';
-
--- -----------------------------------------------------------------------------
--- TEACHER ↔ STUDENT RELATIONSHIPS
--- -----------------------------------------------------------------------------
--- Teacher Alice teaches Student A & B
-INSERT INTO public.teacher_students (teacher_id, student_id)
-VALUES
-  ('00000000-0000-0000-0000-000000000030', '00000000-0000-0000-0000-000000000100'),
-  ('00000000-0000-0000-0000-000000000030', '00000000-0000-0000-0000-000000000101')
-ON CONFLICT DO NOTHING;
-
--- Teacher Bob teaches Student C & D
-INSERT INTO public.teacher_students (teacher_id, student_id)
-VALUES
-  ('00000000-0000-0000-0000-000000000031', '00000000-0000-0000-0000-000000000102'),
-  ('00000000-0000-0000-0000-000000000031', '00000000-0000-0000-0000-000000000103')
-ON CONFLICT DO NOTHING;
+-- Note: New users do NOT get a role automatically.
+INSERT INTO public.user_roles (user_id, role) VALUES
+  ('00000000-0000-0000-0000-000000000001', 'site_admin'),
+  ('00000000-0000-0000-0000-000000000010', 'admin'),
+  ('00000000-0000-0000-0000-000000000011', 'admin'),
+  ('00000000-0000-0000-0000-000000000020', 'staff'),
+  ('00000000-0000-0000-0000-000000000030', 'teacher'),
+  ('00000000-0000-0000-0000-000000000031', 'teacher')
+ON CONFLICT (user_id) DO NOTHING;
 
 -- =============================================================================
 -- END SEED

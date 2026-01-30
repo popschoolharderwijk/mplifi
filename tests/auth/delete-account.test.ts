@@ -2,7 +2,7 @@
  * Tests for account deletion functionality.
  *
  * Verifies that:
- * 1. Users can be deleted and CASCADE removes profile + user_roles
+ * 1. Users can be deleted and CASCADE removes profile
  * 2. The last site_admin cannot be deleted (trigger protection)
  * 3. Non-last site_admin can be deleted after another is promoted
  *
@@ -33,7 +33,7 @@ describe('Account deletion', () => {
 		it('should delete profile when user is deleted', async () => {
 			const testEmail = generateTestEmail('delete-cascade');
 
-			// Create a user (triggers handle_new_user which creates profile + role)
+			// Create a user (triggers handle_new_user which creates profile)
 			const { data: createData, error: createError } = await adminClient.auth.admin.createUser({
 				email: testEmail,
 				email_confirm: true,
@@ -52,14 +52,13 @@ describe('Account deletion', () => {
 			expect(profileBefore).not.toBeNull();
 			expect(profileBefore?.email).toBe(testEmail);
 
-			// Verify user_roles exists
+			// New users do not have an entry in user_roles
 			const { data: roleBefore } = await adminClient
 				.from('user_roles')
 				.select('*')
 				.eq('user_id', userId)
-				.single();
-			expect(roleBefore).not.toBeNull();
-			expect(roleBefore?.role).toBe('student'); // Default role
+				.maybeSingle();
+			expect(roleBefore).toBeNull();
 
 			// Delete the user
 			const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId);
@@ -73,72 +72,6 @@ describe('Account deletion', () => {
 				.single();
 			expect(profileAfter).toBeNull();
 			expect(profileError?.code).toBe('PGRST116'); // No rows returned
-
-			// Verify user_roles is gone (CASCADE)
-			const { data: roleAfter, error: roleError } = await adminClient
-				.from('user_roles')
-				.select('*')
-				.eq('user_id', userId)
-				.single();
-			expect(roleAfter).toBeNull();
-			expect(roleError?.code).toBe('PGRST116'); // No rows returned
-		});
-
-		it('should delete teacher_students relations when teacher is deleted', async () => {
-			const teacherEmail = generateTestEmail('delete-teacher');
-			const studentEmail = generateTestEmail('delete-student');
-
-			// Create teacher
-			const { data: teacherData } = await adminClient.auth.admin.createUser({
-				email: teacherEmail,
-				email_confirm: true,
-			});
-			const teacherId = requireUser(teacherData).id;
-			createdUserIds.push(teacherId);
-
-			// Create student
-			const { data: studentData } = await adminClient.auth.admin.createUser({
-				email: studentEmail,
-				email_confirm: true,
-			});
-			const studentId = requireUser(studentData).id;
-			createdUserIds.push(studentId);
-
-			// Set teacher role
-			await adminClient.from('user_roles').update({ role: 'teacher' }).eq('user_id', teacherId);
-
-			// Create teacher-student relation
-			await adminClient.from('teacher_students').insert({ teacher_id: teacherId, student_id: studentId });
-
-			// Verify relation exists
-			const { data: relationBefore } = await adminClient
-				.from('teacher_students')
-				.select('*')
-				.eq('teacher_id', teacherId)
-				.eq('student_id', studentId)
-				.single();
-			expect(relationBefore).not.toBeNull();
-
-			// Delete the teacher
-			const { error: deleteError } = await adminClient.auth.admin.deleteUser(teacherId);
-			expect(deleteError).toBeNull();
-			// Remove from cleanup list since already deleted
-			const teacherIndex = createdUserIds.indexOf(teacherId);
-			if (teacherIndex > -1) createdUserIds.splice(teacherIndex, 1);
-
-			// Verify relation is gone (CASCADE)
-			const { data: relationAfter, error: relationError } = await adminClient
-				.from('teacher_students')
-				.select('*')
-				.eq('teacher_id', teacherId)
-				.eq('student_id', studentId)
-				.single();
-			expect(relationAfter).toBeNull();
-			expect(relationError?.code).toBe('PGRST116'); // No rows returned
-
-			// Student should still exist
-			const { data: studentStillExists } = await adminClient.auth.admin.getUserById(studentId);
-			expect(studentStillExists.user).not.toBeNull();
 		});
 	});
 
@@ -182,8 +115,8 @@ describe('Account deletion', () => {
 			const secondAdminId = requireUser(secondData).id;
 			createdUserIds.push(secondAdminId);
 
-			// Promote to site_admin
-			await adminClient.from('user_roles').update({ role: 'site_admin' }).eq('user_id', secondAdminId);
+			// Create role entry and set to site_admin
+			await adminClient.from('user_roles').insert({ user_id: secondAdminId, role: 'site_admin' });
 
 			// Now we have 2 site_admins, so deleting the new one should work
 			const { error: deleteError } = await adminClient.auth.admin.deleteUser(secondAdminId);
