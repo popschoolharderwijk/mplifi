@@ -23,10 +23,12 @@ const EXPECTED_POLICIES: Record<string, string[]> = {
 		'roles_select_own',
 		'roles_select_admin',
 		'roles_select_staff',
-		// UPDATE policy - only site_admin can change roles
-		'roles_update_site_admin',
-		// Intentionally NO INSERT policy - roles are assigned directly by site_admin via SQL
-		// Intentionally NO DELETE policy - roles are only removed via CASCADE from auth.users
+		// INSERT policy - admin/site_admin can assign roles (admin cannot assign site_admin)
+		'roles_insert_admin',
+		// UPDATE policy - admin/site_admin can change roles (admin cannot modify site_admin roles)
+		'roles_update_admin',
+		// DELETE policy - admin/site_admin can delete roles (admin cannot delete site_admin roles)
+		'roles_delete_admin',
 	],
 };
 

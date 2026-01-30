@@ -26,7 +26,6 @@ import { supabase } from '@/integrations/supabase/client';
 // Quick navigation items for command palette
 const quickNavItems = [
 	{ href: '/', label: 'Dashboard', group: 'Navigatie' },
-	{ href: '/students', label: 'Leerlingen', group: 'Navigatie' },
 	{ href: '/teachers', label: 'Docenten', group: 'Navigatie' },
 ];
 

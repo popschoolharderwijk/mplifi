@@ -33,6 +33,24 @@
 2. Verifieer secrets in Edge Function settings
 3. Test lokaal met `supabase functions serve`
 
+### verify_jwt = true geeft 401 bij POST
+
+**Probleem**: Met `verify_jwt = true` in `config.toml` krijgen POST requests een 401 Unauthorized, zelfs met een geldige JWT.
+
+**Oorzaak**: De JWT gebruikt ES256 (asymmetrische signing), maar de Supabase Edge Runtime lijkt dit niet correct te verifiëren.
+
+**Oplossing**: Gebruik `verify_jwt = false` en verifieer de JWT handmatig in de Edge Function via `supabase.auth.getUser()`. Dit werkt correct en controleert ook de sessie-status.
+
+```typescript
+// In de Edge Function:
+const { data: { user }, error } = await supabase.auth.getUser();
+if (error || !user) {
+  return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+}
+```
+
+> 📝 Zie ook de FIXME in `supabase/config.toml` voor meer context.
+
 ---
 
 ## Email verzenden faalt

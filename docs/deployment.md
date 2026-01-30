@@ -62,9 +62,9 @@ supabase functions deploy
 
 | Function | Doel | Vereiste secrets |
 |----------|------|------------------|
-| `delete-account` | AVG: accounts verwijderen (self-service + admin) | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (automatisch beschikbaar) |
+| `delete-user` | AVG: accounts verwijderen (self-service + admin) | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (automatisch beschikbaar) |
 
-**Gebruik `delete-account`:**
+**Gebruik `delete-user`:**
 - Zonder body: gebruiker verwijdert eigen account
 - Met `{ "userId": "..." }`: admin/site_admin verwijdert ander account
 
@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
 Edge Functions kunnen geconfigureerd worden in `supabase/config.toml`:
 
 ```toml
-[functions.delete-account]
+[functions.delete-user]
 verify_jwt = false  # Of true voor gateway-level JWT verificatie
 ```
 

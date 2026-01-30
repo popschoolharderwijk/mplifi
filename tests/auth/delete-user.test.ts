@@ -1,5 +1,5 @@
 /**
- * Tests for account deletion functionality.
+ * Tests for user deletion functionality.
  *
  * Verifies that:
  * 1. Users can be deleted and CASCADE removes profile
@@ -14,7 +14,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { createClientBypassRLS } from '../db';
 import { generateTestEmail, requireUser } from '../utils';
 
-describe('Account deletion', () => {
+describe('User deletion', () => {
 	const adminClient = createClientBypassRLS();
 	const createdUserIds: string[] = [];
 

@@ -33,11 +33,13 @@ De lokale Supabase wordt automatisch geseeded met testgebruikers uit `supabase/s
 ### RLS Tests (`tests/rls/`)
 
 - ✅ RLS is enabled op alle verwachte tabellen
-- ✅ Alle verwachte policies bestaan
+- ✅ Alle verwachte policies bestaan (incl. `roles_insert_admin`, `roles_update_admin`, `roles_delete_admin`)
 - ✅ Geen onverwachte policies aanwezig
 - ✅ Security helper functions bestaan (`is_admin`, `is_teacher`, etc.)
 - ✅ Seed data ground truth (correct aantal users per role)
 - ✅ RLS policies werken correct per user role
+- ✅ Role management: admin kan rollen beheren (behalve site_admin)
+- ✅ Role management: site_admin kan alle rollen beheren
 
 ### Auth Tests (`tests/auth/`)
 
@@ -45,6 +47,7 @@ De lokale Supabase wordt automatisch geseeded met testgebruikers uit `supabase/s
 - ✅ Wachtwoorden zonder symbolen/cijfers/letters worden geweigerd
 - ✅ Valide wachtwoorden worden geaccepteerd (user unconfirmed)
 - ✅ OTP/Magic Link sign-in flow
+- ✅ User deletion (CASCADE behavior, site_admin bescherming)
 
 ---
 

@@ -3,7 +3,7 @@ import { createClientAs } from '../../db';
 import { fixtures } from '../fixtures';
 import { TestUsers } from '../test-users';
 
-const { allUserRoles, getProfile, getUserId } = fixtures;
+const { allUserRoles, getProfile, getUserId, requireUserId } = fixtures;
 
 // Get target user_id for role update tests (teacher-bob)
 const targetUserId = getUserId(TestUsers.TEACHER_BOB);
@@ -55,18 +55,62 @@ describe('RLS: user_roles UPDATE - other users', () => {
 		expect(data).toHaveLength(0);
 	});
 
-	it('admin cannot update user roles', async () => {
+	it('admin can update other user roles (except site_admin)', async () => {
 		const db = await createClientAs(TestUsers.ADMIN_ONE);
 
+		// Change teacher-bob to staff
 		const { data, error } = await db
 			.from('user_roles')
 			.update({ role: 'staff' })
 			.eq('user_id', targetUserId)
 			.select();
 
-		// RLS should block - 0 rows affected
+		expect(error).toBeNull();
+		expect(data).toHaveLength(1);
+		expect(data?.[0]?.role).toBe('staff');
+
+		// Restore back to teacher
+		const { error: restoreError } = await db
+			.from('user_roles')
+			.update({ role: 'teacher' })
+			.eq('user_id', targetUserId);
+
+		expect(restoreError).toBeNull();
+	});
+
+	it('admin cannot update site_admin roles', async () => {
+		const db = await createClientAs(TestUsers.ADMIN_ONE);
+
+		// Get site_admin's user_id
+		const siteAdminRole = allUserRoles.find((ur) => ur.role === 'site_admin');
+		if (!siteAdminRole) {
+			throw new Error('Could not find site_admin role');
+		}
+
+		const { data, error } = await db
+			.from('user_roles')
+			.update({ role: 'admin' })
+			.eq('user_id', siteAdminRole.user_id)
+			.select();
+
+		// RLS should block - admin cannot modify site_admin roles
 		expect(error).toBeNull();
 		expect(data).toHaveLength(0);
+	});
+
+	it('admin cannot promote user to site_admin', async () => {
+		const db = await createClientAs(TestUsers.ADMIN_ONE);
+
+		const { error } = await db
+			.from('user_roles')
+			.update({ role: 'site_admin' })
+			.eq('user_id', targetUserId)
+			.select();
+
+		// RLS WITH CHECK blocks this - returns an error (not just 0 rows)
+		// because the USING clause passes but WITH CHECK fails
+		expect(error).not.toBeNull();
+		expect(error?.code).toBe('42501'); // RLS violation
 	});
 
 	it('site_admin can update other user roles', async () => {
@@ -96,7 +140,7 @@ describe('RLS: user_roles UPDATE - other users', () => {
 describe('RLS: user_roles UPDATE - own role', () => {
 	it('user without role has no role to update', async () => {
 		const db = await createClientAs(TestUsers.USER_A);
-		const userId = getUserId(TestUsers.USER_A);
+		const userId = requireUserId(TestUsers.USER_A);
 
 		// Users without a role have no entry in user_roles
 		const { data, error } = await db.from('user_roles').update({ role: 'teacher' }).eq('user_id', userId).select();

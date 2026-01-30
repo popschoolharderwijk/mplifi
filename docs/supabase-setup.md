@@ -55,8 +55,8 @@ supabase db push
 ```
 
 Dit past toe:
-- `20260116145900_baseline.sql` - Basis tabellen en RLS
-- `20260116160000_add_security_introspection.sql` - Security helper functies
+- `20260116145900_baseline.sql` - Basis tabellen, RLS policies en role management
+- `20260116160000_add_security_introspection.sql` - Security helper functies voor testing
 - `20260117000000_create_avatars_storage.sql` - Storage bucket RLS policies
 
 ---

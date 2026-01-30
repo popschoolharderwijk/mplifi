@@ -197,29 +197,29 @@ ALTER FUNCTION public.can_delete_user(UUID, UUID) OWNER TO postgres;
 -- Users can view their own profile
 CREATE POLICY profiles_select_own
 ON public.profiles FOR SELECT TO authenticated
-USING (auth.uid() = user_id);
+USING ((select auth.uid()) = user_id);
 
 -- Admins and site_admins can view all profiles
 CREATE POLICY profiles_select_admin
 ON public.profiles FOR SELECT TO authenticated
-USING (public.is_admin(auth.uid()) OR public.is_site_admin(auth.uid()));
+USING (public.is_admin((select auth.uid())) OR public.is_site_admin((select auth.uid())));
 
 -- Staff can view all profiles
 CREATE POLICY profiles_select_staff
 ON public.profiles FOR SELECT TO authenticated
-USING (public.is_staff(auth.uid()));
+USING (public.is_staff((select auth.uid())));
 
 -- Users can update their own profile
 CREATE POLICY profiles_update_own
 ON public.profiles FOR UPDATE TO authenticated
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
+USING ((select auth.uid()) = user_id)
+WITH CHECK ((select auth.uid()) = user_id);
 
 -- Admins and site_admins can update any profile
 CREATE POLICY profiles_update_admin
 ON public.profiles FOR UPDATE TO authenticated
-USING (public.is_admin(auth.uid()) OR public.is_site_admin(auth.uid()))
-WITH CHECK (public.is_admin(auth.uid()) OR public.is_site_admin(auth.uid()));
+USING (public.is_admin((select auth.uid())) OR public.is_site_admin((select auth.uid())))
+WITH CHECK (public.is_admin((select auth.uid())) OR public.is_site_admin((select auth.uid())));
 
 -- INSERT and DELETE policies explicitly removed:
 -- Profiles can only be created via handle_new_user() trigger
@@ -228,43 +228,88 @@ WITH CHECK (public.is_admin(auth.uid()) OR public.is_site_admin(auth.uid()));
 -- =============================================================================
 -- SECTION 6: RLS POLICIES - USER_ROLES
 -- =============================================================================
--- Role changes are UPDATE operations, not INSERT+DELETE.
+-- Role management permissions:
+--
+-- ADMINS:
+-- - Can assign roles to new users (INSERT), but NOT site_admin roles
+-- - Can modify roles of existing users (UPDATE), but NOT site_admin roles
+-- - Can delete roles (DELETE), but NOT site_admin roles
+-- - Cannot modify their own role
+--
+-- SITE_ADMINS:
+-- - Can do everything (assign, modify, delete any role)
+-- - Cannot modify their own role
+--
+-- Note: PRIMARY KEY on user_id ensures only one role per user.
 
 -- Users can view their own role
 CREATE POLICY roles_select_own
 ON public.user_roles FOR SELECT TO authenticated
-USING (auth.uid() = user_id);
+USING ((select auth.uid()) = user_id);
 
 -- Admins and site_admins can view all roles
 CREATE POLICY roles_select_admin
 ON public.user_roles FOR SELECT TO authenticated
-USING (public.is_admin(auth.uid()) OR public.is_site_admin(auth.uid()));
+USING (public.is_admin((select auth.uid())) OR public.is_site_admin((select auth.uid())));
 
 -- Staff can view all roles
 CREATE POLICY roles_select_staff
 ON public.user_roles FOR SELECT TO authenticated
-USING (public.is_staff(auth.uid()));
+USING (public.is_staff((select auth.uid())));
 
--- INSERT policy explicitly removed:
--- Roles can only be created via handle_new_user() trigger
--- Roles can only be deleted via CASCADE when auth.users is deleted
+-- Allow admins to insert roles (but NOT site_admin)
+-- Allow site_admins to insert any role
+CREATE POLICY roles_insert_admin
+ON public.user_roles FOR INSERT TO authenticated
+WITH CHECK (
+  (
+    public.is_admin((select auth.uid()))
+    AND role != 'site_admin'  -- Admins cannot assign site_admin
+  )
+  OR public.is_site_admin((select auth.uid()))  -- Site_admins can assign any role
+);
 
--- Only site_admin can change roles, but cannot modify their own role
--- This prevents accidental self-lockout. See also SECTION 11 for additional protection.
-CREATE POLICY roles_update_site_admin
+-- Allow admins to update roles (but NOT site_admin roles and not their own)
+-- Allow site_admins to update any role (but not their own)
+-- Note: In USING, 'role' refers to OLD.role. In WITH CHECK, 'role' refers to NEW.role.
+CREATE POLICY roles_update_admin
 ON public.user_roles FOR UPDATE TO authenticated
 USING (
-  public.is_site_admin(auth.uid())
-  AND user_id != auth.uid()  -- Cannot modify own role
+  (
+    (
+      public.is_admin((select auth.uid()))
+      AND role != 'site_admin'  -- Admins cannot modify users with site_admin role (OLD.role)
+    )
+    OR public.is_site_admin((select auth.uid()))  -- Site_admins can modify any role
+  )
+  AND user_id != (select auth.uid())  -- Cannot modify own role
 )
 WITH CHECK (
-  public.is_site_admin(auth.uid())
-  AND user_id != auth.uid()
+  (
+    (
+      public.is_admin((select auth.uid()))
+      AND role != 'site_admin'  -- Admins cannot set role to site_admin (NEW.role)
+    )
+    OR public.is_site_admin((select auth.uid()))  -- Site_admins can set any role
+  )
+  AND user_id != (select auth.uid())  -- Cannot modify own role
+);
+
+-- Allow admins to delete roles (but NOT site_admin roles)
+-- Allow site_admins to delete any role
+CREATE POLICY roles_delete_admin
+ON public.user_roles FOR DELETE TO authenticated
+USING (
+  (
+    public.is_admin((select auth.uid()))
+    AND role != 'site_admin'  -- Admins cannot delete site_admin roles
+  )
+  OR public.is_site_admin((select auth.uid()))  -- Site_admins can delete any role
 );
 
 -- Grant appropriate permissions on tables
 GRANT SELECT, UPDATE ON public.profiles TO authenticated;
-GRANT SELECT ON public.user_roles TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_roles TO authenticated;
 
 -- =============================================================================
 -- SECTION 9: TRIGGERS

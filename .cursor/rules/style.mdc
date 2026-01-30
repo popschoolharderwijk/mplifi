@@ -6,3 +6,4 @@ alwaysApply: true
 * Code and code comments should always be written in English
 * Front-end UI Elements (labels, buttons, error messages, placeholders) should always be written in Dutch
 * Tools, CLI tools should always be completely written in English (output, input and code)
+* For loading spinners, always use `LuLoaderCircle` from `react-icons/lu` with `animate-spin` class

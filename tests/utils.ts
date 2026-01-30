@@ -16,7 +16,7 @@ export function requireUser(data: { user: User | null }): User {
 }
 
 /**
- * Email domain for dynamically generated test accounts.
+ * Email domain for dynamically generated test users.
  * Using real domain since production Supabase rejects @example.com
  */
 export const TEST_EMAIL_DOMAIN = 'popschoolharderwijk.nl';

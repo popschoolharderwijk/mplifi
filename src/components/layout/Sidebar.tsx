@@ -1,15 +1,16 @@
-import { LuChevronLeft, LuGraduationCap, LuLayoutDashboard, LuMusic, LuUsers } from 'react-icons/lu';
+import { LuChevronLeft, LuLayoutDashboard, LuMusic, LuShieldCheck, LuUserCog } from 'react-icons/lu';
 import { NavLink } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 // Navigation items configuration
-const mainNavItems = [
-	{ href: '/', label: 'Dashboard', icon: LuLayoutDashboard },
-	{ href: '/students', label: 'Leerlingen', icon: LuUsers },
-	{ href: '/teachers', label: 'Docenten', icon: LuGraduationCap },
-];
+const mainNavItems = [{ href: '/', label: 'Dashboard', icon: LuLayoutDashboard }];
+
+// Admin-only navigation items
+const adminNavItems = [{ href: '/users', label: 'Gebruikers', icon: LuUserCog }];
 
 interface SidebarProps {
 	collapsed?: boolean;
@@ -17,6 +18,9 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
+	const { isAdmin, isSiteAdmin } = useAuth();
+	const showAdminNav = isAdmin || isSiteAdmin;
+
 	return (
 		<TooltipProvider delayDuration={0}>
 			<aside
@@ -71,9 +75,28 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 				{/* Navigation */}
 				<div className={cn('flex-1 overflow-auto py-4', collapsed ? 'px-0' : 'px-2')}>
 					<nav className={cn('flex flex-col gap-1', collapsed && 'items-center')}>
+						{/* Main navigation items */}
 						{mainNavItems.map((item) => (
 							<NavItem key={item.href} {...item} collapsed={collapsed} />
 						))}
+
+						{/* Admin section */}
+						{showAdminNav && (
+							<>
+								{!collapsed && (
+									<div className="mt-4 mb-2 px-3">
+										<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+											<LuShieldCheck className="h-3.5 w-3.5" />
+											<span>Beheer</span>
+										</div>
+									</div>
+								)}
+								{collapsed && <Separator className="my-2" />}
+								{adminNavItems.map((item) => (
+									<NavItem key={item.href} {...item} collapsed={collapsed} />
+								))}
+							</>
+						)}
 					</nav>
 				</div>
 			</aside>

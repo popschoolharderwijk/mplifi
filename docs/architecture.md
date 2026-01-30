@@ -10,6 +10,31 @@
 
 ---
 
+## Rollen en Permissies
+
+De applicatie gebruikt een role-based access control (RBAC) systeem met de volgende rollen:
+
+| Rol | Beschrijving |
+|-----|-------------|
+| `site_admin` | Volledige toegang, kan alle rollen beheren |
+| `admin` | Kan gebruikers en rollen beheren (behalve site_admin) |
+| `staff` | Kan gebruikersgegevens inzien |
+| `teacher` | Beperkte toegang tot eigen gegevens |
+| *(geen rol)* | Standaard gebruiker, alleen eigen profiel |
+
+### Role Management Permissies
+
+| Actie | admin | site_admin |
+|-------|-------|------------|
+| Rollen toewijzen (INSERT) | ✅ (geen site_admin) | ✅ |
+| Rollen wijzigen (UPDATE) | ✅ (geen site_admin) | ✅ |
+| Rollen verwijderen (DELETE) | ✅ (geen site_admin) | ✅ |
+| Eigen rol wijzigen | ❌ | ❌ |
+
+> ⚠️ **Bescherming**: De laatste `site_admin` kan niet worden verwijderd of gedemoteerd (database trigger).
+
+---
+
 ## Supabase Omgevingen
 
 Dit project gebruikt twee aparte Supabase omgevingen:

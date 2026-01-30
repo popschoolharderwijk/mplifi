@@ -79,6 +79,15 @@ email_sent = 200
 
 # ---------
 # Edge function settings
+#
+# FIXME: verify_jwt = true returns 401 on POST requests, even with a valid JWT.
+# The JWT uses ES256 (asymmetric signing) but the Edge Runtime doesn't seem to
+# verify it correctly. Manual verification via supabase.auth.getUser() in the
+# function code works fine. Investigate later if this is a Supabase bug or
+# configuration issue.
 
-[functions.delete-account]
+[functions.delete-user]
+verify_jwt = false
+
+[functions.create-user]
 verify_jwt = false

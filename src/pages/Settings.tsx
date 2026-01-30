@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -79,37 +80,14 @@ export default function Settings() {
 		loadProfile();
 	}, [user]);
 
-	// Validate phone number (10 digits only)
-	const validatePhoneNumber = (phone: string): boolean => {
-		if (!phone) return true; // Empty is allowed (NULL)
-		const digitsOnly = phone.replace(/\D/g, '');
-		return digitsOnly.length === 10;
-	};
-
-	// Normalize phone number (remove non-digits)
-	const normalizePhoneNumber = (phone: string): string => {
-		return phone.replace(/\D/g, '');
-	};
-
-	const handlePhoneNumberChange = (value: string) => {
-		const normalized = normalizePhoneNumber(value);
-		setFormData({ ...formData, phone_number: normalized });
-
-		if (normalized && !validatePhoneNumber(normalized)) {
-			setErrors({ ...errors, phone_number: 'Telefoonnummer moet exact 10 cijfers zijn' });
-		} else {
-			setErrors({ ...errors, phone_number: undefined });
-		}
-	};
-
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!user) return;
 
 		// Validate
 		const newErrors: typeof errors = {};
-		if (formData.phone_number && !validatePhoneNumber(formData.phone_number)) {
-			newErrors.phone_number = 'Telefoonnummer moet exact 10 cijfers zijn';
+		if (formData.phone_number && formData.phone_number.length !== 10) {
+			newErrors.phone_number = 'Telefoonnummer moet precies 10 cijfers zijn';
 		}
 		setErrors(newErrors);
 
@@ -279,7 +257,7 @@ export default function Settings() {
 			}
 
 			// Call the Edge Function using supabase.functions.invoke (handles auth automatically)
-			const { data, error: invokeError } = await supabase.functions.invoke('delete-account', {
+			const { data, error: invokeError } = await supabase.functions.invoke('delete-user', {
 				method: 'POST',
 			});
 
@@ -419,22 +397,24 @@ export default function Settings() {
 							</div>
 						</div>
 
-						<div className="space-y-2">
-							<Label htmlFor="phone_number">Telefoonnummer</Label>
-							<Input
-								id="phone_number"
-								type="tel"
-								value={formData.phone_number}
-								onChange={(e) => handlePhoneNumberChange(e.target.value)}
-								placeholder="0612345678"
-								maxLength={10}
-								disabled={saving}
-							/>
-							{errors.phone_number && <p className="text-xs text-destructive">{errors.phone_number}</p>}
-							<p className="text-xs text-muted-foreground">
-								Voer 10 cijfers in (bijv. 0612345678). Laat leeg om te verwijderen.
-							</p>
-						</div>
+						<PhoneInput
+							id="phone_number"
+							label="Telefoonnummer"
+							value={formData.phone_number}
+							onChange={(value) => {
+								setFormData({ ...formData, phone_number: value });
+								if (value && value.length !== 10) {
+									setErrors({
+										...errors,
+										phone_number: 'Telefoonnummer moet precies 10 cijfers zijn',
+									});
+								} else {
+									setErrors({ ...errors, phone_number: undefined });
+								}
+							}}
+							error={errors.phone_number}
+							disabled={saving}
+						/>
 
 						<Button type="submit" disabled={saving}>
 							{saving ? 'Opslaan...' : 'Opslaan'}
