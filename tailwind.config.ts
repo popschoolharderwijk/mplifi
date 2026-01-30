@@ -99,5 +99,30 @@ export default {
 			},
 		},
 	},
-	plugins: [require('tailwindcss-animate')],
+	plugins: [
+		require('tailwindcss-animate'),
+		// Add scrollbar-gutter: stable to all overflow utilities to prevent layout shift
+		({ addUtilities }: { addUtilities: (utilities: Record<string, Record<string, string>>) => void }) => {
+			addUtilities({
+				'.overflow-auto': {
+					'scrollbar-gutter': 'stable',
+				},
+				'.overflow-y-auto': {
+					'scrollbar-gutter': 'stable',
+				},
+				'.overflow-x-auto': {
+					'scrollbar-gutter': 'stable',
+				},
+				'.overflow-scroll': {
+					'scrollbar-gutter': 'stable',
+				},
+				'.overflow-y-scroll': {
+					'scrollbar-gutter': 'stable',
+				},
+				'.overflow-x-scroll': {
+					'scrollbar-gutter': 'stable',
+				},
+			});
+		},
+	],
 } satisfies Config;
