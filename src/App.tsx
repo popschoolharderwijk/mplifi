@@ -9,8 +9,7 @@ import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
 import Settings from './pages/Settings';
-import Students from './pages/Students';
-import Teachers from './pages/Teachers';
+import Users from './pages/Users';
 
 const App = () => (
 	<BrowserRouter>
@@ -29,8 +28,7 @@ const App = () => (
 						}
 					>
 						<Route path="/" element={<Dashboard />} />
-						<Route path="/students" element={<Students />} />
-						<Route path="/teachers" element={<Teachers />} />
+						<Route path="/users" element={<Users />} />
 						<Route path="/settings" element={<Settings />} />
 					</Route>
 

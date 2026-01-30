@@ -34,7 +34,7 @@ export default function Login() {
 		if (error) {
 			// User-friendly error message for unregistered users
 			if (error.message === 'Signups not allowed for otp') {
-				setError('Dit emailadres is niet geregistreerd. Neem contact op met je begeleider.');
+				setError('Dit emailadres is niet geregistreerd.');
 			} else {
 				setError(error.message);
 			}

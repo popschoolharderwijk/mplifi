@@ -264,7 +264,7 @@ WITH CHECK (
 
 -- Grant appropriate permissions on tables
 GRANT SELECT, UPDATE ON public.profiles TO authenticated;
-GRANT SELECT ON public.user_roles TO authenticated;
+GRANT SELECT, UPDATE ON public.user_roles TO authenticated;
 
 -- =============================================================================
 -- SECTION 9: TRIGGERS
