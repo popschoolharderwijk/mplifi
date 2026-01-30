@@ -197,29 +197,29 @@ ALTER FUNCTION public.can_delete_user(UUID, UUID) OWNER TO postgres;
 -- Users can view their own profile
 CREATE POLICY profiles_select_own
 ON public.profiles FOR SELECT TO authenticated
-USING (auth.uid() = user_id);
+USING ((select auth.uid()) = user_id);
 
 -- Admins and site_admins can view all profiles
 CREATE POLICY profiles_select_admin
 ON public.profiles FOR SELECT TO authenticated
-USING (public.is_admin(auth.uid()) OR public.is_site_admin(auth.uid()));
+USING (public.is_admin((select auth.uid())) OR public.is_site_admin((select auth.uid())));
 
 -- Staff can view all profiles
 CREATE POLICY profiles_select_staff
 ON public.profiles FOR SELECT TO authenticated
-USING (public.is_staff(auth.uid()));
+USING (public.is_staff((select auth.uid())));
 
 -- Users can update their own profile
 CREATE POLICY profiles_update_own
 ON public.profiles FOR UPDATE TO authenticated
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
+USING ((select auth.uid()) = user_id)
+WITH CHECK ((select auth.uid()) = user_id);
 
 -- Admins and site_admins can update any profile
 CREATE POLICY profiles_update_admin
 ON public.profiles FOR UPDATE TO authenticated
-USING (public.is_admin(auth.uid()) OR public.is_site_admin(auth.uid()))
-WITH CHECK (public.is_admin(auth.uid()) OR public.is_site_admin(auth.uid()));
+USING (public.is_admin((select auth.uid())) OR public.is_site_admin((select auth.uid())))
+WITH CHECK (public.is_admin((select auth.uid())) OR public.is_site_admin((select auth.uid())));
 
 -- INSERT and DELETE policies explicitly removed:
 -- Profiles can only be created via handle_new_user() trigger
@@ -233,17 +233,17 @@ WITH CHECK (public.is_admin(auth.uid()) OR public.is_site_admin(auth.uid()));
 -- Users can view their own role
 CREATE POLICY roles_select_own
 ON public.user_roles FOR SELECT TO authenticated
-USING (auth.uid() = user_id);
+USING ((select auth.uid()) = user_id);
 
 -- Admins and site_admins can view all roles
 CREATE POLICY roles_select_admin
 ON public.user_roles FOR SELECT TO authenticated
-USING (public.is_admin(auth.uid()) OR public.is_site_admin(auth.uid()));
+USING (public.is_admin((select auth.uid())) OR public.is_site_admin((select auth.uid())));
 
 -- Staff can view all roles
 CREATE POLICY roles_select_staff
 ON public.user_roles FOR SELECT TO authenticated
-USING (public.is_staff(auth.uid()));
+USING (public.is_staff((select auth.uid())));
 
 -- INSERT policy explicitly removed:
 -- Roles can only be created via handle_new_user() trigger
@@ -254,12 +254,12 @@ USING (public.is_staff(auth.uid()));
 CREATE POLICY roles_update_site_admin
 ON public.user_roles FOR UPDATE TO authenticated
 USING (
-  public.is_site_admin(auth.uid())
-  AND user_id != auth.uid()  -- Cannot modify own role
+  public.is_site_admin((select auth.uid()))
+  AND user_id != (select auth.uid())  -- Cannot modify own role
 )
 WITH CHECK (
-  public.is_site_admin(auth.uid())
-  AND user_id != auth.uid()
+  public.is_site_admin((select auth.uid()))
+  AND user_id != (select auth.uid())
 );
 
 -- Grant appropriate permissions on tables
