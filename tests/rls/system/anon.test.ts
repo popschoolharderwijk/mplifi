@@ -98,57 +98,7 @@ describe('RLS: anonymous user access', () => {
 		it('anon cannot delete user_roles', async () => {
 			const db = createClientAnon();
 
-			const { data, error } = await db.from('user_roles').delete().eq('role', 'student').select();
-
-			expect(error).toBeNull();
-			expect(data).toHaveLength(0);
-		});
-	});
-
-	describe('teacher_students table', () => {
-		it('anon cannot read teacher_students', async () => {
-			const db = createClientAnon();
-
-			const { data, error } = await db.from('teacher_students').select('*');
-
-			expect(error).toBeNull();
-			expect(data).toHaveLength(0);
-		});
-
-		it('anon cannot insert teacher_students', async () => {
-			const db = createClientAnon();
-
-			const { data, error } = await db
-				.from('teacher_students')
-				.insert({
-					teacher_id: '00000000-0000-0000-0000-000000000030',
-					student_id: '00000000-0000-0000-0000-000000000100',
-				})
-				.select();
-
-			expect(error).not.toBeNull();
-			expect(data).toBeNull();
-		});
-
-		it('anon cannot delete teacher_students', async () => {
-			const db = createClientAnon();
-
-			const { data, error } = await db
-				.from('teacher_students')
-				.delete()
-				.eq('teacher_id', '00000000-0000-0000-0000-000000000030')
-				.select();
-
-			expect(error).toBeNull();
-			expect(data).toHaveLength(0);
-		});
-	});
-
-	describe('teacher_student_profiles view', () => {
-		it('anon cannot read teacher_student_profiles view', async () => {
-			const db = createClientAnon();
-
-			const { data, error } = await db.from('teacher_student_profiles').select('*');
+			const { data, error } = await db.from('user_roles').delete().eq('role', 'teacher').select();
 
 			expect(error).toBeNull();
 			expect(data).toHaveLength(0);

@@ -17,8 +17,7 @@ CREATE TYPE public.app_role AS ENUM (
   'site_admin',
   'admin',
   'staff',
-  'teacher',
-  'student'
+  'teacher'
 );
 
 -- =============================================================================
@@ -39,21 +38,9 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 
 CREATE TABLE IF NOT EXISTS public.user_roles (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  role app_role NOT NULL DEFAULT 'student',
+  role app_role NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
-CREATE TABLE IF NOT EXISTS public.teacher_students (
-  teacher_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  student_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  PRIMARY KEY (teacher_id, student_id)
-);
-
--- Indexes for foreign key lookups (performance optimization)
-CREATE INDEX IF NOT EXISTS idx_teacher_students_teacher_id
-  ON public.teacher_students(teacher_id);
-CREATE INDEX IF NOT EXISTS idx_teacher_students_student_id
-  ON public.teacher_students(student_id);
 
 -- =============================================================================
 -- SECTION 3: ENABLE RLS
@@ -64,9 +51,6 @@ ALTER TABLE public.profiles FORCE ROW LEVEL SECURITY;
 
 ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_roles FORCE ROW LEVEL SECURITY;
-
-ALTER TABLE public.teacher_students ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.teacher_students FORCE ROW LEVEL SECURITY;
 
 -- =============================================================================
 -- SECTION 4: ROLE HELPER FUNCTIONS (HARDENED)
@@ -139,25 +123,13 @@ AS $$
   SELECT public._has_role(_user_id, 'teacher');
 $$;
 
-CREATE OR REPLACE FUNCTION public.is_student(_user_id UUID)
-RETURNS BOOLEAN
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-SET row_security = off
-AS $$
-  SELECT public._has_role(_user_id, 'student');
-$$;
-
 -- Revoke public access, grant only to authenticated users
 REVOKE ALL ON FUNCTION
   public._has_role(UUID, app_role),
   public.is_site_admin(UUID),
   public.is_admin(UUID),
   public.is_staff(UUID),
-  public.is_teacher(UUID),
-  public.is_student(UUID)
+  public.is_teacher(UUID)
 FROM PUBLIC;
 
 -- Explicitly revoke from anon (Supabase's anon role doesn't inherit from PUBLIC revokes)
@@ -166,8 +138,7 @@ REVOKE ALL ON FUNCTION
   public.is_site_admin(UUID),
   public.is_admin(UUID),
   public.is_staff(UUID),
-  public.is_teacher(UUID),
-  public.is_student(UUID)
+  public.is_teacher(UUID)
 FROM anon;
 
 -- _has_role is an internal helper - no direct grant needed
@@ -176,13 +147,48 @@ GRANT EXECUTE ON FUNCTION public.is_site_admin(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_admin(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_staff(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_teacher(UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.is_student(UUID) TO authenticated;
 
 ALTER FUNCTION public.is_site_admin(UUID) OWNER TO postgres;
 ALTER FUNCTION public.is_admin(UUID) OWNER TO postgres;
 ALTER FUNCTION public.is_staff(UUID) OWNER TO postgres;
 ALTER FUNCTION public.is_teacher(UUID) OWNER TO postgres;
-ALTER FUNCTION public.is_student(UUID) OWNER TO postgres;
+
+-- =============================================================================
+-- SECTION 4b: AUTHORIZATION HELPER FUNCTIONS
+-- =============================================================================
+-- These functions centralize permission checks that are used by Edge Functions.
+-- This keeps authorization logic in the database (single source of truth).
+
+-- Check if a user can delete another user's account
+-- Rules:
+-- - Users can always delete their own account (self-deletion)
+-- - Admin and site_admin can delete any user's account
+CREATE OR REPLACE FUNCTION public.can_delete_user(
+  _requester_id UUID,
+  _target_id UUID
+)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+SET row_security = off
+AS $$
+  SELECT
+    -- Self-deletion is always allowed
+    _requester_id = _target_id
+    OR
+    -- Admin and site_admin can delete anyone
+    public.is_admin(_requester_id)
+    OR
+    public.is_site_admin(_requester_id);
+$$;
+
+-- Security: only authenticated users can call this
+REVOKE ALL ON FUNCTION public.can_delete_user(UUID, UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.can_delete_user(UUID, UUID) FROM anon;
+GRANT EXECUTE ON FUNCTION public.can_delete_user(UUID, UUID) TO authenticated;
+ALTER FUNCTION public.can_delete_user(UUID, UUID) OWNER TO postgres;
 
 -- =============================================================================
 -- SECTION 5: RLS POLICIES - PROFILES
@@ -203,19 +209,6 @@ CREATE POLICY profiles_select_staff
 ON public.profiles FOR SELECT TO authenticated
 USING (public.is_staff(auth.uid()));
 
--- Teachers can view profiles of their linked students only
-CREATE POLICY profiles_select_teacher_students
-ON public.profiles FOR SELECT TO authenticated
-USING (
-  public.is_teacher(auth.uid())
-  AND EXISTS (
-    SELECT 1
-    FROM public.teacher_students ts
-    WHERE ts.teacher_id = auth.uid()
-      AND ts.student_id = profiles.user_id
-  )
-);
-
 -- Users can update their own profile
 CREATE POLICY profiles_update_own
 ON public.profiles FOR UPDATE TO authenticated
@@ -227,18 +220,6 @@ CREATE POLICY profiles_update_admin
 ON public.profiles FOR UPDATE TO authenticated
 USING (public.is_admin(auth.uid()) OR public.is_site_admin(auth.uid()))
 WITH CHECK (public.is_admin(auth.uid()) OR public.is_site_admin(auth.uid()));
-
--- Staff can update student profiles only
-CREATE POLICY profiles_update_staff
-ON public.profiles FOR UPDATE TO authenticated
-USING (
-  public.is_staff(auth.uid())
-  AND public.is_student(user_id)
-)
-WITH CHECK (
-  public.is_staff(auth.uid())
-  AND public.is_student(user_id)
-);
 
 -- INSERT and DELETE policies explicitly removed:
 -- Profiles can only be created via handle_new_user() trigger
@@ -264,21 +245,6 @@ CREATE POLICY roles_select_staff
 ON public.user_roles FOR SELECT TO authenticated
 USING (public.is_staff(auth.uid()));
 
--- Teachers can view roles of their linked students
--- (Teachers already see their own role via roles_select_own)
-CREATE POLICY roles_select_teacher_students
-ON public.user_roles FOR SELECT TO authenticated
-USING (
-  public.is_teacher(auth.uid())
-  AND role = 'student'
-  AND EXISTS (
-    SELECT 1
-    FROM public.teacher_students ts
-    WHERE ts.teacher_id = auth.uid()
-      AND ts.student_id = user_roles.user_id
-  )
-);
-
 -- INSERT policy explicitly removed:
 -- Roles can only be created via handle_new_user() trigger
 -- Roles can only be deleted via CASCADE when auth.users is deleted
@@ -296,67 +262,9 @@ WITH CHECK (
   AND user_id != auth.uid()
 );
 
--- =============================================================================
--- SECTION 7: RLS POLICIES - TEACHER_STUDENTS
--- =============================================================================
-
--- Teachers can view their own student links
-CREATE POLICY teacher_students_select_own
-ON public.teacher_students FOR SELECT TO authenticated
-USING (teacher_id = auth.uid());
-
--- Teachers can add students (must be teacher + target must be student)
-CREATE POLICY teacher_students_insert_own
-ON public.teacher_students FOR INSERT TO authenticated
-WITH CHECK (
-  teacher_id = auth.uid()
-  AND public.is_teacher(auth.uid())
-  AND public.is_student(student_id)
-);
-
--- Teachers can remove their own student links
-CREATE POLICY teacher_students_delete_own
-ON public.teacher_students FOR DELETE TO authenticated
-USING (teacher_id = auth.uid());
-
--- Admins and site_admins can view all teacher-student links
-CREATE POLICY teacher_students_select_admin
-ON public.teacher_students FOR SELECT TO authenticated
-USING (public.is_admin(auth.uid()) OR public.is_site_admin(auth.uid()));
-
--- Staff can view all teacher-student links
-CREATE POLICY teacher_students_select_staff
-ON public.teacher_students FOR SELECT TO authenticated
-USING (public.is_staff(auth.uid()));
-
--- =============================================================================
--- SECTION 8: VIEW - TEACHER_STUDENT_PROFILES (WITH SECURITY INVOKER)
--- =============================================================================
--- Safe abstraction for teachers to query their students.
--- Uses security_invoker=on to ensure RLS policies are evaluated
--- in the context of the querying user, not the view owner.
-
-CREATE OR REPLACE VIEW public.teacher_student_profiles
-WITH (security_invoker=on) AS
-SELECT
-  p.user_id     AS student_id,
-  p.first_name,
-  p.last_name,
-  p.avatar_url,
-  p.email,
-  p.created_at,
-  ts.teacher_id
-FROM public.teacher_students ts
-JOIN public.profiles p
-  ON p.user_id = ts.student_id;
-
 -- Grant appropriate permissions on tables
 GRANT SELECT, UPDATE ON public.profiles TO authenticated;
 GRANT SELECT ON public.user_roles TO authenticated;
-GRANT SELECT, INSERT, DELETE ON public.teacher_students TO authenticated;
-
--- Grant permissions on views
-GRANT SELECT ON public.teacher_student_profiles TO authenticated;
 
 -- =============================================================================
 -- SECTION 9: TRIGGERS
@@ -431,8 +339,9 @@ EXECUTE FUNCTION public.prevent_profile_email_change();
 -- =============================================================================
 -- SECTION 10: NEW USER BOOTSTRAP
 -- =============================================================================
--- Automatically creates a profile and assigns 'student' role when a new user
--- signs up via Supabase Auth.
+-- Automatically creates a profile when a new user signs up via Supabase Auth.
+-- Note: No role is assigned. Explicit roles (admin, staff, teacher) are
+-- assigned manually by site_admin.
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
@@ -447,9 +356,7 @@ BEGIN
   VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'first_name', NEW.raw_user_meta_data->>'last_name')
   ON CONFLICT (user_id) DO NOTHING;
 
-  INSERT INTO public.user_roles (user_id, role)
-  VALUES (NEW.id, 'student')
-  ON CONFLICT (user_id) DO NOTHING;
+  -- No role is assigned here. Users without a role in user_roles are regular users.
 
   RETURN NEW;
 END;

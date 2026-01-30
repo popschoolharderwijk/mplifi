@@ -5,16 +5,16 @@ import { TestUsers } from '../test-users';
 
 const { allUserRoles, getProfile, getUserId } = fixtures;
 
-// Get target user_id for role update tests (student-b)
-const targetUserId = getUserId(TestUsers.STUDENT_B);
+// Get target user_id for role update tests (teacher-bob)
+const targetUserId = getUserId(TestUsers.TEACHER_BOB);
 
 if (!targetUserId) {
-	throw new Error('Could not find student-b for role update tests');
+	throw new Error('Could not find teacher-bob for role update tests');
 }
 
 describe('RLS: user_roles UPDATE - other users', () => {
-	it('student cannot update user roles', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+	it('user without role cannot update user roles', async () => {
+		const db = await createClientAs(TestUsers.USER_A);
 
 		const { data, error } = await db
 			.from('user_roles')
@@ -72,21 +72,21 @@ describe('RLS: user_roles UPDATE - other users', () => {
 	it('site_admin can update other user roles', async () => {
 		const db = await createClientAs(TestUsers.SITE_ADMIN);
 
-		// Change student-b to teacher
+		// Change teacher-bob to staff
 		const { data, error } = await db
 			.from('user_roles')
-			.update({ role: 'teacher' })
+			.update({ role: 'staff' })
 			.eq('user_id', targetUserId)
 			.select();
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(1);
-		expect(data?.[0]?.role).toBe('teacher');
+		expect(data?.[0]?.role).toBe('staff');
 
-		// Restore back to student
+		// Restore back to teacher
 		const { error: restoreError } = await db
 			.from('user_roles')
-			.update({ role: 'student' })
+			.update({ role: 'teacher' })
 			.eq('user_id', targetUserId);
 
 		expect(restoreError).toBeNull();
@@ -94,19 +94,12 @@ describe('RLS: user_roles UPDATE - other users', () => {
 });
 
 describe('RLS: user_roles UPDATE - own role', () => {
-	it('student cannot update own role', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+	it('user without role has no role to update', async () => {
+		const db = await createClientAs(TestUsers.USER_A);
+		const userId = getUserId(TestUsers.USER_A);
 
-		const studentProfile = getProfile(TestUsers.STUDENT_A);
-		if (!studentProfile) {
-			throw new Error('Could not find student-a profile');
-		}
-
-		const { data, error } = await db
-			.from('user_roles')
-			.update({ role: 'teacher' })
-			.eq('user_id', studentProfile.user_id)
-			.select();
+		// Users without a role have no entry in user_roles
+		const { data, error } = await db.from('user_roles').update({ role: 'teacher' }).eq('user_id', userId).select();
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(0);

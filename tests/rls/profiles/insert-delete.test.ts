@@ -19,8 +19,8 @@ describe('RLS: profiles INSERT - blocked for all roles', () => {
 		last_name: 'User',
 	};
 
-	it('student cannot insert profile', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+	it('user without role cannot insert profile', async () => {
+		const db = await createClientAs(TestUsers.USER_A);
 
 		const { data, error } = await db.from('profiles').insert(newProfileData).select();
 
@@ -67,9 +67,9 @@ describe('RLS: profiles INSERT - blocked for all roles', () => {
 });
 
 describe('RLS: profiles DELETE - blocked for all roles', () => {
-	it('student cannot delete own profile', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const userId = requireUserId(TestUsers.STUDENT_A);
+	it('user without role cannot delete own profile', async () => {
+		const db = await createClientAs(TestUsers.USER_A);
+		const userId = requireUserId(TestUsers.USER_A);
 
 		const { data, error } = await db.from('profiles').delete().eq('user_id', userId).select();
 
@@ -78,9 +78,9 @@ describe('RLS: profiles DELETE - blocked for all roles', () => {
 		expect(data).toHaveLength(0);
 	});
 
-	it('student cannot delete other profiles', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const userId = requireUserId(TestUsers.STUDENT_B);
+	it('user without role cannot delete other profiles', async () => {
+		const db = await createClientAs(TestUsers.USER_A);
+		const userId = requireUserId(TestUsers.USER_B);
 
 		const { data, error } = await db.from('profiles').delete().eq('user_id', userId).select();
 
@@ -90,7 +90,7 @@ describe('RLS: profiles DELETE - blocked for all roles', () => {
 
 	it('teacher cannot delete profiles', async () => {
 		const db = await createClientAs(TestUsers.TEACHER_ALICE);
-		const userId = requireUserId(TestUsers.STUDENT_A);
+		const userId = requireUserId(TestUsers.USER_A);
 
 		const { data, error } = await db.from('profiles').delete().eq('user_id', userId).select();
 
@@ -100,7 +100,7 @@ describe('RLS: profiles DELETE - blocked for all roles', () => {
 
 	it('staff cannot delete profiles', async () => {
 		const db = await createClientAs(TestUsers.STAFF);
-		const userId = requireUserId(TestUsers.STUDENT_A);
+		const userId = requireUserId(TestUsers.USER_A);
 
 		const { data, error } = await db.from('profiles').delete().eq('user_id', userId).select();
 
@@ -110,7 +110,7 @@ describe('RLS: profiles DELETE - blocked for all roles', () => {
 
 	it('admin cannot delete profiles', async () => {
 		const db = await createClientAs(TestUsers.ADMIN_ONE);
-		const userId = requireUserId(TestUsers.STUDENT_A);
+		const userId = requireUserId(TestUsers.USER_A);
 
 		const { data, error } = await db.from('profiles').delete().eq('user_id', userId).select();
 
@@ -120,7 +120,7 @@ describe('RLS: profiles DELETE - blocked for all roles', () => {
 
 	it('site_admin cannot delete profiles', async () => {
 		const db = await createClientAs(TestUsers.SITE_ADMIN);
-		const userId = requireUserId(TestUsers.STUDENT_A);
+		const userId = requireUserId(TestUsers.USER_A);
 
 		const { data, error } = await db.from('profiles').delete().eq('user_id', userId).select();
 
