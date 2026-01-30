@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { Alert } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,7 +34,7 @@ export default function Login() {
 		if (error) {
 			// User-friendly error message for unregistered users
 			if (error.message === 'Signups not allowed for otp') {
-				setError('Dit emailadres is niet geregistreerd. Maak eerst een account aan.');
+				setError('Dit emailadres is niet geregistreerd. Neem contact op met je begeleider.');
 			} else {
 				setError(error.message);
 			}
@@ -155,13 +155,6 @@ export default function Login() {
 						</button>
 					</div>
 				)}
-
-				<p className="text-center text-sm text-muted-foreground">
-					Nog geen account?{' '}
-					<Link to="/register" className="text-primary hover:underline">
-						Registreren
-					</Link>
-				</p>
 			</div>
 		</div>
 	);
