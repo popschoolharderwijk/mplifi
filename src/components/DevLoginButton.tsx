@@ -30,15 +30,7 @@ export function DevLoginButton({ className }: { className?: string }) {
 /**
  * Inner component to avoid hooks being called conditionally in the outer component.
  */
-function DevLoginButtonInner({
-	email,
-	password,
-	className,
-}: {
-	email: string;
-	password: string;
-	className?: string;
-}) {
+function DevLoginButtonInner({ email, password, className }: { email: string; password: string; className?: string }) {
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
