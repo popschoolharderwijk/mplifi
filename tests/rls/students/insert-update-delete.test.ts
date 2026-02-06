@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { afterAll, describe, expect, it } from 'bun:test';
 import { createClientAs, createClientBypassRLS } from '../../db';
 import { fixtures } from '../fixtures';
 import { TestUsers } from '../test-users';
@@ -10,6 +10,13 @@ const dbNoRLS = createClientBypassRLS();
 const studentBUserId = fixtures.requireUserId(TestUsers.STUDENT_B);
 const studentCUserId = fixtures.requireUserId(TestUsers.STUDENT_C);
 const studentDUserId = fixtures.requireUserId(TestUsers.STUDENT_D);
+
+// Restore students that may have been deleted during INSERT/DELETE tests
+afterAll(async () => {
+	for (const userId of [studentCUserId, studentDUserId]) {
+		await dbNoRLS.from('students').upsert({ user_id: userId }, { onConflict: 'user_id' });
+	}
+});
 
 // Existing student ID for UPDATE/DELETE block tests
 const testStudentId = fixtures.allStudents[0].id;
