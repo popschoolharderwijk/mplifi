@@ -4,7 +4,7 @@ import { createClientBypassRLS } from '../../db';
 const supabase = createClientBypassRLS();
 
 // Ground truth: expected security configuration from baseline migration
-const EXPECTED_RLS_TABLES = ['profiles', 'user_roles'];
+const EXPECTED_RLS_TABLES = ['profiles', 'user_roles', 'lesson_types'];
 
 const EXPECTED_POLICIES: Record<string, string[]> = {
 	profiles: [
@@ -29,6 +29,16 @@ const EXPECTED_POLICIES: Record<string, string[]> = {
 		'roles_update_admin',
 		// DELETE policy - admin/site_admin can delete roles (admin cannot delete site_admin roles)
 		'roles_delete_admin',
+	],
+	lesson_types: [
+		// SELECT policy - all authenticated users can view lesson types
+		'lesson_types_select_all',
+		// INSERT policy - admin/site_admin can create lesson types
+		'lesson_types_insert_admin',
+		// UPDATE policy - admin/site_admin can update lesson types
+		'lesson_types_update_admin',
+		// DELETE policy - admin/site_admin can delete lesson types
+		'lesson_types_delete_admin',
 	],
 };
 

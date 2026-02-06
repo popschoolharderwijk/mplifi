@@ -105,6 +105,65 @@ describe('RLS: anonymous user access', () => {
 		});
 	});
 
+	describe('lesson_types table', () => {
+		it('anon cannot read lesson_types', async () => {
+			const db = createClientAnon();
+
+			const { data, error } = await db.from('lesson_types').select('*');
+
+			// Should return empty result (RLS blocks all rows)
+			expect(error).toBeNull();
+			expect(data).toHaveLength(0);
+		});
+
+		it('anon cannot insert lesson_types', async () => {
+			const db = createClientAnon();
+
+			const { data, error } = await db
+				.from('lesson_types')
+				.insert({
+					name: 'Hacked Lesson Type',
+					icon: 'test',
+					color: '#FF0000',
+					duration_minutes: 30,
+					frequency: 'weekly',
+					price_per_lesson: 25.0,
+				})
+				.select();
+
+			// Should fail - no INSERT policy for anon
+			expect(error).not.toBeNull();
+			expect(data).toBeNull();
+		});
+
+		it('anon cannot update lesson_types', async () => {
+			const db = createClientAnon();
+
+			const { data, error } = await db
+				.from('lesson_types')
+				.update({ name: 'Hacked' })
+				.neq('name', 'Hacked')
+				.select();
+
+			// Should return empty result (RLS blocks)
+			expect(error).toBeNull();
+			expect(data).toHaveLength(0);
+		});
+
+		it('anon cannot delete lesson_types', async () => {
+			const db = createClientAnon();
+
+			const { data, error } = await db
+				.from('lesson_types')
+				.delete()
+				.neq('id', '00000000-0000-0000-0000-000000000000')
+				.select();
+
+			expect(error).toBeNull();
+			expect(data).toHaveLength(0);
+		});
+	});
+
 	describe('security functions', () => {
 		it('anon cannot call role helper functions', async () => {
 			const db = createClientAnon();

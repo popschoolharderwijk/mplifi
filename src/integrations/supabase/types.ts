@@ -1,11 +1,6 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
-	// Allows to automatically instantiate createClient with right options
-	// instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-	__InternalSupabase: {
-		PostgrestVersion: '14.1';
-	};
 	graphql_public: {
 		Tables: {
 			[_ in never]: never;
@@ -33,6 +28,54 @@ export type Database = {
 	};
 	public: {
 		Tables: {
+			lesson_types: {
+				Row: {
+					color: string;
+					cost_center: string | null;
+					created_at: string;
+					description: string | null;
+					duration_minutes: number;
+					frequency: Database['public']['Enums']['lesson_frequency'];
+					icon: string;
+					id: string;
+					is_active: boolean;
+					is_group_lesson: boolean;
+					name: string;
+					price_per_lesson: number;
+					updated_at: string;
+				};
+				Insert: {
+					color: string;
+					cost_center?: string | null;
+					created_at?: string;
+					description?: string | null;
+					duration_minutes?: number;
+					frequency?: Database['public']['Enums']['lesson_frequency'];
+					icon: string;
+					id?: string;
+					is_active?: boolean;
+					is_group_lesson?: boolean;
+					name: string;
+					price_per_lesson: number;
+					updated_at?: string;
+				};
+				Update: {
+					color?: string;
+					cost_center?: string | null;
+					created_at?: string;
+					description?: string | null;
+					duration_minutes?: number;
+					frequency?: Database['public']['Enums']['lesson_frequency'];
+					icon?: string;
+					id?: string;
+					is_active?: boolean;
+					is_group_lesson?: boolean;
+					name?: string;
+					price_per_lesson?: number;
+					updated_at?: string;
+				};
+				Relationships: [];
+			};
 			profiles: {
 				Row: {
 					avatar_url: string | null;
@@ -117,6 +160,7 @@ export type Database = {
 		};
 		Enums: {
 			app_role: 'site_admin' | 'admin' | 'staff' | 'teacher';
+			lesson_frequency: 'weekly' | 'biweekly' | 'monthly';
 		};
 		CompositeTypes: {
 			[_ in never]: never;
@@ -240,6 +284,7 @@ export const Constants = {
 	public: {
 		Enums: {
 			app_role: ['site_admin', 'admin', 'staff', 'teacher'],
+			lesson_frequency: ['weekly', 'biweekly', 'monthly'],
 		},
 	},
 } as const;
