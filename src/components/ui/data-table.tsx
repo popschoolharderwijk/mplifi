@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { LuArrowDown, LuArrowUp, LuArrowUpDown, LuSearch, LuTrash2 } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAutofocus } from '@/hooks/useAutofocus';
 import { cn } from '@/lib/utils';
 
@@ -24,6 +24,7 @@ export interface DataTableRowActions<T> {
 
 interface DataTableProps<T> {
 	title: string;
+	description?: React.ReactNode;
 	data: T[];
 	columns: DataTableColumn<T>[];
 	searchQuery?: string;
@@ -42,6 +43,7 @@ interface DataTableProps<T> {
 
 export function DataTable<T>({
 	title,
+	description,
 	data,
 	columns,
 	searchQuery,
@@ -133,7 +135,10 @@ export function DataTable<T>({
 			<CardHeader>
 				<div className="space-y-4">
 					<div className="flex items-center justify-between">
-						<CardTitle>{title}</CardTitle>
+						<div>
+							<CardTitle>{title}</CardTitle>
+							{description && <CardDescription className="mt-1">{description}</CardDescription>}
+						</div>
 						{headerActions}
 					</div>
 					{onSearchChange && (
@@ -175,7 +180,10 @@ export function DataTable<T>({
 											return (
 												<th
 													key={column.key}
-													className={cn('pb-3 font-medium', column.className)}
+													className={cn(
+														'pb-3 pr-4 font-medium first:pl-2 last:pr-2',
+														column.className,
+													)}
 												>
 													{isSortable ? (
 														<Button
@@ -223,7 +231,10 @@ export function DataTable<T>({
 											role={rowActions?.onEdit ? 'button' : undefined}
 										>
 											{columns.map((column) => (
-												<td key={column.key} className={cn('py-4', column.className)}>
+												<td
+													key={column.key}
+													className={cn('py-4 pr-4 first:pl-2 last:pr-2', column.className)}
+												>
 													{column.render
 														? column.render(item)
 														: String(item[column.key as keyof T] ?? '')}

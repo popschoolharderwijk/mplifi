@@ -159,6 +159,22 @@ INSERT INTO public.user_roles (user_id, role) VALUES
   ('00000000-0000-0000-0000-000000000031', 'teacher')
 ON CONFLICT (user_id) DO NOTHING;
 
+-- -----------------------------------------------------------------------------
+-- LESSON TYPES (default lesson types)
+-- -----------------------------------------------------------------------------
+INSERT INTO public.lesson_types (name, description, icon, color, duration_minutes, frequency, price_per_lesson, is_group_lesson, is_active)
+SELECT * FROM (VALUES
+  ('Gitaar', NULL, 'LuGuitar', '#FF9500', 30, 'weekly'::public.lesson_frequency, 25.00, false, true),
+  ('Drums', NULL, 'LuDrum', '#DC2626', 30, 'weekly'::public.lesson_frequency, 25.00, false, true),
+  ('Zang', 'Leer zingen', 'LuMic', '#EC4899', 30, 'weekly'::public.lesson_frequency, 25.00, false, true),
+  ('Bas', NULL, 'GiGuitarBassHead', '#9333EA', 30, 'weekly'::public.lesson_frequency, 25.00, false, true),
+  ('Keyboard', 'Keyboard les', 'LuPiano', '#3B82F6', 30, 'weekly'::public.lesson_frequency, 25.00, false, true),
+  ('Saxofoon', NULL, 'GiSaxophone', '#14B8A6', 30, 'weekly'::public.lesson_frequency, 25.00, false, true),
+  ('DJ / Beats', NULL, 'LuHeadphones', '#F59E0B', 45, 'weekly'::public.lesson_frequency, 25.00, false, true),
+  ('Bandcoaching', NULL, 'HiUserGroup', '#6366F1', 60, 'biweekly'::public.lesson_frequency, 25.00, true, true)
+) AS v(name, description, icon, color, duration_minutes, frequency, price_per_lesson, is_group_lesson, is_active)
+WHERE NOT EXISTS (SELECT 1 FROM public.lesson_types WHERE lesson_types.name = v.name);
+
 -- =============================================================================
 -- END SEED
 -- =============================================================================

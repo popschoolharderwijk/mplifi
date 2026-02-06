@@ -6,6 +6,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { ThemeProvider } from './components/ThemeProvider';
 import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
+import LessonTypes from './pages/LessonTypes';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
 import Settings from './pages/Settings';
@@ -29,6 +30,7 @@ const App = () => (
 					>
 						<Route path="/" element={<Dashboard />} />
 						<Route path="/users" element={<Users />} />
+						<Route path="/lesson-types" element={<LessonTypes />} />
 						<Route path="/settings" element={<Settings />} />
 					</Route>
 

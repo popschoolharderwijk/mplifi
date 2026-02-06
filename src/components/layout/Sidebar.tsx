@@ -1,4 +1,4 @@
-import { LuChevronLeft, LuLayoutDashboard, LuMusic, LuShieldCheck, LuUserCog } from 'react-icons/lu';
+import { LuChevronLeft, LuLayoutDashboard, LuMusic, LuMusic2, LuShieldCheck, LuUserCog } from 'react-icons/lu';
 import { NavLink } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { EnvironmentBadge } from '@/components/ui/environment-badge';
@@ -11,7 +11,10 @@ import { cn } from '@/lib/utils';
 const mainNavItems = [{ href: '/', label: 'Dashboard', icon: LuLayoutDashboard }];
 
 // Admin-only navigation items
-const adminNavItems = [{ href: '/users', label: 'Gebruikers', icon: LuUserCog }];
+const adminNavItems = [
+	{ href: '/users', label: 'Gebruikers', icon: LuUserCog },
+	{ href: '/lesson-types', label: 'Lessoorten', icon: LuMusic2 },
+];
 
 interface SidebarProps {
 	collapsed?: boolean;

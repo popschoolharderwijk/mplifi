@@ -270,11 +270,11 @@ export default function Users() {
 	}
 
 	return (
-		<div className="space-y-6">
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="text-3xl font-bold tracking-tight">Gebruikers</h1>
-					<p className="text-muted-foreground">
+		<div>
+			<DataTable
+				title="Gebruikers"
+				description={
+					<>
 						Beheer alle gebruikers en hun rollen
 						{isSiteAdmin && (
 							<span className="ml-2 inline-flex items-center gap-1 text-primary">
@@ -282,12 +282,8 @@ export default function Users() {
 								Je kunt rollen wijzigen
 							</span>
 						)}
-					</p>
-				</div>
-			</div>
-
-			<DataTable
-				title="Gebruikers Overzicht"
+					</>
+				}
 				data={users}
 				columns={columns}
 				searchQuery={searchQuery}
