@@ -50,7 +50,7 @@ export type Database = {
 					created_at?: string;
 					description?: string | null;
 					duration_minutes?: number;
-					frequency: Database['public']['Enums']['lesson_frequency'];
+					frequency?: Database['public']['Enums']['lesson_frequency'];
 					icon: string;
 					id?: string;
 					is_active?: boolean;
