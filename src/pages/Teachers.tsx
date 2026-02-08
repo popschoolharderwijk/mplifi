@@ -6,7 +6,8 @@ import { TeacherFormDialog } from '@/components/teachers/TeacherFormDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { ColorIcon } from '@/components/ui/color-icon';
+import { DataTable, type DataTableColumn, type QuickFilterGroup } from '@/components/ui/data-table';
 import {
 	Dialog,
 	DialogContent,
@@ -15,8 +16,18 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
+import { resolveIconFromList } from '@/components/ui/icon-picker';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { MUSIC_ICONS } from '@/constants/icons';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+
+interface LessonType {
+	id: string;
+	name: string;
+	icon: string;
+	color: string;
+}
 
 interface TeacherWithProfile {
 	id: string;
@@ -32,14 +43,17 @@ interface TeacherWithProfile {
 		phone_number: string | null;
 		avatar_url: string | null;
 	};
+	lesson_types: LessonType[];
 }
 
 export default function Teachers() {
 	const { isAdmin, isSiteAdmin, isLoading: authLoading } = useAuth();
 	const [teachers, setTeachers] = useState<TeacherWithProfile[]>([]);
+	const [lessonTypes, setLessonTypes] = useState<LessonType[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [searchQuery, setSearchQuery] = useState('');
 	const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
+	const [selectedLessonTypeId, setSelectedLessonTypeId] = useState<string | null>(null);
 	const [deleteDialog, setDeleteDialog] = useState<{
 		open: boolean;
 		teacher: TeacherWithProfile | null;
@@ -91,25 +105,83 @@ export default function Teachers() {
 			return;
 		}
 
-		// Combine the data
+		// Get lesson types for all teachers
+		const teacherIds = teachersData.map((t) => t.id);
+		const { data: lessonTypeLinks, error: linksError } = await supabase
+			.from('teacher_lesson_types')
+			.select('teacher_id, lesson_type_id')
+			.in('teacher_id', teacherIds);
+
+		if (linksError) {
+			console.error('Error loading lesson type links:', linksError);
+			toast.error('Fout bij laden lessoorten');
+			setLoading(false);
+			return;
+		}
+
+		// Get all lesson types
+		const lessonTypeIds = [...new Set(lessonTypeLinks?.map((link) => link.lesson_type_id) ?? [])];
+		const { data: lessonTypesData, error: lessonTypesError } = await supabase
+			.from('lesson_types')
+			.select('id, name, icon, color')
+			.in('id', lessonTypeIds);
+
+		if (lessonTypesError) {
+			console.error('Error loading lesson types:', lessonTypesError);
+			toast.error('Fout bij laden lessoorten');
+			setLoading(false);
+			return;
+		}
+
+		// Create maps for easy lookup
 		const profileMap = new Map(profilesData?.map((p) => [p.user_id, p]) ?? []);
-		const transformedData: TeacherWithProfile[] = teachersData.map((teacher) => ({
-			id: teacher.id,
-			user_id: teacher.user_id,
-			bio: teacher.bio,
-			is_active: teacher.is_active,
-			created_at: teacher.created_at,
-			updated_at: teacher.updated_at,
-			profile: profileMap.get(teacher.user_id) ?? {
-				email: '',
-				first_name: null,
-				last_name: null,
-				phone_number: null,
-				avatar_url: null,
-			},
-		}));
+		const lessonTypeMap = new Map(lessonTypesData?.map((lt) => [lt.id, lt]) ?? []);
+		const linksByTeacher = new Map<string, string[]>();
+		lessonTypeLinks?.forEach((link) => {
+			const existing = linksByTeacher.get(link.teacher_id) ?? [];
+			linksByTeacher.set(link.teacher_id, [...existing, link.lesson_type_id]);
+		});
+
+		// Combine the data
+		const transformedData: TeacherWithProfile[] = teachersData.map((teacher) => {
+			const lessonTypeIds = linksByTeacher.get(teacher.id) ?? [];
+			const lessonTypes = lessonTypeIds
+				.map((id) => lessonTypeMap.get(id))
+				.filter((lt): lt is LessonType => lt !== undefined);
+
+			return {
+				id: teacher.id,
+				user_id: teacher.user_id,
+				bio: teacher.bio,
+				is_active: teacher.is_active,
+				created_at: teacher.created_at,
+				updated_at: teacher.updated_at,
+				profile: profileMap.get(teacher.user_id) ?? {
+					email: '',
+					first_name: null,
+					last_name: null,
+					phone_number: null,
+					avatar_url: null,
+				},
+				lesson_types: lessonTypes,
+			};
+		});
 
 		setTeachers(transformedData);
+
+		// Load all active lesson types for the filter
+		const { data: allLessonTypes, error: allLessonTypesError } = await supabase
+			.from('lesson_types')
+			.select('id, name, icon, color')
+			.eq('is_active', true)
+			.order('name', { ascending: true });
+
+		if (allLessonTypesError) {
+			console.error('Error loading lesson types:', allLessonTypesError);
+		} else {
+			setLessonTypes(allLessonTypes ?? []);
+		}
+
 		setLoading(false);
 	}, [hasAccess]);
 
@@ -142,7 +214,7 @@ export default function Teachers() {
 		return profile.email;
 	}, []);
 
-	// Filter teachers based on active status
+	// Filter teachers based on active status and lesson type
 	const filteredTeachers = useMemo(() => {
 		let filtered = teachers;
 		if (activeFilter === 'active') {
@@ -150,8 +222,50 @@ export default function Teachers() {
 		} else if (activeFilter === 'inactive') {
 			filtered = teachers.filter((t) => !t.is_active);
 		}
+
+		// Filter by lesson type if selected
+		if (selectedLessonTypeId) {
+			filtered = filtered.filter((t) => t.lesson_types.some((lt) => lt.id === selectedLessonTypeId));
+		}
+
 		return filtered;
-	}, [teachers, activeFilter]);
+	}, [teachers, activeFilter, selectedLessonTypeId]);
+
+	// Quick filter groups configuration
+	const quickFilterGroups: QuickFilterGroup[] = useMemo(() => {
+		const groups: QuickFilterGroup[] = [
+			{
+				label: 'Status',
+				value: activeFilter === 'all' ? null : activeFilter,
+				options: [
+					{ id: 'active', label: 'Actief' },
+					{ id: 'inactive', label: 'Inactief' },
+				],
+				onChange: (value) => {
+					setActiveFilter(value === null ? 'all' : (value as 'active' | 'inactive'));
+				},
+			},
+		];
+
+		if (lessonTypes.length > 0) {
+			groups.push({
+				label: 'Lessoorten',
+				value: selectedLessonTypeId,
+				options: lessonTypes.map((lt) => {
+					const Icon = lt.icon ? resolveIconFromList(MUSIC_ICONS, lt.icon) : undefined;
+					return {
+						id: lt.id,
+						label: lt.name,
+						icon: Icon,
+						color: lt.color,
+					};
+				}),
+				onChange: setSelectedLessonTypeId,
+			});
+		}
+
+		return groups;
+	}, [activeFilter, lessonTypes, selectedLessonTypeId]);
 
 	const columns: DataTableColumn<TeacherWithProfile>[] = useMemo(
 		() => [
@@ -170,17 +284,10 @@ export default function Teachers() {
 						</Avatar>
 						<div>
 							<p className="font-medium">{getDisplayName(t)}</p>
+							<p className="text-xs text-muted-foreground">{t.profile.email}</p>
 						</div>
 					</div>
 				),
-			},
-			{
-				key: 'email',
-				label: 'Email',
-				sortable: true,
-				sortValue: (t) => t.profile.email.toLowerCase(),
-				render: (t) => <span className="text-muted-foreground">{t.profile.email}</span>,
-				className: 'text-muted-foreground',
 			},
 			{
 				key: 'phone_number',
@@ -189,6 +296,38 @@ export default function Teachers() {
 				sortValue: (t) => t.profile.phone_number?.toLowerCase() ?? '',
 				render: (t) => <span className="text-muted-foreground">{t.profile.phone_number || '-'}</span>,
 				className: 'text-muted-foreground',
+			},
+			{
+				key: 'lesson_types',
+				label: 'Lessoorten',
+				sortable: false,
+				render: (t) => {
+					if (t.lesson_types.length === 0) {
+						return <span className="text-muted-foreground text-sm">-</span>;
+					}
+
+					return (
+						<TooltipProvider>
+							<div className="flex items-center gap-1.5">
+								{t.lesson_types.map((lt) => {
+									const Icon = lt.icon ? resolveIconFromList(MUSIC_ICONS, lt.icon) : undefined;
+									return (
+										<Tooltip key={lt.id}>
+											<TooltipTrigger asChild>
+												<div className="cursor-help">
+													<ColorIcon icon={Icon} color={lt.color} size="sm" />
+												</div>
+											</TooltipTrigger>
+											<TooltipContent>
+												<p>{lt.name}</p>
+											</TooltipContent>
+										</Tooltip>
+									);
+								})}
+							</div>
+						</TooltipProvider>
+					);
+				},
 			},
 			{
 				key: 'is_active',
@@ -289,34 +428,12 @@ export default function Teachers() {
 				emptyMessage="Geen docenten gevonden"
 				initialSortColumn="teacher"
 				initialSortDirection="asc"
+				quickFilter={quickFilterGroups}
 				headerActions={
-					<div className="flex items-center gap-2">
-						<Button
-							variant={activeFilter === 'all' ? 'default' : 'outline'}
-							size="sm"
-							onClick={() => setActiveFilter('all')}
-						>
-							Alle
-						</Button>
-						<Button
-							variant={activeFilter === 'active' ? 'default' : 'outline'}
-							size="sm"
-							onClick={() => setActiveFilter('active')}
-						>
-							Actief
-						</Button>
-						<Button
-							variant={activeFilter === 'inactive' ? 'default' : 'outline'}
-							size="sm"
-							onClick={() => setActiveFilter('inactive')}
-						>
-							Inactief
-						</Button>
-						<Button onClick={handleCreate}>
-							<LuPlus className="mr-2 h-4 w-4" />
-							Docent toevoegen
-						</Button>
-					</div>
+					<Button onClick={handleCreate}>
+						<LuPlus className="mr-2 h-4 w-4" />
+						Docent toevoegen
+					</Button>
 				}
 				rowActions={{
 					onEdit: handleEdit,

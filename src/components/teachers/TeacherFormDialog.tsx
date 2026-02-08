@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { LuLoaderCircle } from 'react-icons/lu';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
 	Dialog,
 	DialogContent,
@@ -13,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { LessonTypeSelector, type LessonTypeOption } from '@/components/ui/lesson-type-selector';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,10 +30,6 @@ interface TeacherData {
 	};
 }
 
-interface LessonType {
-	id: string;
-	name: string;
-}
 
 interface TeacherFormDialogProps {
 	open: boolean;
@@ -64,7 +60,7 @@ const emptyForm: FormState = {
 export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: TeacherFormDialogProps) {
 	const isEditMode = !!teacher;
 	const [form, setForm] = useState<FormState>(emptyForm);
-	const [lessonTypes, setLessonTypes] = useState<LessonType[]>([]);
+	const [lessonTypes, setLessonTypes] = useState<LessonTypeOption[]>([]);
 	const [loadingLessonTypes, setLoadingLessonTypes] = useState(false);
 	const [saving, setSaving] = useState(false);
 
@@ -74,7 +70,7 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 			setLoadingLessonTypes(true);
 			supabase
 				.from('lesson_types')
-				.select('id, name')
+				.select('id, name, icon, color')
 				.eq('is_active', true)
 				.order('name', { ascending: true })
 				.then(({ data, error }) => {
@@ -255,6 +251,23 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 			return;
 		}
 
+		// Update profile (first_name, last_name, phone_number)
+		const { error: profileError } = await supabase
+			.from('profiles')
+			.update({
+				first_name: form.first_name || null,
+				last_name: form.last_name || null,
+				phone_number: form.phone_number || null,
+			})
+			.eq('user_id', teacher.user_id);
+
+		if (profileError) {
+			toast.error('Fout bij bijwerken profiel', {
+				description: profileError.message,
+			});
+			return;
+		}
+
 		// Update lesson types
 		// First, get current lesson types
 		const { data: currentLinks } = await supabase
@@ -318,12 +331,41 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 			<DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
 				<DialogHeader className="pb-2">
 					<DialogTitle className="text-lg">{dialogTitle}</DialogTitle>
-					{dialogDescription && <DialogDescription className="text-sm">{dialogDescription}</DialogDescription>}
+					{dialogDescription && (
+						<DialogDescription className="text-sm">{dialogDescription}</DialogDescription>
+					)}
 				</DialogHeader>
 				<div className="space-y-3 py-2">
 					<div className="grid grid-cols-2 gap-3">
 						<div className="space-y-1.5">
-							<Label htmlFor="teacher-email" className="text-sm">Email *</Label>
+							<Label htmlFor="teacher-first-name" className="text-sm">
+								Voornaam
+							</Label>
+							<Input
+								id="teacher-first-name"
+								value={form.first_name}
+								onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+								className="h-9"
+								autoFocus
+							/>
+						</div>
+						<div className="space-y-1.5">
+							<Label htmlFor="teacher-last-name" className="text-sm">
+								Achternaam
+							</Label>
+							<Input
+								id="teacher-last-name"
+								value={form.last_name}
+								onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+								className="h-9"
+							/>
+						</div>
+					</div>
+					<div className="grid grid-cols-2 gap-3">
+						<div className="space-y-1.5">
+							<Label htmlFor="teacher-email" className="text-sm">
+								Email *
+							</Label>
 							<Input
 								id="teacher-email"
 								type="email"
@@ -343,50 +385,20 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 								label="Telefoonnummer"
 								value={form.phone_number}
 								onChange={(value) => setForm({ ...form, phone_number: value })}
-								disabled={isEditMode}
 							/>
-							{isEditMode && (
-								<p className="text-xs text-muted-foreground">Wijzig via profielinstellingen.</p>
-							)}
-						</div>
-					</div>
-					<div className="grid grid-cols-2 gap-3">
-						<div className="space-y-1.5">
-							<Label htmlFor="teacher-first-name" className="text-sm">Voornaam</Label>
-							<Input
-								id="teacher-first-name"
-								value={form.first_name}
-								onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-								disabled={isEditMode}
-								className="h-9"
-							/>
-							{isEditMode && (
-								<p className="text-xs text-muted-foreground">Wijzig via profielinstellingen.</p>
-							)}
-						</div>
-						<div className="space-y-1.5">
-							<Label htmlFor="teacher-last-name" className="text-sm">Achternaam</Label>
-							<Input
-								id="teacher-last-name"
-								value={form.last_name}
-								onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-								disabled={isEditMode}
-								className="h-9"
-							/>
-							{isEditMode && (
-								<p className="text-xs text-muted-foreground">Wijzig via profielinstellingen.</p>
-							)}
 						</div>
 					</div>
 					<div className="space-y-1.5">
-						<Label htmlFor="teacher-bio" className="text-sm">Bio</Label>
+						<Label htmlFor="teacher-bio" className="text-sm">
+							Bio
+						</Label>
 						<Textarea
 							id="teacher-bio"
 							value={form.bio}
 							onChange={(e) => setForm({ ...form, bio: e.target.value })}
 							placeholder="Korte beschrijving van de docent..."
-							rows={3}
-							className="min-h-[60px]"
+							rows={2}
+							className="min-h-[50px]"
 						/>
 					</div>
 					<div className="space-y-1.5">
@@ -399,37 +411,13 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 						) : lessonTypes.length === 0 ? (
 							<p className="text-sm text-muted-foreground py-2">Geen actieve lessoorten beschikbaar.</p>
 						) : (
-							<div className="max-h-40 space-y-1.5 overflow-y-auto rounded-md border p-2">
-								{lessonTypes.map((lessonType) => (
-									<div key={lessonType.id} className="flex items-center space-x-2 py-0.5">
-										<Checkbox
-											id={`lesson-type-${lessonType.id}`}
-											checked={form.lesson_type_ids.includes(lessonType.id)}
-											onCheckedChange={(checked) => {
-												if (checked) {
-													setForm({
-														...form,
-														lesson_type_ids: [...form.lesson_type_ids, lessonType.id],
-													});
-												} else {
-													setForm({
-														...form,
-														lesson_type_ids: form.lesson_type_ids.filter(
-															(id) => id !== lessonType.id,
-														),
-													});
-												}
-											}}
-										/>
-										<Label
-											htmlFor={`lesson-type-${lessonType.id}`}
-											className="cursor-pointer text-sm font-normal"
-										>
-											{lessonType.name}
-										</Label>
-									</div>
-								))}
-							</div>
+							<LessonTypeSelector
+								value={form.lesson_type_ids}
+								onChange={(selectedIds) => setForm({ ...form, lesson_type_ids: selectedIds })}
+								options={lessonTypes}
+								placeholder="Selecteer lessoorten..."
+								searchPlaceholder="Zoek lessoort..."
+							/>
 						)}
 					</div>
 				</div>

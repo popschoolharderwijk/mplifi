@@ -1,7 +1,11 @@
 import { useMemo, useState } from 'react';
-import { LuArrowDown, LuArrowUp, LuArrowUpDown, LuSearch, LuTrash2 } from 'react-icons/lu';
+import type { IconType } from 'react-icons';
+import { LuArrowDown, LuArrowUp, LuArrowUpDown, LuFilter, LuSearch, LuTrash2 } from 'react-icons/lu';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ColorIcon } from '@/components/ui/color-icon';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAutofocus } from '@/hooks/useAutofocus';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +26,22 @@ export interface DataTableRowActions<T> {
 	render?: (item: T) => React.ReactNode;
 }
 
+export interface QuickFilterOption {
+	id: string;
+	label: string;
+	icon?: IconType;
+	color?: string;
+}
+
+export interface QuickFilterGroup {
+	label: string;
+	value: string | null;
+	options: QuickFilterOption[];
+	onChange: (value: string | null) => void;
+	showAllOption?: boolean;
+	allOptionLabel?: string;
+}
+
 interface DataTableProps<T> {
 	title: string;
 	description?: React.ReactNode;
@@ -39,6 +59,7 @@ interface DataTableProps<T> {
 	initialSortColumn?: string;
 	initialSortDirection?: SortDirection;
 	rowActions?: DataTableRowActions<T>;
+	quickFilter?: QuickFilterGroup[];
 }
 
 export function DataTable<T>({
@@ -58,11 +79,13 @@ export function DataTable<T>({
 	initialSortColumn,
 	initialSortDirection = 'asc',
 	rowActions,
+	quickFilter,
 }: DataTableProps<T>) {
 	const [sortColumn, setSortColumn] = useState<string | null>(initialSortColumn ?? null);
 	const [sortDirection, setSortDirection] = useState<SortDirection>(
 		initialSortColumn ? (initialSortDirection ?? 'asc') : null,
 	);
+	const [filterOpen, setFilterOpen] = useState(false);
 	const searchInputRef = useAutofocus<HTMLInputElement>(!!onSearchChange);
 
 	// Filter data based on search query if searchFields are provided
@@ -130,6 +153,26 @@ export function DataTable<T>({
 		});
 	}, [filteredData, sortColumn, sortDirection, columns]);
 
+	// Count active filters
+	const activeFilterCount = useMemo(() => {
+		if (!quickFilter) return 0;
+		return quickFilter.filter((group) => group.value !== null).length;
+	}, [quickFilter]);
+
+	// Get active filter details for tooltip
+	const activeFilters = useMemo(() => {
+		if (!quickFilter) return [];
+		return quickFilter
+			.filter((group) => group.value !== null)
+			.map((group) => {
+				const selectedOption = group.options.find((opt) => opt.id === group.value);
+				return {
+					category: group.label,
+					value: selectedOption?.label ?? group.value,
+				};
+			});
+	}, [quickFilter]);
+
 	return (
 		<Card>
 			<CardHeader>
@@ -142,16 +185,113 @@ export function DataTable<T>({
 						{headerActions}
 					</div>
 					{onSearchChange && (
-						<div className="relative">
-							<LuSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-							<input
-								ref={searchInputRef}
-								type="text"
-								placeholder={searchPlaceholder}
-								value={searchQuery ?? ''}
-								onChange={(e) => onSearchChange(e.target.value)}
-								className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-							/>
+						<div className="relative flex items-center gap-2">
+							<div className="relative flex-1">
+								<LuSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+								<input
+									ref={searchInputRef}
+									type="text"
+									placeholder={searchPlaceholder}
+									value={searchQuery ?? ''}
+									onChange={(e) => onSearchChange(e.target.value)}
+									className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+								/>
+							</div>
+							{quickFilter && (
+								<TooltipProvider>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<Button
+												variant={filterOpen ? 'default' : 'outline'}
+												size="icon"
+												className="relative h-9 w-9 shrink-0"
+												onClick={() => setFilterOpen(!filterOpen)}
+												aria-label="Toggle filter"
+											>
+												<LuFilter className="h-4 w-4" />
+												{activeFilterCount > 0 && (
+													<Badge
+														variant="destructive"
+														className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full p-0 text-xs"
+													>
+														{activeFilterCount}
+													</Badge>
+												)}
+											</Button>
+										</TooltipTrigger>
+										<TooltipContent>
+											<div className="space-y-1">
+												<div className="text-sm font-semibold">
+													{activeFilters.length > 0 ? 'Actieve filters' : 'Geen actieve filters'}
+												</div>
+												{activeFilters.length > 0 && (
+													<div className="space-y-0.5">
+														{activeFilters.map((filter, index) => (
+															<div key={index} className="text-sm">
+																{filter.category}: {filter.value}
+															</div>
+														))}
+													</div>
+												)}
+											</div>
+										</TooltipContent>
+									</Tooltip>
+								</TooltipProvider>
+							)}
+						</div>
+					)}
+					{quickFilter && quickFilter.length > 0 && (
+						<div
+							className={cn(
+								'overflow-hidden transition-all duration-300 ease-in-out',
+								filterOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0',
+							)}
+						>
+							<div className="pt-2">
+								<div className="space-y-2 rounded-md border bg-card p-3">
+									{quickFilter.map((group, groupIndex) => (
+										<div key={groupIndex} className="space-y-1.5">
+											<div className="text-xs font-medium text-muted-foreground">{group.label}</div>
+											<div className="flex flex-wrap items-center gap-2">
+												{group.showAllOption !== false && (
+													<Button
+														variant={group.value === null ? 'default' : 'outline'}
+														size="sm"
+														onClick={() => group.onChange(null)}
+														className="h-8 px-3 text-sm"
+													>
+														{group.allOptionLabel ?? 'Alle'}
+													</Button>
+												)}
+												{group.options.map((option) => {
+													const isSelected = group.value === option.id;
+													return (
+														<Button
+															key={option.id}
+															variant={isSelected ? 'default' : 'outline'}
+															size="sm"
+															onClick={() => group.onChange(isSelected ? null : option.id)}
+															className={cn(
+																'h-8 px-3 text-sm',
+																option.icon && 'gap-1',
+															)}
+														>
+															{option.icon && (
+																<ColorIcon
+																	icon={option.icon}
+																	color={option.color}
+																	size="sm"
+																/>
+															)}
+															<span>{option.label}</span>
+														</Button>
+													);
+												})}
+											</div>
+										</div>
+									))}
+								</div>
+							</div>
 						</div>
 					)}
 				</div>

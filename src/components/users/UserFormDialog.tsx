@@ -250,6 +250,25 @@ export function UserFormDialog({ open, onOpenChange, onSuccess, isSiteAdmin, use
 				<div className="space-y-4 py-4">
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
+							<Label htmlFor="user-first-name">Voornaam</Label>
+							<Input
+								id="user-first-name"
+								value={form.first_name}
+								onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+								autoFocus
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="user-last-name">Achternaam</Label>
+							<Input
+								id="user-last-name"
+								value={form.last_name}
+								onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+							/>
+						</div>
+					</div>
+					<div className="grid grid-cols-2 gap-4">
+						<div className="space-y-2">
 							<Label htmlFor="user-email">Email *</Label>
 							<Input
 								id="user-email"
@@ -269,24 +288,6 @@ export function UserFormDialog({ open, onOpenChange, onSuccess, isSiteAdmin, use
 								label="Telefoonnummer"
 								value={form.phone_number}
 								onChange={(value) => setForm({ ...form, phone_number: value })}
-							/>
-						</div>
-					</div>
-					<div className="grid grid-cols-2 gap-4">
-						<div className="space-y-2">
-							<Label htmlFor="user-first-name">Voornaam</Label>
-							<Input
-								id="user-first-name"
-								value={form.first_name}
-								onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="user-last-name">Achternaam</Label>
-							<Input
-								id="user-last-name"
-								value={form.last_name}
-								onChange={(e) => setForm({ ...form, last_name: e.target.value })}
 							/>
 						</div>
 					</div>

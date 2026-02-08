@@ -1,11 +1,12 @@
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { IconType } from 'react-icons';
 import { LuLoaderCircle, LuPlus, LuTrash2, LuTriangleAlert } from 'react-icons/lu';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn, type QuickFilterGroup } from '@/components/ui/data-table';
 import {
 	Dialog,
 	DialogContent,
@@ -18,7 +19,7 @@ import { RoleBadge } from '@/components/ui/role-badge';
 import { UserFormDialog } from '@/components/users/UserFormDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { type AppRole, getIcon, roleLabels, rolePriority } from '@/lib/roles';
+import { type AppRole, allRoles, getIcon, roleLabels, rolePriority } from '@/lib/roles';
 
 interface UserWithRole {
 	user_id: string;
@@ -36,6 +37,7 @@ export default function Users() {
 	const [users, setUsers] = useState<UserWithRole[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [searchQuery, setSearchQuery] = useState('');
+	const [selectedRole, setSelectedRole] = useState<AppRole | null | 'none'>(null);
 	const [deleteDialog, setDeleteDialog] = useState<{
 		open: boolean;
 		user: UserWithRole | null;
@@ -113,6 +115,47 @@ export default function Users() {
 		}
 		return u.email;
 	}, []);
+
+	// Filter users based on selected role
+	const filteredUsers = useMemo(() => {
+		if (selectedRole === null) {
+			return users;
+		}
+		if (selectedRole === 'none') {
+			return users.filter((u) => u.role === null);
+		}
+		return users.filter((u) => u.role === selectedRole);
+	}, [users, selectedRole]);
+
+	// Quick filter groups configuration
+	const quickFilterGroups: QuickFilterGroup[] = useMemo(() => {
+		const roleOptions: Array<{ id: string; label: string; icon?: IconType }> = allRoles.map((role) => {
+			const config = roleLabels[role];
+			const Icon = config.icon;
+			return {
+				id: role,
+				label: config.label,
+				icon: Icon as IconType,
+			};
+		});
+
+		// Add option for users without role
+		roleOptions.push({
+			id: 'none',
+			label: 'Geen rol',
+		});
+
+		return [
+			{
+				label: 'Rol',
+				value: selectedRole === null ? null : selectedRole,
+				options: roleOptions,
+				onChange: (value) => {
+					setSelectedRole(value === null ? null : (value as AppRole | 'none'));
+				},
+			},
+		];
+	}, [selectedRole]);
 
 	const columns: DataTableColumn<UserWithRole>[] = useMemo(
 		() => [
@@ -284,7 +327,7 @@ export default function Users() {
 						)}
 					</>
 				}
-				data={users}
+				data={filteredUsers}
 				columns={columns}
 				searchQuery={searchQuery}
 				onSearchChange={setSearchQuery}
@@ -301,6 +344,7 @@ export default function Users() {
 				emptyMessage="Geen gebruikers gevonden"
 				initialSortColumn="user"
 				initialSortDirection="asc"
+				quickFilter={quickFilterGroups}
 				headerActions={
 					isAdmin || isSiteAdmin ? (
 						<Button onClick={handleCreate}>
