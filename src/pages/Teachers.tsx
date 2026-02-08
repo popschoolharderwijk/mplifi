@@ -72,117 +72,133 @@ export default function Teachers() {
 
 		setLoading(true);
 
-		// First get teachers
-		const { data: teachersData, error: teachersError } = await supabase
-			.from('teachers')
-			.select('id, user_id, bio, is_active, created_at, updated_at')
-			.order('created_at', { ascending: false });
+		try {
+			// First get teachers (needed to get user_ids and teacher_ids for subsequent queries)
+			const { data: teachersData, error: teachersError } = await supabase
+				.from('teachers')
+				.select('id, user_id, bio, is_active, created_at, updated_at')
+				.order('created_at', { ascending: false });
 
-		if (teachersError) {
-			console.error('Error loading teachers:', teachersError);
+			if (teachersError) {
+				console.error('Error loading teachers:', teachersError);
+				toast.error('Fout bij laden docenten');
+				setLoading(false);
+				return;
+			}
+
+			if (!teachersData || teachersData.length === 0) {
+				setTeachers([]);
+				setLoading(false);
+				return;
+			}
+
+			// Extract IDs for parallel queries
+			const userIds = teachersData.map((t) => t.user_id);
+			const teacherIds = teachersData.map((t) => t.id);
+
+			// Run all remaining queries in parallel for better performance
+			const [profilesResult, teachersWithLessonTypesResult, allLessonTypesResult] = await Promise.all([
+				// Query 1: Get profiles for all user_ids
+				supabase
+					.from('profiles')
+					.select('user_id, email, first_name, last_name, phone_number, avatar_url')
+					.in('user_id', userIds),
+
+				// Query 2: Get teachers with nested lesson types (this nested select should work)
+				supabase
+					.from('teachers')
+					.select(`
+						id,
+						teacher_lesson_types (
+							lesson_type_id,
+							lesson_types (
+								id,
+								name,
+								icon,
+								color
+							)
+						)
+					`)
+					.in('id', teacherIds),
+
+				// Query 3: Get all active lesson types for filter (independent, can run in parallel)
+				supabase
+					.from('lesson_types')
+					.select('id, name, icon, color')
+					.eq('is_active', true)
+					.order('name', { ascending: true }),
+			]);
+
+			if (profilesResult.error) {
+				console.error('Error loading profiles:', profilesResult.error);
+				toast.error('Fout bij laden profielen');
+				setLoading(false);
+				return;
+			}
+
+			if (teachersWithLessonTypesResult.error) {
+				console.error('Error loading lesson type links:', teachersWithLessonTypesResult.error);
+				toast.error('Fout bij laden lessoorten');
+				setLoading(false);
+				return;
+			}
+
+			if (allLessonTypesResult.error) {
+				console.error('Error loading lesson types:', allLessonTypesResult.error);
+			} else {
+				setLessonTypes(allLessonTypesResult.data ?? []);
+			}
+
+			// Create maps for easy lookup
+			const profileMap = new Map(profilesResult.data?.map((p) => [p.user_id, p]) ?? []);
+			const lessonTypesByTeacher = new Map<string, LessonType[]>();
+
+			// Process nested lesson types data
+			if (teachersWithLessonTypesResult.data) {
+				for (const teacher of teachersWithLessonTypesResult.data) {
+					const lessonTypes: LessonType[] = [];
+					if (teacher.teacher_lesson_types && Array.isArray(teacher.teacher_lesson_types)) {
+						for (const link of teacher.teacher_lesson_types) {
+							if (link.lesson_types) {
+								if (Array.isArray(link.lesson_types)) {
+									lessonTypes.push(...link.lesson_types);
+								} else {
+									lessonTypes.push(link.lesson_types);
+								}
+							}
+						}
+					}
+					lessonTypesByTeacher.set(teacher.id, lessonTypes);
+				}
+			}
+
+			// Combine the data
+			const transformedData: TeacherWithProfile[] = teachersData.map((teacher) => {
+				return {
+					id: teacher.id,
+					user_id: teacher.user_id,
+					bio: teacher.bio,
+					is_active: teacher.is_active,
+					created_at: teacher.created_at,
+					updated_at: teacher.updated_at,
+					profile: profileMap.get(teacher.user_id) ?? {
+						email: '',
+						first_name: null,
+						last_name: null,
+						phone_number: null,
+						avatar_url: null,
+					},
+					lesson_types: lessonTypesByTeacher.get(teacher.id) ?? [],
+				};
+			});
+
+			setTeachers(transformedData);
+			setLoading(false);
+		} catch (error) {
+			console.error('Error loading teachers:', error);
 			toast.error('Fout bij laden docenten');
 			setLoading(false);
-			return;
 		}
-
-		if (!teachersData || teachersData.length === 0) {
-			setTeachers([]);
-			setLoading(false);
-			return;
-		}
-
-		// Then get profiles for all user_ids
-		const userIds = teachersData.map((t) => t.user_id);
-		const { data: profilesData, error: profilesError } = await supabase
-			.from('profiles')
-			.select('user_id, email, first_name, last_name, phone_number, avatar_url')
-			.in('user_id', userIds);
-
-		if (profilesError) {
-			console.error('Error loading profiles:', profilesError);
-			toast.error('Fout bij laden profielen');
-			setLoading(false);
-			return;
-		}
-
-		// Get lesson types for all teachers
-		const teacherIds = teachersData.map((t) => t.id);
-		const { data: lessonTypeLinks, error: linksError } = await supabase
-			.from('teacher_lesson_types')
-			.select('teacher_id, lesson_type_id')
-			.in('teacher_id', teacherIds);
-
-		if (linksError) {
-			console.error('Error loading lesson type links:', linksError);
-			toast.error('Fout bij laden lessoorten');
-			setLoading(false);
-			return;
-		}
-
-		// Get all lesson types
-		const lessonTypeIds = [...new Set(lessonTypeLinks?.map((link) => link.lesson_type_id) ?? [])];
-		const { data: lessonTypesData, error: lessonTypesError } = await supabase
-			.from('lesson_types')
-			.select('id, name, icon, color')
-			.in('id', lessonTypeIds);
-
-		if (lessonTypesError) {
-			console.error('Error loading lesson types:', lessonTypesError);
-			toast.error('Fout bij laden lessoorten');
-			setLoading(false);
-			return;
-		}
-
-		// Create maps for easy lookup
-		const profileMap = new Map(profilesData?.map((p) => [p.user_id, p]) ?? []);
-		const lessonTypeMap = new Map(lessonTypesData?.map((lt) => [lt.id, lt]) ?? []);
-		const linksByTeacher = new Map<string, string[]>();
-		lessonTypeLinks?.forEach((link) => {
-			const existing = linksByTeacher.get(link.teacher_id) ?? [];
-			linksByTeacher.set(link.teacher_id, [...existing, link.lesson_type_id]);
-		});
-
-		// Combine the data
-		const transformedData: TeacherWithProfile[] = teachersData.map((teacher) => {
-			const lessonTypeIds = linksByTeacher.get(teacher.id) ?? [];
-			const lessonTypes = lessonTypeIds
-				.map((id) => lessonTypeMap.get(id))
-				.filter((lt): lt is LessonType => lt !== undefined);
-
-			return {
-				id: teacher.id,
-				user_id: teacher.user_id,
-				bio: teacher.bio,
-				is_active: teacher.is_active,
-				created_at: teacher.created_at,
-				updated_at: teacher.updated_at,
-				profile: profileMap.get(teacher.user_id) ?? {
-					email: '',
-					first_name: null,
-					last_name: null,
-					phone_number: null,
-					avatar_url: null,
-				},
-				lesson_types: lessonTypes,
-			};
-		});
-
-		setTeachers(transformedData);
-
-		// Load all active lesson types for the filter
-		const { data: allLessonTypes, error: allLessonTypesError } = await supabase
-			.from('lesson_types')
-			.select('id, name, icon, color')
-			.eq('is_active', true)
-			.order('name', { ascending: true });
-
-		if (allLessonTypesError) {
-			console.error('Error loading lesson types:', allLessonTypesError);
-		} else {
-			setLessonTypes(allLessonTypes ?? []);
-		}
-
-		setLoading(false);
 	}, [hasAccess]);
 
 	useEffect(() => {
