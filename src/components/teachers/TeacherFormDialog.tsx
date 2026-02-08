@@ -12,9 +12,10 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { LessonTypeSelector, type LessonTypeOption } from '@/components/ui/lesson-type-selector';
+import { type LessonTypeOption, LessonTypeSelector } from '@/components/ui/lesson-type-selector';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Textarea } from '@/components/ui/textarea';
+import { UserSelector } from '@/components/ui/user-selector';
 import { supabase } from '@/integrations/supabase/client';
 
 interface TeacherData {
@@ -29,7 +30,6 @@ interface TeacherData {
 		phone_number: string | null;
 	};
 }
-
 
 interface TeacherFormDialogProps {
 	open: boolean;
@@ -57,12 +57,16 @@ const emptyForm: FormState = {
 	lesson_type_ids: [],
 };
 
+type TeacherFormMode = 'new-user' | 'existing-user';
+
 export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: TeacherFormDialogProps) {
 	const isEditMode = !!teacher;
 	const [form, setForm] = useState<FormState>(emptyForm);
 	const [lessonTypes, setLessonTypes] = useState<LessonTypeOption[]>([]);
 	const [loadingLessonTypes, setLoadingLessonTypes] = useState(false);
 	const [saving, setSaving] = useState(false);
+	const [mode, setMode] = useState<TeacherFormMode>('new-user');
+	const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
 	// Load lesson types
 	useEffect(() => {
@@ -115,25 +119,64 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 					bio: teacher.bio ?? '',
 					lesson_type_ids: [],
 				});
+				setMode('new-user');
+				setSelectedUserId(null);
 			} else {
 				setForm(emptyForm);
+				setMode('new-user');
+				setSelectedUserId(null);
 			}
 		}
 	}, [open, teacher]);
+
+	// Load user data when existing user is selected (only for email, not for form fields)
+	const loadUserData = async (userId: string) => {
+		const { data: profile, error } = await supabase
+			.from('profiles')
+			.select('email, first_name, last_name, phone_number')
+			.eq('user_id', userId)
+			.single();
+
+		if (error) {
+			console.error('Error loading user data:', error);
+			toast.error('Fout bij laden gebruikersgegevens');
+			return;
+		}
+
+		if (profile) {
+			// Only set email for validation, keep other fields empty for existing users
+			setForm({
+				email: profile.email,
+				first_name: '',
+				last_name: '',
+				phone_number: '',
+				bio: '',
+				lesson_type_ids: [],
+			});
+		}
+	};
 
 	const handleOpenChange = (newOpen: boolean) => {
 		if (!saving) {
 			if (!newOpen) {
 				setForm(emptyForm);
+				setMode('new-user');
+				setSelectedUserId(null);
 			}
 			onOpenChange(newOpen);
 		}
 	};
 
 	const handleSubmit = async () => {
-		if (!form.email) {
-			toast.error('Email is verplicht');
-			return;
+		if (!isEditMode) {
+			if (mode === 'existing-user' && !selectedUserId) {
+				toast.error('Selecteer een gebruiker');
+				return;
+			}
+			if (mode === 'new-user' && !form.email) {
+				toast.error('Email is verplicht');
+				return;
+			}
 		}
 
 		setSaving(true);
@@ -150,42 +193,49 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 	};
 
 	const handleCreate = async () => {
-		// Create user via Supabase Auth Admin API
-		const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-			email: form.email,
-			email_confirm: true,
-			user_metadata: {
-				first_name: form.first_name || undefined,
-				last_name: form.last_name || undefined,
-			},
-		});
+		let userId: string;
 
-		if (authError || !authData.user) {
-			toast.error('Fout bij aanmaken gebruiker', {
-				description: authError?.message || 'Onbekende fout',
+		if (mode === 'existing-user' && selectedUserId) {
+			// Use existing user - no need to update profile, just use the user_id
+			userId = selectedUserId;
+		} else {
+			// Create new user via Supabase Auth Admin API
+			const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+				email: form.email,
+				email_confirm: true,
+				user_metadata: {
+					first_name: form.first_name || undefined,
+					last_name: form.last_name || undefined,
+				},
 			});
-			return;
-		}
 
-		const userId = authData.user.id;
-
-		// Update profile with phone number
-		if (form.first_name || form.last_name || form.phone_number) {
-			const { error: profileError } = await supabase
-				.from('profiles')
-				.update({
-					first_name: form.first_name || null,
-					last_name: form.last_name || null,
-					phone_number: form.phone_number || null,
-				})
-				.eq('user_id', userId);
-
-			if (profileError) {
-				console.error('Error updating profile:', profileError);
-				toast.error('Fout bij bijwerken profiel', {
-					description: profileError.message,
+			if (authError || !authData.user) {
+				toast.error('Fout bij aanmaken gebruiker', {
+					description: authError?.message || 'Onbekende fout',
 				});
 				return;
+			}
+
+			userId = authData.user.id;
+
+			// Update profile with phone number
+			if (form.first_name || form.last_name || form.phone_number) {
+				const { error: profileError } = await supabase
+					.from('profiles')
+					.update({
+						first_name: form.first_name || null,
+						last_name: form.last_name || null,
+						phone_number: form.phone_number || null,
+					})
+					.eq('user_id', userId);
+
+				if (profileError) {
+					console.error('Error updating profile:', profileError);
+					toast.error('Fout bij bijwerken profiel', {
+						description: profileError.message,
+					});
+					return;
+				}
 			}
 		}
 
@@ -229,6 +279,8 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 		});
 
 		setForm(emptyForm);
+		setMode('new-user');
+		setSelectedUserId(null);
 		onOpenChange(false);
 		onSuccess();
 	};
@@ -336,58 +388,119 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 					)}
 				</DialogHeader>
 				<div className="space-y-3 py-2">
-					<div className="grid grid-cols-2 gap-3">
+					{/* Mode selector for new teachers */}
+					{!isEditMode && (
 						<div className="space-y-1.5">
-							<Label htmlFor="teacher-first-name" className="text-sm">
-								Voornaam
-							</Label>
-							<Input
-								id="teacher-first-name"
-								value={form.first_name}
-								onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-								className="h-9"
-								autoFocus
+							<Label className="text-sm">Type docent</Label>
+							<div className="flex gap-2">
+								<Button
+									type="button"
+									variant={mode === 'new-user' ? 'default' : 'outline'}
+									onClick={() => {
+										setMode('new-user');
+										setSelectedUserId(null);
+										setForm(emptyForm);
+									}}
+									className="flex-1"
+								>
+									Nieuwe gebruiker
+								</Button>
+								<Button
+									type="button"
+									variant={mode === 'existing-user' ? 'default' : 'outline'}
+									onClick={() => {
+										setMode('existing-user');
+										setSelectedUserId(null);
+										setForm(emptyForm);
+									}}
+									className="flex-1"
+								>
+									Bestaande gebruiker
+								</Button>
+							</div>
+						</div>
+					)}
+
+					{/* User selector for existing users */}
+					{!isEditMode && mode === 'existing-user' && (
+						<div className="space-y-1.5">
+							<Label className="text-sm">Gebruiker *</Label>
+							<UserSelector
+								value={selectedUserId}
+								onChange={(userId) => {
+									setSelectedUserId(userId);
+									if (userId) {
+										// Load user data (only for bio, not for form fields)
+										loadUserData(userId);
+									} else {
+										setForm(emptyForm);
+									}
+								}}
+								placeholder="Selecteer een bestaande gebruiker..."
+								searchPlaceholder="Zoek op naam of email..."
 							/>
 						</div>
-						<div className="space-y-1.5">
-							<Label htmlFor="teacher-last-name" className="text-sm">
-								Achternaam
-							</Label>
-							<Input
-								id="teacher-last-name"
-								value={form.last_name}
-								onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-								className="h-9"
-							/>
-						</div>
-					</div>
-					<div className="grid grid-cols-2 gap-3">
-						<div className="space-y-1.5">
-							<Label htmlFor="teacher-email" className="text-sm">
-								Email *
-							</Label>
-							<Input
-								id="teacher-email"
-								type="email"
-								value={form.email}
-								onChange={(e) => setForm({ ...form, email: e.target.value })}
-								placeholder="docent@voorbeeld.nl"
-								disabled={isEditMode}
-								className="h-9"
-							/>
-							{isEditMode && (
-								<p className="text-xs text-muted-foreground">Email kan niet worden gewijzigd.</p>
-							)}
-						</div>
-						<div className="space-y-1.5">
-							<PhoneInput
-								id="teacher-phone-number"
-								label="Telefoonnummer"
-								value={form.phone_number}
-								onChange={(value) => setForm({ ...form, phone_number: value })}
-							/>
-						</div>
-					</div>
+					)}
+
+					{/* Name, email, phone fields - only show for new users or edit mode */}
+					{(isEditMode || mode === 'new-user') && (
+						<>
+							<div className="grid grid-cols-2 gap-3">
+								<div className="space-y-1.5">
+									<Label htmlFor="teacher-first-name" className="text-sm">
+										Voornaam
+									</Label>
+									<Input
+										id="teacher-first-name"
+										value={form.first_name}
+										onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+										className="h-9"
+										autoFocus={isEditMode || mode === 'new-user'}
+									/>
+								</div>
+								<div className="space-y-1.5">
+									<Label htmlFor="teacher-last-name" className="text-sm">
+										Achternaam
+									</Label>
+									<Input
+										id="teacher-last-name"
+										value={form.last_name}
+										onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+										className="h-9"
+									/>
+								</div>
+							</div>
+							<div className="grid grid-cols-2 gap-3">
+								<div className="space-y-1.5">
+									<Label htmlFor="teacher-email" className="text-sm">
+										Email *
+									</Label>
+									<Input
+										id="teacher-email"
+										type="email"
+										value={form.email}
+										onChange={(e) => setForm({ ...form, email: e.target.value })}
+										placeholder="docent@voorbeeld.nl"
+										disabled={isEditMode}
+										className="h-9"
+									/>
+									{isEditMode && (
+										<p className="text-xs text-muted-foreground">
+											Email kan niet worden gewijzigd.
+										</p>
+									)}
+								</div>
+								<div className="space-y-1.5">
+									<PhoneInput
+										id="teacher-phone-number"
+										label="Telefoonnummer"
+										value={form.phone_number}
+										onChange={(value) => setForm({ ...form, phone_number: value })}
+									/>
+								</div>
+							</div>
+						</>
+					)}
 					<div className="space-y-1.5">
 						<Label htmlFor="teacher-bio" className="text-sm">
 							Bio

@@ -222,12 +222,17 @@ export function DataTable<T>({
 										<TooltipContent>
 											<div className="space-y-1">
 												<div className="text-sm font-semibold">
-													{activeFilters.length > 0 ? 'Actieve filters' : 'Geen actieve filters'}
+													{activeFilters.length > 0
+														? 'Actieve filters'
+														: 'Geen actieve filters'}
 												</div>
 												{activeFilters.length > 0 && (
 													<div className="space-y-0.5">
-														{activeFilters.map((filter, index) => (
-															<div key={index} className="text-sm">
+														{activeFilters.map((filter) => (
+															<div
+																key={`${filter.category}-${filter.value}`}
+																className="text-sm"
+															>
 																{filter.category}: {filter.value}
 															</div>
 														))}
@@ -249,9 +254,11 @@ export function DataTable<T>({
 						>
 							<div className="pt-2">
 								<div className="space-y-2 rounded-md border bg-card p-3">
-									{quickFilter.map((group, groupIndex) => (
-										<div key={groupIndex} className="space-y-1.5">
-											<div className="text-xs font-medium text-muted-foreground">{group.label}</div>
+									{quickFilter.map((group) => (
+										<div key={group.label} className="space-y-1.5">
+											<div className="text-xs font-medium text-muted-foreground">
+												{group.label}
+											</div>
 											<div className="flex flex-wrap items-center gap-2">
 												{group.showAllOption !== false && (
 													<Button
@@ -270,11 +277,10 @@ export function DataTable<T>({
 															key={option.id}
 															variant={isSelected ? 'default' : 'outline'}
 															size="sm"
-															onClick={() => group.onChange(isSelected ? null : option.id)}
-															className={cn(
-																'h-8 px-3 text-sm',
-																option.icon && 'gap-1',
-															)}
+															onClick={() =>
+																group.onChange(isSelected ? null : option.id)
+															}
+															className={cn('h-8 px-3 text-sm', option.icon && 'gap-1')}
 														>
 															{option.icon && (
 																<ColorIcon
