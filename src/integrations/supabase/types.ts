@@ -1,6 +1,11 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
+	// Allows to automatically instantiate createClient with right options
+	// instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+	__InternalSupabase: {
+		PostgrestVersion: '14.1';
+	};
 	graphql_public: {
 		Tables: {
 			[_ in never]: never;
@@ -278,6 +283,7 @@ export type Database = {
 				}[];
 			};
 			is_admin: { Args: { _user_id: string }; Returns: boolean };
+			is_privileged: { Args: { _user_id: string }; Returns: boolean };
 			is_site_admin: { Args: { _user_id: string }; Returns: boolean };
 			is_staff: { Args: { _user_id: string }; Returns: boolean };
 			is_student: { Args: { _user_id: string }; Returns: boolean };
