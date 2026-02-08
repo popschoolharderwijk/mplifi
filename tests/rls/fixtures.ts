@@ -125,9 +125,11 @@ export const fixtures = {
 	},
 
 	requireAgreementId: (studentUser: TestUser, teacherUser: TestUser) => {
-		const studentId = fixtures.requireStudentId(studentUser);
+		const studentUserId = fixtures.requireUserId(studentUser);
 		const teacherId = fixtures.requireTeacherId(teacherUser);
-		const agreement = allLessonAgreements.find((a) => a.student_id === studentId && a.teacher_id === teacherId);
+		const agreement = allLessonAgreements.find(
+			(a) => a.student_user_id === studentUserId && a.teacher_id === teacherId,
+		);
 		if (!agreement) {
 			throw new Error(`Lesson agreement not found for ${studentUser} with ${teacherUser}`);
 		}

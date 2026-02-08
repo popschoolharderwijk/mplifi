@@ -39,7 +39,7 @@ export type Database = {
 					notes: string | null;
 					start_date: string;
 					start_time: string;
-					student_id: string;
+					student_user_id: string;
 					teacher_id: string;
 					updated_at: string;
 				};
@@ -53,7 +53,7 @@ export type Database = {
 					notes?: string | null;
 					start_date: string;
 					start_time: string;
-					student_id: string;
+					student_user_id: string;
 					teacher_id: string;
 					updated_at?: string;
 				};
@@ -67,7 +67,7 @@ export type Database = {
 					notes?: string | null;
 					start_date?: string;
 					start_time?: string;
-					student_id?: string;
+					student_user_id?: string;
 					teacher_id?: string;
 					updated_at?: string;
 				};
@@ -77,13 +77,6 @@ export type Database = {
 						columns: ['lesson_type_id'];
 						isOneToOne: false;
 						referencedRelation: 'lesson_types';
-						referencedColumns: ['id'];
-					},
-					{
-						foreignKeyName: 'lesson_agreements_student_id_fkey';
-						columns: ['student_id'];
-						isOneToOne: false;
-						referencedRelation: 'students';
 						referencedColumns: ['id'];
 					},
 					{
@@ -265,6 +258,11 @@ export type Database = {
 				Returns: boolean;
 			};
 			check_rls_enabled: { Args: { p_table_name: string }; Returns: boolean };
+			cleanup_student_if_no_agreements: {
+				Args: { _user_id: string };
+				Returns: undefined;
+			};
+			ensure_student_exists: { Args: { _user_id: string }; Returns: undefined };
 			function_exists: { Args: { p_fn_name: string }; Returns: boolean };
 			get_student_id: { Args: { _user_id: string }; Returns: string };
 			get_table_policies: { Args: { p_table_name: string }; Returns: string[] };

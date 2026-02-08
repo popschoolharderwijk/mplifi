@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS public.lesson_agreements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
   -- References
-  student_id UUID NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
+  student_user_id UUID NOT NULL REFERENCES auth.users(id),
   teacher_id UUID NOT NULL REFERENCES public.teachers(id) ON DELETE CASCADE,
   lesson_type_id UUID NOT NULL REFERENCES public.lesson_types(id),
 
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS public.lesson_agreements (
 );
 
 -- Indexes
-CREATE INDEX IF NOT EXISTS idx_lesson_agreements_student_id ON public.lesson_agreements(student_id);
+CREATE INDEX IF NOT EXISTS idx_lesson_agreements_student_user_id ON public.lesson_agreements(student_user_id);
 CREATE INDEX IF NOT EXISTS idx_lesson_agreements_teacher_id ON public.lesson_agreements(teacher_id);
 CREATE INDEX IF NOT EXISTS idx_lesson_agreements_lesson_type_id ON public.lesson_agreements(lesson_type_id);
 CREATE INDEX IF NOT EXISTS idx_lesson_agreements_is_active ON public.lesson_agreements(is_active);
@@ -66,11 +66,10 @@ ALTER TABLE public.lesson_agreements FORCE ROW LEVEL SECURITY;
 -- =============================================================================
 
 -- Students can only view their own lesson agreements
--- Uses helper function to bypass RLS on students table
 CREATE POLICY lesson_agreements_select_student
 ON public.lesson_agreements FOR SELECT TO authenticated
 USING (
-  student_id = public.get_student_id((select auth.uid()))
+  student_user_id = (select auth.uid())
 );
 
 -- Teachers can only view lesson agreements where they are the teacher
@@ -125,7 +124,101 @@ USING (
 );
 
 -- =============================================================================
--- SECTION 5: TRIGGERS
+-- SECTION 5: HELPER FUNCTIONS FOR AUTOMATIC STUDENT MANAGEMENT
+-- =============================================================================
+
+-- Function to ensure a student exists for a given user_id
+-- Creates the student if it doesn't exist
+CREATE OR REPLACE FUNCTION public.ensure_student_exists(_user_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+SET row_security = off
+AS $$
+BEGIN
+  INSERT INTO public.students (user_id)
+  VALUES (_user_id)
+  ON CONFLICT (user_id) DO NOTHING;
+END;
+$$;
+
+-- Revoke public access, grant only to authenticated users
+REVOKE ALL ON FUNCTION public.ensure_student_exists(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.ensure_student_exists(UUID) FROM anon;
+GRANT EXECUTE ON FUNCTION public.ensure_student_exists(UUID) TO authenticated;
+ALTER FUNCTION public.ensure_student_exists(UUID) OWNER TO postgres;
+
+-- Trigger function to ensure student exists before inserting lesson agreement
+CREATE OR REPLACE FUNCTION public.trigger_ensure_student_on_agreement_insert()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+SET row_security = off
+AS $$
+BEGIN
+  PERFORM public.ensure_student_exists(NEW.student_user_id);
+  RETURN NEW;
+END;
+$$;
+
+-- Revoke public access
+REVOKE ALL ON FUNCTION public.trigger_ensure_student_on_agreement_insert() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trigger_ensure_student_on_agreement_insert() FROM anon;
+GRANT EXECUTE ON FUNCTION public.trigger_ensure_student_on_agreement_insert() TO authenticated;
+ALTER FUNCTION public.trigger_ensure_student_on_agreement_insert() OWNER TO postgres;
+
+-- Function to cleanup student if no agreements remain
+-- Deletes the student if there are no more lesson agreements
+CREATE OR REPLACE FUNCTION public.cleanup_student_if_no_agreements(_user_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+SET row_security = off
+AS $$
+BEGIN
+  -- Only delete if there are no lesson agreements left for this user
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.lesson_agreements
+    WHERE student_user_id = _user_id
+  ) THEN
+    DELETE FROM public.students
+    WHERE user_id = _user_id;
+  END IF;
+END;
+$$;
+
+-- Revoke public access, grant only to authenticated users
+REVOKE ALL ON FUNCTION public.cleanup_student_if_no_agreements(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.cleanup_student_if_no_agreements(UUID) FROM anon;
+GRANT EXECUTE ON FUNCTION public.cleanup_student_if_no_agreements(UUID) TO authenticated;
+ALTER FUNCTION public.cleanup_student_if_no_agreements(UUID) OWNER TO postgres;
+
+-- Trigger function to cleanup student after deleting lesson agreement
+CREATE OR REPLACE FUNCTION public.trigger_cleanup_student_on_agreement_delete()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+SET row_security = off
+AS $$
+BEGIN
+  PERFORM public.cleanup_student_if_no_agreements(OLD.student_user_id);
+  RETURN OLD;
+END;
+$$;
+
+-- Revoke public access
+REVOKE ALL ON FUNCTION public.trigger_cleanup_student_on_agreement_delete() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trigger_cleanup_student_on_agreement_delete() FROM anon;
+GRANT EXECUTE ON FUNCTION public.trigger_cleanup_student_on_agreement_delete() TO authenticated;
+ALTER FUNCTION public.trigger_cleanup_student_on_agreement_delete() OWNER TO postgres;
+
+-- =============================================================================
+-- SECTION 6: TRIGGERS
 -- =============================================================================
 
 -- Reuse existing update_updated_at_column function from baseline
@@ -134,8 +227,20 @@ BEFORE UPDATE ON public.lesson_agreements
 FOR EACH ROW
 EXECUTE FUNCTION public.update_updated_at_column();
 
+-- Trigger to automatically create student when lesson agreement is inserted
+CREATE TRIGGER ensure_student_on_agreement_insert
+BEFORE INSERT ON public.lesson_agreements
+FOR EACH ROW
+EXECUTE FUNCTION public.trigger_ensure_student_on_agreement_insert();
+
+-- Trigger to automatically cleanup student when lesson agreement is deleted
+CREATE TRIGGER cleanup_student_on_agreement_delete
+AFTER DELETE ON public.lesson_agreements
+FOR EACH ROW
+EXECUTE FUNCTION public.trigger_cleanup_student_on_agreement_delete();
+
 -- =============================================================================
--- SECTION 6: PERMISSIONS
+-- SECTION 7: PERMISSIONS
 -- =============================================================================
 
 -- GRANT gives table-level permissions, but RLS policies (above) are what

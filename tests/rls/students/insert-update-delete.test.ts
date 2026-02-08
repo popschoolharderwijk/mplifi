@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import { createClientAs, createClientBypassRLS } from '../../db';
 import { fixtures } from '../fixtures';
 import { TestUsers } from '../test-users';
@@ -9,14 +9,6 @@ const dbNoRLS = createClientBypassRLS();
 // User IDs from fixtures for insert tests
 const studentBUserId = fixtures.requireUserId(TestUsers.STUDENT_B);
 const studentCUserId = fixtures.requireUserId(TestUsers.STUDENT_C);
-const studentDUserId = fixtures.requireUserId(TestUsers.STUDENT_D);
-
-// Restore students that may have been deleted during INSERT/DELETE tests
-afterAll(async () => {
-	for (const userId of [studentCUserId, studentDUserId]) {
-		await dbNoRLS.from('students').upsert({ user_id: userId }, { onConflict: 'user_id' });
-	}
-});
 
 // Existing student ID for UPDATE/DELETE block tests
 const testStudentId = fixtures.allStudents[0].id;
@@ -24,15 +16,17 @@ const testStudentId = fixtures.allStudents[0].id;
 /**
  * Students INSERT/UPDATE/DELETE permissions:
  *
- * ADMINS and SITE_ADMINS:
- * - Can insert students
- * - Can update students
- * - Can delete students
+ * INSERT/DELETE:
+ * - NO ONE can insert or delete students (blocked for all roles)
+ * - Students are automatically created/deleted via triggers on lesson_agreements
  *
- * All other roles (staff, user without role) cannot insert, update, or delete students.
+ * UPDATE:
+ * - ADMINS and SITE_ADMINS can update students (for future fields)
+ * - All other roles cannot update students
+ *
  * Note: Teachers are identified by the teachers table, not by a role.
  */
-describe('RLS: students INSERT - blocked for non-admin roles', () => {
+describe('RLS: students INSERT - blocked for all roles', () => {
 	const newStudent: StudentInsert = { user_id: studentBUserId };
 
 	it('user without role cannot insert student', async () => {
@@ -40,7 +34,7 @@ describe('RLS: students INSERT - blocked for non-admin roles', () => {
 
 		const { data, error } = await db.from('students').insert(newStudent).select();
 
-		// Should fail - no INSERT policy for regular users
+		// Should fail - no INSERT policy (students are managed automatically)
 		expect(error).not.toBeNull();
 		expect(data).toBeNull();
 	});
@@ -62,10 +56,8 @@ describe('RLS: students INSERT - blocked for non-admin roles', () => {
 		expect(error).not.toBeNull();
 		expect(data).toBeNull();
 	});
-});
 
-describe('RLS: students INSERT - admin permissions', () => {
-	it('admin can insert student', async () => {
+	it('admin cannot insert student', async () => {
 		const db = await createClientAs(TestUsers.ADMIN_ONE);
 
 		// Ensure clean state
@@ -74,17 +66,12 @@ describe('RLS: students INSERT - admin permissions', () => {
 		const newStudent: StudentInsert = { user_id: studentCUserId };
 		const { data, error } = await db.from('students').insert(newStudent).select();
 
-		expect(error).toBeNull();
-		expect(data).toHaveLength(1);
-		expect(data?.[0]?.user_id).toBe(newStudent.user_id);
-
-		// Cleanup
-		if (data?.[0]?.id) {
-			await db.from('students').delete().eq('id', data[0].id);
-		}
+		// Should fail - no INSERT policy (students are managed automatically)
+		expect(error).not.toBeNull();
+		expect(data).toBeNull();
 	});
 
-	it('site_admin can insert student', async () => {
+	it('site_admin cannot insert student', async () => {
 		const db = await createClientAs(TestUsers.SITE_ADMIN);
 
 		// Ensure clean state
@@ -93,14 +80,9 @@ describe('RLS: students INSERT - admin permissions', () => {
 		const newStudent: StudentInsert = { user_id: studentCUserId };
 		const { data, error } = await db.from('students').insert(newStudent).select();
 
-		expect(error).toBeNull();
-		expect(data).toHaveLength(1);
-		expect(data?.[0]?.user_id).toBe(newStudent.user_id);
-
-		// Cleanup
-		if (data?.[0]?.id) {
-			await db.from('students').delete().eq('id', data[0].id);
-		}
+		// Should fail - no INSERT policy (students are managed automatically)
+		expect(error).not.toBeNull();
+		expect(data).toBeNull();
 	});
 });
 
@@ -195,13 +177,13 @@ describe('RLS: students UPDATE - admin permissions', () => {
 	});
 });
 
-describe('RLS: students DELETE - blocked for non-admin roles', () => {
+describe('RLS: students DELETE - blocked for all roles', () => {
 	it('user without role cannot delete student', async () => {
 		const db = await createClientAs(TestUsers.STUDENT_A);
 
 		const { data, error } = await db.from('students').delete().eq('id', testStudentId).select();
 
-		// RLS blocks - 0 rows affected
+		// RLS blocks - 0 rows affected (no DELETE policy)
 		expect(error).toBeNull();
 		expect(data).toHaveLength(0);
 	});
@@ -228,54 +210,24 @@ describe('RLS: students DELETE - blocked for non-admin roles', () => {
 		expect(error).toBeNull();
 		expect(data).toHaveLength(0);
 	});
-});
 
-describe('RLS: students DELETE - admin permissions', () => {
-	it('admin can delete student', async () => {
+	it('admin cannot delete student', async () => {
 		const db = await createClientAs(TestUsers.ADMIN_ONE);
 
-		// Ensure clean state, then insert a student to delete
-		await dbNoRLS.from('students').delete().eq('user_id', studentDUserId);
+		const { data, error } = await db.from('students').delete().eq('id', testStudentId).select();
 
-		const newStudent: StudentInsert = { user_id: studentDUserId };
-		const { data: inserted, error: insertError } = await db.from('students').insert(newStudent).select();
-		expect(insertError).toBeNull();
-		expect(inserted).toHaveLength(1);
-		if (!inserted || inserted.length === 0) {
-			throw new Error('Failed to insert student');
-		}
-
-		const studentId = inserted[0].id;
-
-		// Delete
-		const { data, error } = await db.from('students').delete().eq('id', studentId).select();
-
+		// RLS blocks - 0 rows affected (no DELETE policy)
 		expect(error).toBeNull();
-		expect(data).toHaveLength(1);
-		expect(data?.[0]?.id).toBe(studentId);
+		expect(data).toHaveLength(0);
 	});
 
-	it('site_admin can delete student', async () => {
+	it('site_admin cannot delete student', async () => {
 		const db = await createClientAs(TestUsers.SITE_ADMIN);
 
-		// Ensure clean state, then insert a student to delete
-		await dbNoRLS.from('students').delete().eq('user_id', studentDUserId);
+		const { data, error } = await db.from('students').delete().eq('id', testStudentId).select();
 
-		const newStudent: StudentInsert = { user_id: studentDUserId };
-		const { data: inserted, error: insertError } = await db.from('students').insert(newStudent).select();
-		expect(insertError).toBeNull();
-		expect(inserted).toHaveLength(1);
-		if (!inserted || inserted.length === 0) {
-			throw new Error('Failed to insert student');
-		}
-
-		const studentId = inserted[0].id;
-
-		// Delete
-		const { data, error } = await db.from('students').delete().eq('id', studentId).select();
-
+		// RLS blocks - 0 rows affected (no DELETE policy)
 		expect(error).toBeNull();
-		expect(data).toHaveLength(1);
-		expect(data?.[0]?.id).toBe(studentId);
+		expect(data).toHaveLength(0);
 	});
 });

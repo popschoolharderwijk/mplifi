@@ -110,21 +110,15 @@ USING (
   OR public.is_site_admin((select auth.uid()))
 );
 
--- Admins and site_admins can insert students
-CREATE POLICY students_insert_admin
-ON public.students FOR INSERT TO authenticated
-WITH CHECK (public.is_admin((select auth.uid())) OR public.is_site_admin((select auth.uid())));
+-- Note: INSERT and DELETE policies are intentionally omitted.
+-- Students are automatically created/deleted via triggers on lesson_agreements.
+-- No one can manually insert or delete students.
 
--- Admins and site_admins can update students
+-- Admins and site_admins can update students (for future fields)
 CREATE POLICY students_update_admin
 ON public.students FOR UPDATE TO authenticated
 USING (public.is_admin((select auth.uid())) OR public.is_site_admin((select auth.uid())))
 WITH CHECK (public.is_admin((select auth.uid())) OR public.is_site_admin((select auth.uid())));
-
--- Admins and site_admins can delete students
-CREATE POLICY students_delete_admin
-ON public.students FOR DELETE TO authenticated
-USING (public.is_admin((select auth.uid())) OR public.is_site_admin((select auth.uid())));
 
 -- =============================================================================
 -- SECTION 6: TRIGGERS
@@ -143,7 +137,8 @@ EXECUTE FUNCTION public.update_updated_at_column();
 -- GRANT gives table-level permissions, but RLS policies (above) are what
 -- actually control access. GRANT is required for RLS to work, but RLS is the
 -- security boundary. Without matching RLS policies, GRANT alone does NOT grant access.
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.students TO authenticated;
+-- Note: INSERT and DELETE are not granted - students are managed automatically via triggers.
+GRANT SELECT, UPDATE ON public.students TO authenticated;
 
 -- =============================================================================
 -- END OF STUDENTS MIGRATION

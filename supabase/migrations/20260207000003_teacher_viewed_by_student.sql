@@ -42,9 +42,7 @@ AS $$
   FROM public.lesson_agreements la
   INNER JOIN public.teachers t ON la.teacher_id = t.id
   INNER JOIN public.profiles p ON t.user_id = p.user_id
-  WHERE la.student_id IN (
-    SELECT id FROM public.students WHERE user_id = (SELECT auth.uid())
-  );
+  WHERE la.student_user_id = (SELECT auth.uid());
 $$;
 
 -- Revoke public access

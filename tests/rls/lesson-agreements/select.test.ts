@@ -11,7 +11,7 @@ const agreementStudentATeacherBob = fixtures.requireAgreementId(TestUsers.STUDEN
  * Lesson agreements SELECT permissions:
  *
  * STUDENTS:
- * - Can only view their own lesson agreements (where student_id matches their student record)
+ * - Can only view their own lesson agreements (where student_user_id matches their user_id)
  *
  * TEACHERS:
  * - Can only view lesson agreements where they are the teacher (where teacher_id matches their teacher record)

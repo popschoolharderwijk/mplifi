@@ -4,7 +4,7 @@ import { fixtures } from '../fixtures';
 import { TestUsers } from '../test-users';
 import type { LessonAgreementInsert } from '../types';
 
-const studentAId = fixtures.requireStudentId(TestUsers.STUDENT_A);
+const studentAUserId = fixtures.requireUserId(TestUsers.STUDENT_A);
 const teacherAliceId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
 const lessonTypeId = fixtures.requireLessonTypeId('Gitaar');
 const testAgreementId = fixtures.requireAgreementId(TestUsers.STUDENT_A, TestUsers.TEACHER_ALICE);
@@ -22,7 +22,7 @@ const testAgreementId = fixtures.requireAgreementId(TestUsers.STUDENT_A, TestUse
  */
 describe('RLS: lesson_agreements INSERT - blocked for students and teachers', () => {
 	const newAgreement: LessonAgreementInsert = {
-		student_id: studentAId,
+		student_user_id: studentAUserId,
 		teacher_id: teacherAliceId,
 		lesson_type_id: lessonTypeId,
 		day_of_week: 4,
@@ -53,7 +53,7 @@ describe('RLS: lesson_agreements INSERT - blocked for students and teachers', ()
 
 describe('RLS: lesson_agreements INSERT - staff permissions', () => {
 	const newAgreement: LessonAgreementInsert = {
-		student_id: studentAId,
+		student_user_id: studentAUserId,
 		teacher_id: teacherAliceId,
 		lesson_type_id: lessonTypeId,
 		day_of_week: 4,
@@ -69,7 +69,7 @@ describe('RLS: lesson_agreements INSERT - staff permissions', () => {
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(1);
-		expect(data?.[0]?.student_id).toBe(newAgreement.student_id);
+		expect(data?.[0]?.student_user_id).toBe(newAgreement.student_user_id);
 		expect(data?.[0]?.teacher_id).toBe(newAgreement.teacher_id);
 
 		// Cleanup
@@ -85,7 +85,7 @@ describe('RLS: lesson_agreements INSERT - staff permissions', () => {
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(1);
-		expect(data?.[0]?.student_id).toBe(newAgreement.student_id);
+		expect(data?.[0]?.student_user_id).toBe(newAgreement.student_user_id);
 		expect(data?.[0]?.teacher_id).toBe(newAgreement.teacher_id);
 
 		// Cleanup
@@ -101,7 +101,7 @@ describe('RLS: lesson_agreements INSERT - staff permissions', () => {
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(1);
-		expect(data?.[0]?.student_id).toBe(newAgreement.student_id);
+		expect(data?.[0]?.student_user_id).toBe(newAgreement.student_user_id);
 		expect(data?.[0]?.teacher_id).toBe(newAgreement.teacher_id);
 
 		// Cleanup
@@ -254,7 +254,7 @@ describe('RLS: lesson_agreements DELETE - staff permissions', () => {
 
 		// Create an agreement to delete
 		const newAgreement: LessonAgreementInsert = {
-			student_id: studentAId,
+			student_user_id: studentAUserId,
 			teacher_id: teacherAliceId,
 			lesson_type_id: lessonTypeId,
 			day_of_week: 5,
@@ -285,7 +285,7 @@ describe('RLS: lesson_agreements DELETE - staff permissions', () => {
 
 		// Create an agreement to delete
 		const newAgreement: LessonAgreementInsert = {
-			student_id: studentAId,
+			student_user_id: studentAUserId,
 			teacher_id: teacherAliceId,
 			lesson_type_id: lessonTypeId,
 			day_of_week: 6,
@@ -316,7 +316,7 @@ describe('RLS: lesson_agreements DELETE - staff permissions', () => {
 
 		// Create an agreement to delete
 		const newAgreement: LessonAgreementInsert = {
-			student_id: studentAId,
+			student_user_id: studentAUserId,
 			teacher_id: teacherAliceId,
 			lesson_type_id: lessonTypeId,
 			day_of_week: 0,

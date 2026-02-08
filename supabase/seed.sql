@@ -177,14 +177,6 @@ SELECT * FROM (VALUES
 WHERE NOT EXISTS (SELECT 1 FROM public.lesson_types WHERE lesson_types.name = v.name);
 
 -- -----------------------------------------------------------------------------
--- STUDENTS (for test users without role)
--- -----------------------------------------------------------------------------
-INSERT INTO public.students (user_id)
-SELECT user_id FROM public.profiles
-WHERE email IN ('student-a@test.nl', 'student-b@test.nl', 'student-c@test.nl', 'student-d@test.nl')
-ON CONFLICT (user_id) DO NOTHING;
-
--- -----------------------------------------------------------------------------
 -- TEACHERS (for test users - teachers are identified by this table, not by role)
 -- -----------------------------------------------------------------------------
 INSERT INTO public.teachers (user_id)
@@ -198,9 +190,10 @@ ON CONFLICT (user_id) DO NOTHING;
 -- Create lesson agreements between students and teachers for testing
 -- Student A has agreements with Teacher Alice and Teacher Bob
 -- Student B has agreement with Teacher Alice
-INSERT INTO public.lesson_agreements (student_id, teacher_id, lesson_type_id, day_of_week, start_time, start_date, is_active)
+-- Note: Students are automatically created via triggers when lesson agreements are inserted
+INSERT INTO public.lesson_agreements (student_user_id, teacher_id, lesson_type_id, day_of_week, start_time, start_date, is_active)
 SELECT
-  s.id AS student_id,
+  student_profile.user_id AS student_user_id,
   t.id AS teacher_id,
   lt.id AS lesson_type_id,
   agreement_data.day_of_week,
@@ -213,13 +206,12 @@ FROM (VALUES
   ('student-b@test.nl', 'teacher-alice@test.nl', 'Gitaar', 3, '16:00', CURRENT_DATE, true)
 ) AS agreement_data(student_email, teacher_email, lesson_type_name, day_of_week, start_time, start_date, is_active)
 INNER JOIN public.profiles student_profile ON student_profile.email = agreement_data.student_email
-INNER JOIN public.students s ON s.user_id = student_profile.user_id
 INNER JOIN public.profiles teacher_profile ON teacher_profile.email = agreement_data.teacher_email
 INNER JOIN public.teachers t ON t.user_id = teacher_profile.user_id
 INNER JOIN public.lesson_types lt ON lt.name = agreement_data.lesson_type_name
 WHERE NOT EXISTS (
   SELECT 1 FROM public.lesson_agreements la
-  WHERE la.student_id = s.id
+  WHERE la.student_user_id = student_profile.user_id
     AND la.teacher_id = t.id
     AND la.lesson_type_id = lt.id
     AND la.day_of_week = agreement_data.day_of_week
