@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { LuLoaderCircle, LuPlus, LuTriangleAlert } from 'react-icons/lu';
+import { LuLoaderCircle, LuTriangleAlert } from 'react-icons/lu';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { type LessonAgreement, LessonAgreementItem } from '@/components/students/LessonAgreementItem';
@@ -16,6 +16,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
 import { type LessonType, useLessonTypeFilter, useStatusFilter } from '@/hooks/useTableFilters';
 import { supabase } from '@/integrations/supabase/client';
@@ -228,21 +229,42 @@ export default function Students() {
 				key: 'student',
 				label: 'Leerling',
 				sortable: false, // Server-side sorting
-				className: 'w-48 max-w-48',
-				render: (s) => (
-					<div className="flex items-center gap-3">
-						<Avatar className="h-9 w-9 flex-shrink-0">
-							<AvatarImage src={s.profile.avatar_url ?? undefined} alt={getDisplayName(s)} />
-							<AvatarFallback className="bg-primary/10 text-primary text-sm">
-								{getUserInitials(s)}
-							</AvatarFallback>
-						</Avatar>
-						<div className="min-w-0 flex-1 overflow-hidden">
-							<p className="font-medium break-words line-clamp-2">{getDisplayName(s)}</p>
-							<p className="text-xs text-muted-foreground break-words truncate">{s.profile.email}</p>
+				className: 'w-64 max-w-64',
+				render: (s) => {
+					const displayName = getDisplayName(s);
+					return (
+						<div className="flex items-center gap-3">
+							<Avatar className="h-9 w-9 flex-shrink-0">
+								<AvatarImage src={s.profile.avatar_url ?? undefined} alt={displayName} />
+								<AvatarFallback className="bg-primary/10 text-primary text-sm">
+									{getUserInitials(s)}
+								</AvatarFallback>
+							</Avatar>
+							<div className="min-w-0 flex-1 overflow-hidden">
+								<TooltipProvider>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<p className="font-medium truncate">{displayName}</p>
+										</TooltipTrigger>
+										<TooltipContent>
+											<p>{displayName}</p>
+										</TooltipContent>
+									</Tooltip>
+								</TooltipProvider>
+								<TooltipProvider>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<p className="text-xs text-muted-foreground truncate">{s.profile.email}</p>
+										</TooltipTrigger>
+										<TooltipContent>
+											<p>{s.profile.email}</p>
+										</TooltipContent>
+									</Tooltip>
+								</TooltipProvider>
+							</div>
 						</div>
-					</div>
-				),
+					);
+				},
 			},
 			{
 				key: 'phone_number',
@@ -287,10 +309,6 @@ export default function Students() {
 		],
 		[getDisplayName, getUserInitials],
 	);
-
-	const handleCreate = useCallback(() => {
-		setStudentFormDialog({ open: true, student: null });
-	}, []);
 
 	const handleEdit = useCallback((student: StudentWithProfile) => {
 		setStudentFormDialog({ open: true, student });
@@ -386,14 +404,6 @@ export default function Students() {
 					onPageChange: handlePageChange,
 					onRowsPerPageChange: handleRowsPerPageChange,
 				}}
-				headerActions={
-					(isAdmin || isSiteAdmin || isStaff) && (
-						<Button onClick={handleCreate}>
-							<LuPlus className="mr-2 h-4 w-4" />
-							Leerling toevoegen
-						</Button>
-					)
-				}
 				rowActions={{
 					onEdit: isAdmin || isSiteAdmin || isStaff ? handleEdit : undefined,
 					onDelete: isAdmin || isSiteAdmin ? handleDelete : undefined,

@@ -29,7 +29,7 @@ const quickNavItems = [
 	{ href: '/teachers', label: 'Docenten', group: 'Navigatie' },
 ];
 
-const quickActions = [{ action: 'new-student', label: 'Nieuwe leerling toevoegen', group: 'Acties' }];
+const quickActions: Array<{ action: string; label: string; group: string }> = [];
 
 export function TopNav() {
 	const { user, signOut } = useAuth();
@@ -192,19 +192,21 @@ export function TopNav() {
 							</CommandItem>
 						))}
 					</CommandGroup>
-					<CommandGroup heading="Acties">
-						{quickActions.map((item) => (
-							<CommandItem
-								key={item.action}
-								onSelect={() => {
-									// Handle actions
-									setOpen(false);
-								}}
-							>
-								{item.label}
-							</CommandItem>
-						))}
-					</CommandGroup>
+					{quickActions.length > 0 && (
+						<CommandGroup heading="Acties">
+							{quickActions.map((item) => (
+								<CommandItem
+									key={item.action}
+									onSelect={() => {
+										// Handle actions
+										setOpen(false);
+									}}
+								>
+									{item.label}
+								</CommandItem>
+							))}
+						</CommandGroup>
+					)}
 				</CommandList>
 			</CommandDialog>
 		</>

@@ -4,15 +4,19 @@ alwaysApply: true
 
 * When writing tests, never start a test by deleting data to get rid of potential dirty database states. A dirty database state means some other test didn't properly clean up. THAT needs to be fixed instead.
 * **Seed data is authoritative**: All tests must rely on data from `supabase/seed.sql`. Every test can assume that seed data is available and consistent. If test data is needed, add it to `supabase/seed.sql` instead of creating it in tests.
+* **Use seed-data-constants.ts for all seed-based values**: All constants that come from seed data (counts, totals, specific IDs, etc.) MUST be imported from `tests/rls/seed-data-constants.ts`. Never hardcode values like `88`, `60`, `10` etc. in tests. If a constant doesn't exist, add it to `seed-data-constants.ts` first.
 * **Tests may modify the database**: Tests are allowed to create, modify, or delete data during execution (e.g., for INSERT/UPDATE/DELETE permission tests). However, tests MUST restore the database to its original state after completion. Use the `setupDatabaseStateVerification()` helper from `tests/rls/db-state.ts` to automatically verify that the database state is unchanged after tests run.
 * Use the `setupDatabaseStateVerification()` helper from `tests/rls/db-state.ts` to automatically verify database integrity after tests complete. This helper captures the initial state in `beforeAll()` and verifies it hasn't changed in `afterAll()`.
 * Try to use these integrity checks for all written test files, unless the expected data is too large (e.g., seed data that grows over time).
 * You can also use these helpers for debugging purposes to identify which tables/rows were modified unexpectedly.
+* **NO conditional logic in tests**: Tests must NEVER use `if` statements, ternary operators, or any other conditional logic. Every test must have explicit, deterministic expectations. If you need different behavior based on conditions, write separate test cases instead.
+* **NO range assertions**: Tests must NEVER use `toBeGreaterThan()`, `toBeLessThan()`, `toBeGreaterThanOrEqual()`, or `toBeLessThanOrEqual()`. All assertions must be explicit and exact. Use `toBe()`, `toHaveLength()`, `toEqual()`, etc. with exact values. If you need to check a range, write separate test cases for the boundaries.
 
 Example usage:
 ```typescript
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { setupDatabaseStateVerification, type DatabaseState } from '../db-state';
+import { STUDENTS, TEACHERS, USERS } from '../seed-data-constants';
 
 describe('My test suite', () => {
   let initialState: DatabaseState;
@@ -26,8 +30,65 @@ describe('My test suite', () => {
     await verifyState(initialState);
   });
 
-  // ... your tests ...
-  // Tests can modify the database here, but verifyState will ensure
-  // everything is restored to the original state
+  it('should return correct count', async () => {
+    const result = await someFunction();
+    // ✅ CORRECT: Use constants from seed-data-constants.ts
+    expect(result.total_count).toBe(STUDENTS.TOTAL);
+    expect(result.data).toHaveLength(STUDENTS.TOTAL);
+    
+    // ❌ WRONG: Hardcoded values
+    // expect(result.total_count).toBe(60);
+    
+    // ❌ WRONG: Range assertions
+    // expect(result.total_count).toBeGreaterThan(50);
+    // expect(result.total_count).toBeLessThan(100);
+    
+    // ❌ WRONG: Conditional logic
+    // if (result.length > 0) {
+    //   expect(result[0]).toBeDefined();
+    // }
+  });
+});
+```
+
+**Bad examples (DO NOT DO THIS):**
+```typescript
+// ❌ BAD: Hardcoded values
+expect(result.total_count).toBe(88);
+
+// ❌ BAD: Range assertions
+expect(result.total_count).toBeGreaterThan(0);
+expect(result.total_count).toBeLessThanOrEqual(100);
+
+// ❌ BAD: Conditional logic
+if (result.length > 0) {
+  expect(result[0].id).toBeDefined();
+} else {
+  expect(result).toHaveLength(0);
+}
+
+// ❌ BAD: Ternary operators
+expect(result.length > 0 ? result[0].id : null).toBeDefined();
+```
+
+**Good examples (DO THIS):**
+```typescript
+// ✅ GOOD: Use constants
+import { USERS } from '../seed-data-constants';
+expect(result.total_count).toBe(USERS.TOTAL);
+
+// ✅ GOOD: Explicit exact assertions
+expect(result.data).toHaveLength(10);
+expect(result.total_count).toBe(88);
+
+// ✅ GOOD: Separate test cases for different scenarios
+it('returns empty array when no results', async () => {
+  const result = await searchFunction('nonexistent');
+  expect(result.data).toHaveLength(0);
+});
+
+it('returns results when search matches', async () => {
+  const result = await searchFunction('existing');
+  expect(result.data).toHaveLength(5);
 });
 ```

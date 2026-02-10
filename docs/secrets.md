@@ -72,7 +72,6 @@ Voor snelle login in development omgevingen zonder Magic Link/OTP. Toe te voegen
 
 | Variabele | Verplicht | Beschrijving |
 |-----------|-----------|--------------|
-| `VITE_DEV_LOGIN_EMAIL` | Ja | Email van de dev user |
 | `VITE_DEV_LOGIN_PASSWORD` | Nee | Wachtwoord voor directe login (zonder = knop disabled) |
 
 ### Script variabelen (voor `bun run createuser`)
@@ -94,9 +93,8 @@ VITE_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_URL=http://localhost:54321
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 
-# Dev login
-VITE_DEV_LOGIN_EMAIL=dev@example.com
-VITE_DEV_LOGIN_PASSWORD=mijn-dev-wachtwoord
+DEV_LOGIN_EMAIL=dev@example.com
+DEV_LOGIN_PASSWORD=mijn-dev-wachtwoord
 DEV_LOGIN_FIRST_NAME=Dev
 DEV_LOGIN_LAST_NAME=User
 ```

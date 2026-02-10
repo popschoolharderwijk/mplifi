@@ -18,7 +18,6 @@ VITE_SUPABASE_URL=https://xyz-dev.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJ...
 
 # Dev login bypass (optioneel, zie "Dev Login Bypass" sectie)
-VITE_DEV_LOGIN_EMAIL=dev@example.com
 VITE_DEV_LOGIN_PASSWORD=your-dev-password
 ```
 
@@ -32,7 +31,6 @@ SUPABASE_URL=http://localhost:54321
 SUPABASE_SERVICE_ROLE_KEY=eyJ...lokale-service-key
 
 # Dev login bypass (optioneel, zie "Dev Login Bypass" sectie)
-VITE_DEV_LOGIN_EMAIL=dev@example.com
 VITE_DEV_LOGIN_PASSWORD=your-dev-password
 ```
 
@@ -129,8 +127,8 @@ bun run create-storage-bucket
 # Configureer in .env.localdev of .env.development:
 #   SUPABASE_URL=http://localhost:54321          (verplicht, API URL)
 #   SUPABASE_SERVICE_ROLE_KEY=eyJ...             (verplicht, service role key)
-#   VITE_DEV_LOGIN_EMAIL=user@example.com        (verplicht)
-#   VITE_DEV_LOGIN_PASSWORD=wachtwoord           (optioneel, zonder = passwordless user)
+#   DEV_LOGIN_EMAIL=user@example.com             (verplicht, voor createuser script)
+#   DEV_LOGIN_PASSWORD=wachtwoord                (optioneel, zonder = passwordless user)
 #   DEV_LOGIN_FIRST_NAME=Voornaam                (optioneel)
 #   DEV_LOGIN_LAST_NAME=Achternaam               (optioneel)
 bun run createuser
@@ -162,13 +160,15 @@ Deze users komen uit de seed data (`supabase/seed.sql`) en zijn beschikbaar in d
 
 ### Configuratie
 
-**Optioneel** - Voeg toe aan `.env.development` als je een custom wachtwoord wilt gebruiken:
+**Optioneel** - Voeg toe aan `.env.development` of `.env.localdev` als je een custom wachtwoord wilt gebruiken:
 
 ```env
 VITE_DEV_LOGIN_PASSWORD=your-custom-password
 ```
 
-Als `VITE_DEV_LOGIN_PASSWORD` niet is ingesteld, wordt het standaard seed wachtwoord gebruikt (`password`).
+Als `VITE_DEV_LOGIN_PASSWORD` niet is ingesteld, wordt de Dev Login knop uitgeschakeld. De seed users in de remote dev instance gebruiken standaard het wachtwoord `password`.
+
+> 💡 **Let op**: De Dev Login knop gebruikt hardcoded emails uit de seed data (bijv. `site-admin@test.nl`). Deze emails zijn niet configureerbaar via environment variabelen. Voor custom users gebruik je `bun run createuser` met `DEV_LOGIN_EMAIL`.
 
 ### Beveiliging
 

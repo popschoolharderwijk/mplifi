@@ -11,6 +11,7 @@ SELECT
   last_name,
   phone_number,
   avatar_url,
+  created_at,
   COALESCE(
     NULLIF(TRIM(COALESCE(first_name, '') || ' ' || COALESCE(last_name, '')), ''),
     email

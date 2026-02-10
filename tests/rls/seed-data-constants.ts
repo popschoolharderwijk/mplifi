@@ -94,3 +94,18 @@ export const TEACHERS = {
 	ACTIVE: 10,
 	INACTIVE: 0,
 } as const;
+
+/**
+ * Users counts
+ */
+export const USERS = {
+	// Total number of users in seed data
+	TOTAL: 88, // 1 site_admin, 2 admins, 5 staff, 10 teachers, 60 students, 10 users without role
+	// Per role (from seed.sql)
+	SITE_ADMIN: 1,
+	ADMIN: 2,
+	STAFF: 5,
+	// Users without app_role (teachers, students, and regular users)
+	// 10 teachers + 60 students + 10 users without role = 80
+	WITHOUT_ROLE: 80,
+} as const;

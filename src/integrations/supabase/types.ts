@@ -353,6 +353,7 @@ export type Database = {
 			view_profiles_with_display_name: {
 				Row: {
 					avatar_url: string | null;
+					created_at: string | null;
 					display_name: string | null;
 					email: string | null;
 					first_name: string | null;
@@ -362,6 +363,7 @@ export type Database = {
 				};
 				Insert: {
 					avatar_url?: string | null;
+					created_at?: string | null;
 					display_name?: never;
 					email?: string | null;
 					first_name?: string | null;
@@ -371,6 +373,7 @@ export type Database = {
 				};
 				Update: {
 					avatar_url?: string | null;
+					created_at?: string | null;
 					display_name?: never;
 					email?: string | null;
 					first_name?: string | null;
@@ -458,6 +461,17 @@ export type Database = {
 					phone_number: string;
 					teacher_id: string;
 				}[];
+			};
+			get_users_paginated: {
+				Args: {
+					p_limit?: number;
+					p_offset?: number;
+					p_role?: string;
+					p_search?: string;
+					p_sort_column?: string;
+					p_sort_direction?: string;
+				};
+				Returns: Json;
 			};
 			is_admin: { Args: { _user_id: string }; Returns: boolean };
 			is_privileged: { Args: { _user_id: string }; Returns: boolean };

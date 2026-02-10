@@ -9,8 +9,8 @@
  * Configure in .env.localdev or .env.development:
  *   SUPABASE_URL=https://xxx.supabase.co
  *   SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
- *   VITE_DEV_LOGIN_EMAIL=dev@example.com
- *   VITE_DEV_LOGIN_PASSWORD=your-dev-password  (optional, omit for passwordless)
+ *   DEV_LOGIN_EMAIL=dev@example.com
+ *   DEV_LOGIN_PASSWORD=your-dev-password       (optional, omit for passwordless)
  *   DEV_LOGIN_FIRST_NAME=Your                  (optional)
  *   DEV_LOGIN_LAST_NAME=Name                   (optional)
  *   DEV_LOGIN_ROLE=admin                       (optional)
@@ -27,8 +27,8 @@ type AppRole = (typeof VALID_ROLES)[number];
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const DEV_LOGIN_EMAIL = process.env.VITE_DEV_LOGIN_EMAIL;
-const DEV_LOGIN_PASSWORD = process.env.VITE_DEV_LOGIN_PASSWORD;
+const DEV_LOGIN_EMAIL = process.env.DEV_LOGIN_EMAIL;
+const DEV_LOGIN_PASSWORD = process.env.DEV_LOGIN_PASSWORD;
 const DEV_LOGIN_FIRST_NAME = process.env.DEV_LOGIN_FIRST_NAME;
 const DEV_LOGIN_LAST_NAME = process.env.DEV_LOGIN_LAST_NAME;
 const DEV_LOGIN_ROLE = process.env.DEV_LOGIN_ROLE?.trim() || '';
@@ -38,7 +38,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 }
 
 if (!DEV_LOGIN_EMAIL) {
-	throw new Error('Missing VITE_DEV_LOGIN_EMAIL in environment');
+	throw new Error('Missing DEV_LOGIN_EMAIL in environment');
 }
 
 // Validate DEV_LOGIN_ROLE if provided

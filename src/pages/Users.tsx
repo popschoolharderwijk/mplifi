@@ -1,5 +1,5 @@
 import { FunctionsHttpError } from '@supabase/supabase-js';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { IconType } from 'react-icons';
 import { LuLoaderCircle, LuPlus, LuTrash2, LuTriangleAlert } from 'react-icons/lu';
 import { Navigate } from 'react-router-dom';
@@ -16,10 +16,11 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { RoleBadge } from '@/components/ui/role-badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { UserFormDialog } from '@/components/users/UserFormDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { type AppRole, allRoles, getIcon, roleLabels, rolePriority } from '@/lib/roles';
+import { type AppRole, allRoles, getIcon, roleLabels } from '@/lib/roles';
 
 interface UserWithRole {
 	user_id: string;
@@ -32,12 +33,28 @@ interface UserWithRole {
 	role: AppRole | null;
 }
 
+interface PaginatedUsersResponse {
+	data: UserWithRole[];
+	total_count: number;
+	limit: number;
+	offset: number;
+}
+
 export default function Users() {
 	const { user, isAdmin, isSiteAdmin, isLoading: authLoading } = useAuth();
 	const [users, setUsers] = useState<UserWithRole[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [totalCount, setTotalCount] = useState(0);
+
+	// Pagination state
+	const [currentPage, setCurrentPage] = useState(1);
+	const [rowsPerPage, setRowsPerPage] = useState(20);
+
+	// Filter state
 	const [searchQuery, setSearchQuery] = useState('');
+	const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 	const [selectedRole, setSelectedRole] = useState<AppRole | null | 'none'>(null);
+
 	const [deleteDialog, setDeleteDialog] = useState<{
 		open: boolean;
 		user: UserWithRole | null;
@@ -51,49 +68,82 @@ export default function Users() {
 	// Check access - only admin and site_admin can view this page
 	const hasAccess = isAdmin || isSiteAdmin;
 
+	// Load paginated users
 	const loadUsers = useCallback(async () => {
 		if (!hasAccess) return;
 
 		setLoading(true);
 
-		const { data: profiles, error: profilesError } = await supabase
-			.from('profiles')
-			.select('user_id, email, first_name, last_name, phone_number, avatar_url, created_at')
-			.order('created_at', { ascending: false });
+		try {
+			const offset = (currentPage - 1) * rowsPerPage;
 
-		if (profilesError) {
-			console.error('Error loading profiles:', profilesError);
+			const { data, error } = await supabase.rpc('get_users_paginated', {
+				p_limit: rowsPerPage,
+				p_offset: offset,
+				p_search: debouncedSearchQuery || null,
+				p_role: selectedRole === null ? null : selectedRole,
+				p_sort_column: 'name',
+				p_sort_direction: 'asc',
+			});
+
+			if (error) {
+				console.error('Error loading users:', error);
+				toast.error('Fout bij laden gebruikers');
+				setLoading(false);
+				return;
+			}
+
+			const result = data as unknown as PaginatedUsersResponse;
+			setUsers(result.data ?? []);
+			setTotalCount(result.total_count ?? 0);
+			setLoading(false);
+		} catch (error) {
+			console.error('Error loading users:', error);
 			toast.error('Fout bij laden gebruikers');
 			setLoading(false);
-			return;
 		}
+	}, [hasAccess, currentPage, rowsPerPage, debouncedSearchQuery, selectedRole]);
 
-		const { data: roles, error: rolesError } = await supabase.from('user_roles').select('user_id, role');
-
-		if (rolesError) {
-			console.error('Error loading roles:', rolesError);
-			toast.error('Fout bij laden rollen');
-			setLoading(false);
-			return;
-		}
-
-		const roleMap = new Map(roles?.map((r) => [r.user_id, r.role]) ?? []);
-
-		const usersWithRoles: UserWithRole[] =
-			profiles?.map((profile) => ({
-				...profile,
-				role: roleMap.get(profile.user_id) ?? null,
-			})) ?? [];
-
-		setUsers(usersWithRoles);
-		setLoading(false);
-	}, [hasAccess]);
-
+	// Load users when dependencies change
 	useEffect(() => {
 		if (!authLoading) {
 			loadUsers();
 		}
 	}, [authLoading, loadUsers]);
+
+	// Reset to page 1 when filters change - use a ref to track previous values
+	const prevFiltersRef = React.useRef({ debouncedSearchQuery, selectedRole });
+	useEffect(() => {
+		const prev = prevFiltersRef.current;
+		if (prev.debouncedSearchQuery !== debouncedSearchQuery || prev.selectedRole !== selectedRole) {
+			setCurrentPage(1);
+			prevFiltersRef.current = { debouncedSearchQuery, selectedRole };
+		}
+	}, [debouncedSearchQuery, selectedRole]);
+
+	// Handle search query change (debounced)
+	const handleSearchChange = useCallback((query: string) => {
+		setSearchQuery(query);
+	}, []);
+
+	// Debounce search query
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearchQuery(searchQuery);
+		}, 300);
+		return () => clearTimeout(timer);
+	}, [searchQuery]);
+
+	// Handle page change
+	const handlePageChange = useCallback((page: number) => {
+		setCurrentPage(page);
+	}, []);
+
+	// Handle rows per page change
+	const handleRowsPerPageChange = useCallback((newRowsPerPage: number) => {
+		setRowsPerPage(newRowsPerPage);
+		setCurrentPage(1);
+	}, []);
 
 	// Helper functions
 	const getUserInitials = useCallback((u: UserWithRole) => {
@@ -115,17 +165,6 @@ export default function Users() {
 		}
 		return u.email;
 	}, []);
-
-	// Filter users based on selected role
-	const filteredUsers = useMemo(() => {
-		if (selectedRole === null) {
-			return users;
-		}
-		if (selectedRole === 'none') {
-			return users.filter((u) => u.role === null);
-		}
-		return users.filter((u) => u.role === selectedRole);
-	}, [users, selectedRole]);
 
 	// Quick filter groups configuration
 	const quickFilterGroups: QuickFilterGroup[] = useMemo(() => {
@@ -162,55 +201,63 @@ export default function Users() {
 			{
 				key: 'user',
 				label: 'Gebruiker',
-				sortable: true,
-				sortValue: (u) => getDisplayName(u).toLowerCase(),
-				render: (u) => (
-					<div className="flex items-center gap-3">
-						<Avatar className="h-9 w-9">
-							<AvatarImage src={u.avatar_url ?? undefined} alt={getDisplayName(u)} />
-							<AvatarFallback className="bg-primary/10 text-primary text-sm">
-								{getUserInitials(u)}
-							</AvatarFallback>
-						</Avatar>
-						<div>
-							<p className="font-medium">
-								{getDisplayName(u)}
-								{u.user_id === user?.id && (
-									<span className="text-muted-foreground font-normal"> (jij)</span>
-								)}
-							</p>
+				sortable: false, // Server-side sorting
+				render: (u) => {
+					const displayName = getDisplayName(u);
+					const fullName = displayName + (u.user_id === user?.id ? ' (jij)' : '');
+					return (
+						<div className="flex items-center gap-3">
+							<Avatar className="h-9 w-9 flex-shrink-0">
+								<AvatarImage src={u.avatar_url ?? undefined} alt={displayName} />
+								<AvatarFallback className="bg-primary/10 text-primary text-sm">
+									{getUserInitials(u)}
+								</AvatarFallback>
+							</Avatar>
+							<div className="min-w-0 flex-1 overflow-hidden">
+								<TooltipProvider>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<p className="font-medium truncate">
+												{displayName}
+												{u.user_id === user?.id && (
+													<span className="text-muted-foreground font-normal"> (jij)</span>
+												)}
+											</p>
+										</TooltipTrigger>
+										<TooltipContent>
+											<p>{fullName}</p>
+										</TooltipContent>
+									</Tooltip>
+								</TooltipProvider>
+							</div>
 						</div>
-					</div>
-				),
+					);
+				},
 			},
 			{
 				key: 'email',
 				label: 'Email',
-				sortable: true,
-				sortValue: (u) => u.email.toLowerCase(),
+				sortable: false, // Server-side sorting
 				render: (u) => <span className="text-muted-foreground">{u.email}</span>,
 				className: 'text-muted-foreground',
 			},
 			{
 				key: 'phone_number',
 				label: 'Telefoonnummer',
-				sortable: true,
-				sortValue: (u) => u.phone_number?.toLowerCase() ?? '',
+				sortable: false, // Server-side sorting
 				render: (u) => <span className="text-muted-foreground">{u.phone_number || '-'}</span>,
 				className: 'text-muted-foreground',
 			},
 			{
 				key: 'role',
 				label: 'Rol',
-				sortable: true,
-				sortValue: (u) => (u.role ? rolePriority[u.role] : 0),
+				sortable: false, // Server-side sorting
 				render: (u) => <RoleBadge role={u.role} />,
 			},
 			{
 				key: 'created_at',
 				label: 'Aangemaakt',
-				sortable: true,
-				sortValue: (u) => new Date(u.created_at),
+				sortable: false, // Server-side sorting
 				render: (u) => {
 					const date = new Date(u.created_at);
 					return (
@@ -294,9 +341,9 @@ export default function Users() {
 				description: `${getDisplayName(deleteDialog.user)} is verwijderd.`,
 			});
 
-			// Remove user from local state
-			setUsers((prev) => prev.filter((u) => u.user_id !== deleteDialog.user?.user_id));
+			// Reload users to get updated data
 			setDeleteDialog(null);
+			loadUsers();
 		} catch (error) {
 			console.error('Error deleting user:', error);
 			toast.error('Fout bij verwijderen gebruiker', {
@@ -305,7 +352,7 @@ export default function Users() {
 		} finally {
 			setDeletingUser(false);
 		}
-	}, [deleteDialog, getDisplayName, isSiteAdmin]);
+	}, [deleteDialog, getDisplayName, isSiteAdmin, loadUsers]);
 
 	// Redirect if no access
 	if (!hasAccess) {
@@ -327,24 +374,22 @@ export default function Users() {
 						)}
 					</>
 				}
-				data={filteredUsers}
+				data={users}
 				columns={columns}
 				searchQuery={searchQuery}
-				onSearchChange={setSearchQuery}
-				searchFields={[
-					(u) => u.email,
-					(u) => u.first_name ?? undefined,
-					(u) => u.last_name ?? undefined,
-					(u) => u.phone_number ?? undefined,
-					(u) => (u.role ? roleLabels[u.role].label : undefined),
-				]}
+				onSearchChange={handleSearchChange}
 				loading={loading}
 				getRowKey={(u) => u.user_id}
 				getRowClassName={(u) => (u.user_id === user?.id ? 'bg-primary/15 hover:bg-primary/20' : undefined)}
 				emptyMessage="Geen gebruikers gevonden"
-				initialSortColumn="user"
-				initialSortDirection="asc"
 				quickFilter={quickFilterGroups}
+				serverPagination={{
+					totalCount,
+					currentPage,
+					rowsPerPage,
+					onPageChange: handlePageChange,
+					onRowsPerPageChange: handleRowsPerPageChange,
+				}}
 				headerActions={
 					isAdmin || isSiteAdmin ? (
 						<Button onClick={handleCreate}>
