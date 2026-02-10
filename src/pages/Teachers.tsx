@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LuLoaderCircle, LuPlus, LuTriangleAlert } from 'react-icons/lu';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -20,6 +20,7 @@ import { resolveIconFromList } from '@/components/ui/icon-picker';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { MUSIC_ICONS } from '@/constants/icons';
 import { useAuth } from '@/hooks/useAuth';
+import { useServerTableState } from '@/hooks/useServerTableState';
 import { type LessonType, useLessonTypeFilter, useStatusFilter } from '@/hooks/useTableFilters';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -56,17 +57,29 @@ export default function Teachers() {
 	const [loading, setLoading] = useState(true);
 	const [totalCount, setTotalCount] = useState(0);
 
-	// Pagination state
-	const [currentPage, setCurrentPage] = useState(1);
-	const [rowsPerPage, setRowsPerPage] = useState(20);
-
 	// Filter state
-	const [searchQuery, setSearchQuery] = useState('');
-	const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 	const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
 	const statusFilter = activeFilter;
 	const setStatusFilter = setActiveFilter;
 	const [selectedLessonTypeId, setSelectedLessonTypeId] = useState<string | null>(null);
+
+	// Server-side table state (pagination, sorting, search)
+	const {
+		searchQuery,
+		debouncedSearchQuery,
+		handleSearchChange,
+		currentPage,
+		rowsPerPage,
+		handlePageChange,
+		handleRowsPerPageChange,
+		sortColumn,
+		sortDirection,
+		handleSortChange,
+	} = useServerTableState({
+		initialSortColumn: 'teacher',
+		initialSortDirection: 'asc',
+		additionalFilters: { statusFilter, selectedLessonTypeId },
+	});
 
 	const [deleteDialog, setDeleteDialog] = useState<{
 		open: boolean;
@@ -111,14 +124,24 @@ export default function Teachers() {
 		try {
 			const offset = (currentPage - 1) * rowsPerPage;
 
+			// Map DataTable column keys to database sort column names
+			const columnMapping: Record<string, string> = {
+				teacher: 'name',
+				phone_number: 'phone_number',
+				is_active: 'status',
+				created_at: 'created_at',
+			};
+
+			const dbSortColumn = sortColumn ? columnMapping[sortColumn] || 'name' : 'name';
+
 			const { data, error } = await supabase.rpc('get_teachers_paginated', {
 				p_limit: rowsPerPage,
 				p_offset: offset,
 				p_search: debouncedSearchQuery || null,
 				p_status: statusFilter,
 				p_lesson_type_id: selectedLessonTypeId,
-				p_sort_column: 'name',
-				p_sort_direction: 'asc',
+				p_sort_column: dbSortColumn,
+				p_sort_direction: sortDirection || 'asc',
 			});
 
 			if (error) {
@@ -137,7 +160,16 @@ export default function Teachers() {
 			toast.error('Fout bij laden docenten');
 			setLoading(false);
 		}
-	}, [hasAccess, currentPage, rowsPerPage, debouncedSearchQuery, statusFilter, selectedLessonTypeId]);
+	}, [
+		hasAccess,
+		currentPage,
+		rowsPerPage,
+		debouncedSearchQuery,
+		statusFilter,
+		selectedLessonTypeId,
+		sortColumn,
+		sortDirection,
+	]);
 
 	// Load teachers when dependencies change
 	useEffect(() => {
@@ -145,44 +177,6 @@ export default function Teachers() {
 			loadTeachers();
 		}
 	}, [authLoading, loadTeachers]);
-
-	// Reset to page 1 when filters change - use a ref to track previous values
-	const prevFiltersRef = React.useRef({ debouncedSearchQuery, statusFilter, selectedLessonTypeId });
-	useEffect(() => {
-		const prev = prevFiltersRef.current;
-		if (
-			prev.debouncedSearchQuery !== debouncedSearchQuery ||
-			prev.statusFilter !== statusFilter ||
-			prev.selectedLessonTypeId !== selectedLessonTypeId
-		) {
-			setCurrentPage(1);
-			prevFiltersRef.current = { debouncedSearchQuery, statusFilter, selectedLessonTypeId };
-		}
-	}, [debouncedSearchQuery, statusFilter, selectedLessonTypeId]);
-
-	// Handle search query change (debounced)
-	const handleSearchChange = useCallback((query: string) => {
-		setSearchQuery(query);
-	}, []);
-
-	// Debounce search query
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			setDebouncedSearchQuery(searchQuery);
-		}, 300);
-		return () => clearTimeout(timer);
-	}, [searchQuery]);
-
-	// Handle page change
-	const handlePageChange = useCallback((page: number) => {
-		setCurrentPage(page);
-	}, []);
-
-	// Handle rows per page change
-	const handleRowsPerPageChange = useCallback((newRowsPerPage: number) => {
-		setRowsPerPage(newRowsPerPage);
-		setCurrentPage(1);
-	}, []);
 
 	// Helper functions
 	const getUserInitials = useCallback((t: TeacherWithProfile) => {
@@ -224,7 +218,7 @@ export default function Teachers() {
 			{
 				key: 'teacher',
 				label: 'Docent',
-				sortable: false, // Server-side sorting
+				sortable: true, // Server-side sorting
 				render: (t) => (
 					<div className="flex items-center gap-3">
 						<Avatar className="h-9 w-9">
@@ -243,7 +237,7 @@ export default function Teachers() {
 			{
 				key: 'phone_number',
 				label: 'Telefoonnummer',
-				sortable: false,
+				sortable: true,
 				render: (t) => <span className="text-muted-foreground">{t.profile.phone_number || '-'}</span>,
 				className: 'text-muted-foreground',
 			},
@@ -282,7 +276,7 @@ export default function Teachers() {
 			{
 				key: 'is_active',
 				label: 'Status',
-				sortable: false,
+				sortable: true,
 				render: (t) => (
 					<Badge variant={t.is_active ? 'default' : 'secondary'}>{t.is_active ? 'Actief' : 'Inactief'}</Badge>
 				),
@@ -290,7 +284,7 @@ export default function Teachers() {
 			{
 				key: 'created_at',
 				label: 'Aangemaakt',
-				sortable: false,
+				sortable: true,
 				render: (t) => {
 					const date = new Date(t.created_at);
 					return (
@@ -376,6 +370,9 @@ export default function Teachers() {
 					onPageChange: handlePageChange,
 					onRowsPerPageChange: handleRowsPerPageChange,
 				}}
+				initialSortColumn={sortColumn || undefined}
+				initialSortDirection={sortDirection || undefined}
+				onSortChange={handleSortChange}
 				headerActions={
 					<Button onClick={handleCreate}>
 						<LuPlus className="mr-2 h-4 w-4" />

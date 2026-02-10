@@ -1,5 +1,5 @@
 import { FunctionsHttpError } from '@supabase/supabase-js';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { IconType } from 'react-icons';
 import { LuLoaderCircle, LuPlus, LuTrash2, LuTriangleAlert } from 'react-icons/lu';
 import { Navigate } from 'react-router-dom';
@@ -19,6 +19,7 @@ import { RoleBadge } from '@/components/ui/role-badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { UserFormDialog } from '@/components/users/UserFormDialog';
 import { useAuth } from '@/hooks/useAuth';
+import { useServerTableState } from '@/hooks/useServerTableState';
 import { supabase } from '@/integrations/supabase/client';
 import { type AppRole, allRoles, getIcon, roleLabels } from '@/lib/roles';
 
@@ -46,14 +47,26 @@ export default function Users() {
 	const [loading, setLoading] = useState(true);
 	const [totalCount, setTotalCount] = useState(0);
 
-	// Pagination state
-	const [currentPage, setCurrentPage] = useState(1);
-	const [rowsPerPage, setRowsPerPage] = useState(20);
-
 	// Filter state
-	const [searchQuery, setSearchQuery] = useState('');
-	const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 	const [selectedRole, setSelectedRole] = useState<AppRole | null | 'none'>(null);
+
+	// Server-side table state (pagination, sorting, search)
+	const {
+		searchQuery,
+		debouncedSearchQuery,
+		handleSearchChange,
+		currentPage,
+		rowsPerPage,
+		handlePageChange,
+		handleRowsPerPageChange,
+		sortColumn,
+		sortDirection,
+		handleSortChange,
+	} = useServerTableState({
+		initialSortColumn: 'user',
+		initialSortDirection: 'asc',
+		additionalFilters: { selectedRole },
+	});
 
 	const [deleteDialog, setDeleteDialog] = useState<{
 		open: boolean;
@@ -77,13 +90,24 @@ export default function Users() {
 		try {
 			const offset = (currentPage - 1) * rowsPerPage;
 
+			// Map DataTable column keys to database sort column names
+			const columnMapping: Record<string, string> = {
+				user: 'name',
+				email: 'email',
+				phone_number: 'phone_number',
+				role: 'role',
+				created_at: 'created_at',
+			};
+
+			const dbSortColumn = sortColumn ? columnMapping[sortColumn] || 'name' : 'name';
+
 			const { data, error } = await supabase.rpc('get_users_paginated', {
 				p_limit: rowsPerPage,
 				p_offset: offset,
 				p_search: debouncedSearchQuery || null,
 				p_role: selectedRole === null ? null : selectedRole,
-				p_sort_column: 'name',
-				p_sort_direction: 'asc',
+				p_sort_column: dbSortColumn,
+				p_sort_direction: sortDirection || 'asc',
 			});
 
 			if (error) {
@@ -102,7 +126,7 @@ export default function Users() {
 			toast.error('Fout bij laden gebruikers');
 			setLoading(false);
 		}
-	}, [hasAccess, currentPage, rowsPerPage, debouncedSearchQuery, selectedRole]);
+	}, [hasAccess, currentPage, rowsPerPage, debouncedSearchQuery, selectedRole, sortColumn, sortDirection]);
 
 	// Load users when dependencies change
 	useEffect(() => {
@@ -110,40 +134,6 @@ export default function Users() {
 			loadUsers();
 		}
 	}, [authLoading, loadUsers]);
-
-	// Reset to page 1 when filters change - use a ref to track previous values
-	const prevFiltersRef = React.useRef({ debouncedSearchQuery, selectedRole });
-	useEffect(() => {
-		const prev = prevFiltersRef.current;
-		if (prev.debouncedSearchQuery !== debouncedSearchQuery || prev.selectedRole !== selectedRole) {
-			setCurrentPage(1);
-			prevFiltersRef.current = { debouncedSearchQuery, selectedRole };
-		}
-	}, [debouncedSearchQuery, selectedRole]);
-
-	// Handle search query change (debounced)
-	const handleSearchChange = useCallback((query: string) => {
-		setSearchQuery(query);
-	}, []);
-
-	// Debounce search query
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			setDebouncedSearchQuery(searchQuery);
-		}, 300);
-		return () => clearTimeout(timer);
-	}, [searchQuery]);
-
-	// Handle page change
-	const handlePageChange = useCallback((page: number) => {
-		setCurrentPage(page);
-	}, []);
-
-	// Handle rows per page change
-	const handleRowsPerPageChange = useCallback((newRowsPerPage: number) => {
-		setRowsPerPage(newRowsPerPage);
-		setCurrentPage(1);
-	}, []);
 
 	// Helper functions
 	const getUserInitials = useCallback((u: UserWithRole) => {
@@ -201,7 +191,7 @@ export default function Users() {
 			{
 				key: 'user',
 				label: 'Gebruiker',
-				sortable: false, // Server-side sorting
+				sortable: true, // Server-side sorting
 				render: (u) => {
 					const displayName = getDisplayName(u);
 					const fullName = displayName + (u.user_id === user?.id ? ' (jij)' : '');
@@ -237,27 +227,27 @@ export default function Users() {
 			{
 				key: 'email',
 				label: 'Email',
-				sortable: false, // Server-side sorting
+				sortable: true, // Server-side sorting
 				render: (u) => <span className="text-muted-foreground">{u.email}</span>,
 				className: 'text-muted-foreground',
 			},
 			{
 				key: 'phone_number',
 				label: 'Telefoonnummer',
-				sortable: false, // Server-side sorting
+				sortable: true, // Server-side sorting
 				render: (u) => <span className="text-muted-foreground">{u.phone_number || '-'}</span>,
 				className: 'text-muted-foreground',
 			},
 			{
 				key: 'role',
 				label: 'Rol',
-				sortable: false, // Server-side sorting
+				sortable: true, // Server-side sorting
 				render: (u) => <RoleBadge role={u.role} />,
 			},
 			{
 				key: 'created_at',
 				label: 'Aangemaakt',
-				sortable: false, // Server-side sorting
+				sortable: true, // Server-side sorting
 				render: (u) => {
 					const date = new Date(u.created_at);
 					return (
@@ -390,6 +380,9 @@ export default function Users() {
 					onPageChange: handlePageChange,
 					onRowsPerPageChange: handleRowsPerPageChange,
 				}}
+				initialSortColumn={sortColumn || undefined}
+				initialSortDirection={sortDirection || undefined}
+				onSortChange={handleSortChange}
 				headerActions={
 					isAdmin || isSiteAdmin ? (
 						<Button onClick={handleCreate}>

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LuLoaderCircle, LuTriangleAlert } from 'react-icons/lu';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
+import { useServerTableState } from '@/hooks/useServerTableState';
 import { type LessonType, useLessonTypeFilter, useStatusFilter } from '@/hooks/useTableFilters';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -61,15 +62,27 @@ export default function Students() {
 	const [loading, setLoading] = useState(true);
 	const [totalCount, setTotalCount] = useState(0);
 
-	// Pagination state
-	const [currentPage, setCurrentPage] = useState(1);
-	const [rowsPerPage, setRowsPerPage] = useState(20);
-
 	// Filter state
-	const [searchQuery, setSearchQuery] = useState('');
-	const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 	const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
 	const [selectedLessonTypeId, setSelectedLessonTypeId] = useState<string | null>(null);
+
+	// Server-side table state (pagination, sorting, search)
+	const {
+		searchQuery,
+		debouncedSearchQuery,
+		handleSearchChange,
+		currentPage,
+		rowsPerPage,
+		handlePageChange,
+		handleRowsPerPageChange,
+		sortColumn,
+		sortDirection,
+		handleSortChange,
+	} = useServerTableState({
+		initialSortColumn: 'student',
+		initialSortDirection: 'asc',
+		additionalFilters: { statusFilter, selectedLessonTypeId },
+	});
 
 	const [deleteDialog, setDeleteDialog] = useState<{
 		open: boolean;
@@ -115,14 +128,24 @@ export default function Students() {
 		try {
 			const offset = (currentPage - 1) * rowsPerPage;
 
+			// Map DataTable column keys to database sort column names
+			const columnMapping: Record<string, string> = {
+				student: 'name',
+				phone_number: 'phone_number',
+				status: 'status',
+				agreements: 'agreements',
+			};
+
+			const dbSortColumn = sortColumn ? columnMapping[sortColumn] || 'name' : 'name';
+
 			const { data, error } = await supabase.rpc('get_students_paginated', {
 				p_limit: rowsPerPage,
 				p_offset: offset,
 				p_search: debouncedSearchQuery || null,
 				p_status: statusFilter,
 				p_lesson_type_id: selectedLessonTypeId,
-				p_sort_column: 'name',
-				p_sort_direction: 'asc',
+				p_sort_column: dbSortColumn,
+				p_sort_direction: sortDirection || 'asc',
 			});
 
 			if (error) {
@@ -141,7 +164,16 @@ export default function Students() {
 			toast.error('Fout bij laden leerlingen');
 			setLoading(false);
 		}
-	}, [hasAccess, currentPage, rowsPerPage, debouncedSearchQuery, statusFilter, selectedLessonTypeId]);
+	}, [
+		hasAccess,
+		currentPage,
+		rowsPerPage,
+		debouncedSearchQuery,
+		statusFilter,
+		selectedLessonTypeId,
+		sortColumn,
+		sortDirection,
+	]);
 
 	// Load students when dependencies change
 	useEffect(() => {
@@ -149,44 +181,6 @@ export default function Students() {
 			loadStudents();
 		}
 	}, [authLoading, loadStudents]);
-
-	// Reset to page 1 when filters change - use a ref to track previous values
-	const prevFiltersRef = React.useRef({ debouncedSearchQuery, statusFilter, selectedLessonTypeId });
-	useEffect(() => {
-		const prev = prevFiltersRef.current;
-		if (
-			prev.debouncedSearchQuery !== debouncedSearchQuery ||
-			prev.statusFilter !== statusFilter ||
-			prev.selectedLessonTypeId !== selectedLessonTypeId
-		) {
-			setCurrentPage(1);
-			prevFiltersRef.current = { debouncedSearchQuery, statusFilter, selectedLessonTypeId };
-		}
-	}, [debouncedSearchQuery, statusFilter, selectedLessonTypeId]);
-
-	// Handle search query change (debounced)
-	const handleSearchChange = useCallback((query: string) => {
-		setSearchQuery(query);
-	}, []);
-
-	// Debounce search query
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			setDebouncedSearchQuery(searchQuery);
-		}, 300);
-		return () => clearTimeout(timer);
-	}, [searchQuery]);
-
-	// Handle page change
-	const handlePageChange = useCallback((page: number) => {
-		setCurrentPage(page);
-	}, []);
-
-	// Handle rows per page change
-	const handleRowsPerPageChange = useCallback((newRowsPerPage: number) => {
-		setRowsPerPage(newRowsPerPage);
-		setCurrentPage(1);
-	}, []);
 
 	// Helper functions
 	const getUserInitials = useCallback((s: StudentWithProfile) => {
@@ -228,7 +222,7 @@ export default function Students() {
 			{
 				key: 'student',
 				label: 'Leerling',
-				sortable: false, // Server-side sorting
+				sortable: true, // Server-side sorting
 				className: 'w-64 max-w-64',
 				render: (s) => {
 					const displayName = getDisplayName(s);
@@ -269,14 +263,14 @@ export default function Students() {
 			{
 				key: 'phone_number',
 				label: 'Telefoon',
-				sortable: false,
+				sortable: true,
 				render: (s) => <span className="text-muted-foreground">{s.profile.phone_number || '-'}</span>,
 				className: 'text-muted-foreground w-32',
 			},
 			{
 				key: 'status',
 				label: 'Status',
-				sortable: false,
+				sortable: true,
 				render: (s) => (
 					<Badge variant={s.active_agreements_count > 0 ? 'default' : 'secondary'}>
 						{s.active_agreements_count > 0 ? 'Actief' : 'Inactief'}
@@ -287,7 +281,7 @@ export default function Students() {
 			{
 				key: 'agreements',
 				label: 'Lesovereenkomsten',
-				sortable: false,
+				sortable: true,
 				className: '',
 				render: (s) => {
 					if (s.agreements.length === 0) {
@@ -404,6 +398,9 @@ export default function Students() {
 					onPageChange: handlePageChange,
 					onRowsPerPageChange: handleRowsPerPageChange,
 				}}
+				initialSortColumn={sortColumn || undefined}
+				initialSortDirection={sortDirection || undefined}
+				onSortChange={handleSortChange}
 				rowActions={{
 					onEdit: isAdmin || isSiteAdmin || isStaff ? handleEdit : undefined,
 					onDelete: isAdmin || isSiteAdmin ? handleDelete : undefined,

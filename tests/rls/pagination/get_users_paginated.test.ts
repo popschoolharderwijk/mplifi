@@ -301,7 +301,7 @@ describe('RLS: get_users_paginated', () => {
 		const { data: allDataRaw, error: allError } = await db.rpc('get_users_paginated', {
 			p_limit: 1000,
 			p_offset: 0,
-			p_role: null,
+			p_role: undefined,
 		});
 
 		expect(allError).toBeNull();

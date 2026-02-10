@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ColorIcon } from '@/components/ui/color-icon';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAutofocus } from '@/hooks/useAutofocus';
 import { cn } from '@/lib/utils';
@@ -84,6 +85,8 @@ interface DataTableProps<T> {
 	serverPagination?: ServerPaginationProps;
 	// Debounce delay for search input (useful for server-side search)
 	searchDebounceMs?: number;
+	// Callback for server-side sorting (called when sort changes)
+	onSortChange?: (column: string | null, direction: SortDirection) => void;
 }
 
 export function DataTable<T>({
@@ -107,6 +110,7 @@ export function DataTable<T>({
 	rowsPerPage: initialRowsPerPage = 20,
 	serverPagination,
 	searchDebounceMs = 0,
+	onSortChange,
 }: DataTableProps<T>) {
 	const [sortColumn, setSortColumn] = useState<string | null>(initialSortColumn ?? null);
 	const [sortDirection, setSortDirection] = useState<SortDirection>(
@@ -154,6 +158,14 @@ export function DataTable<T>({
 		}
 	}, [searchQuery, localSearchQuery]);
 
+	// Sync sort state with initial props (for server-side pagination)
+	useEffect(() => {
+		if (isServerPagination && initialSortColumn !== undefined) {
+			setSortColumn(initialSortColumn ?? null);
+			setSortDirection(initialSortColumn ? (initialSortDirection ?? 'asc') : null);
+		}
+	}, [isServerPagination, initialSortColumn, initialSortDirection]);
+
 	// Filter data based on search query if searchFields are provided
 	const filteredData = useMemo(() => {
 		if (!searchQuery || !searchFields || searchFields.length === 0) {
@@ -175,22 +187,42 @@ export function DataTable<T>({
 		const column = columns.find((col) => col.key === columnKey);
 		if (!column || column.sortable === false) return;
 
+		let newSortColumn: string | null;
+		let newSortDirection: SortDirection;
+
 		if (sortColumn === columnKey) {
-			// Cycle: asc -> desc -> null
+			// Cycle: asc -> desc -> asc (no null state)
 			if (sortDirection === 'asc') {
-				setSortDirection('desc');
-			} else if (sortDirection === 'desc') {
-				setSortColumn(null);
-				setSortDirection(null);
+				newSortColumn = columnKey;
+				newSortDirection = 'desc';
+			} else {
+				// desc or null -> asc
+				newSortColumn = columnKey;
+				newSortDirection = 'asc';
 			}
 		} else {
-			setSortColumn(columnKey);
-			setSortDirection('asc');
+			// Different column: set to asc, previous column becomes null
+			newSortColumn = columnKey;
+			newSortDirection = 'asc';
+		}
+
+		setSortColumn(newSortColumn);
+		setSortDirection(newSortDirection);
+
+		// Call server-side sort callback if provided
+		if (onSortChange) {
+			onSortChange(newSortColumn, newSortDirection);
 		}
 	};
 
 	const sortedData = useMemo(() => {
 		const dataToSort = filteredData;
+
+		// For server-side pagination, don't sort locally - server handles it
+		if (isServerPagination) {
+			return dataToSort;
+		}
+
 		if (!sortColumn || !sortDirection) return dataToSort;
 
 		const column = columns.find((col) => col.key === sortColumn);
@@ -219,7 +251,7 @@ export function DataTable<T>({
 			}
 			return 0;
 		});
-	}, [filteredData, sortColumn, sortDirection, columns]);
+	}, [filteredData, sortColumn, sortDirection, columns, isServerPagination]);
 
 	// Pagination calculations - use server-side values if available
 	const effectiveRowsPerPage = isServerPagination ? serverPagination.rowsPerPage : rowsPerPage;
@@ -425,177 +457,202 @@ export function DataTable<T>({
 				</div>
 			</CardHeader>
 			<CardContent>
-				{loading ? (
-					<p className="text-muted-foreground">Laden...</p>
-				) : paginatedData.length === 0 ? (
-					<p className="text-muted-foreground">{emptyMessage}</p>
-				) : (
-					<>
-						<div className="overflow-x-auto">
-							<table className="w-full table-fixed">
-								<thead>
-									<tr className="border-b text-left text-sm text-muted-foreground">
-										{columns.map((column) => {
-											const isSortable = column.sortable !== false;
-											const isSorted = sortColumn === column.key;
-											const SortIcon =
-												!isSorted || sortDirection === null
-													? LuArrowUpDown
-													: sortDirection === 'asc'
-														? LuArrowUp
-														: LuArrowDown;
+				<div className="overflow-x-auto">
+					<table className="w-full table-fixed">
+						<thead className="bg-muted/30">
+							<tr className="border-b text-left text-sm text-muted-foreground">
+								{columns.map((column) => {
+									const isSortable = column.sortable !== false;
+									const isSorted = sortColumn === column.key;
+									const SortIcon =
+										!isSorted || sortDirection === null
+											? LuArrowUpDown
+											: sortDirection === 'asc'
+												? LuArrowUp
+												: LuArrowDown;
 
-											return (
-												<th
-													key={column.key}
-													className={cn(
-														'pb-3 pr-4 font-medium first:pl-2 last:pr-2',
-														column.className,
-													)}
-												>
-													{isSortable ? (
-														<Button
-															variant="ghost"
-															size="sm"
-															className="h-auto p-0 font-medium hover:bg-transparent"
-															onClick={() => handleSort(column.key)}
-														>
-															<div className="flex items-center gap-2">
-																<span>{column.label}</span>
-																<SortIcon
-																	className={cn(
-																		'h-3.5 w-3.5 transition-opacity',
-																		isSorted ? 'opacity-100' : 'opacity-40',
-																	)}
-																/>
-															</div>
-														</Button>
-													) : (
-														<span>{column.label}</span>
-													)}
-												</th>
-											);
-										})}
-										{rowActions && <th className="pb-3 font-medium w-12" />}
-									</tr>
-								</thead>
-								<tbody>
-									{paginatedData.map((item) => (
-										<tr
-											key={getRowKey(item)}
+									return (
+										<th
+											key={column.key}
 											className={cn(
-												'border-b last:border-0 transition-colors',
-												rowActions?.onEdit && 'cursor-pointer hover:bg-muted/50',
-												getRowClassName?.(item),
+												'pb-3 pr-4 font-medium first:pl-2 last:pr-2',
+												column.className,
 											)}
-											onClick={() => rowActions?.onEdit?.(item)}
-											onKeyDown={(e) => {
-												if (e.key === 'Enter' || e.key === ' ') {
-													e.preventDefault();
-													rowActions?.onEdit?.(item);
-												}
-											}}
-											tabIndex={rowActions?.onEdit ? 0 : undefined}
-											role={rowActions?.onEdit ? 'button' : undefined}
 										>
-											{columns.map((column) => (
-												<td
-													key={column.key}
-													className={cn('py-4 pr-4 first:pl-2 last:pr-2', column.className)}
+											{isSortable ? (
+												<Button
+													variant="ghost"
+													size="sm"
+													className="h-auto p-0 font-medium text-muted-foreground hover:bg-transparent hover:text-muted-foreground focus-visible:bg-transparent focus-visible:text-muted-foreground"
+													onClick={() => !loading && handleSort(column.key)}
+													style={{ pointerEvents: loading ? 'none' : 'auto' }}
 												>
-													{column.render
-														? column.render(item)
-														: String(item[column.key as keyof T] ?? '')}
-												</td>
-											))}
-											{rowActions && (
-												<td
-													className="py-4"
-													onClick={(e) => {
-														e.stopPropagation();
-													}}
-													onKeyDown={(e) => {
-														if (e.key === 'Enter' || e.key === ' ') {
-															e.stopPropagation();
-														}
-													}}
-												>
-													{rowActions.render ? (
-														rowActions.render(item)
-													) : (
-														<div className="flex items-center gap-2">
-															{rowActions.onDelete && (
-																<Button
-																	variant="ghost"
-																	size="icon"
-																	className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-																	onClick={() => rowActions.onDelete?.(item)}
-																>
-																	<LuTrash2 className="h-4 w-4" />
-																</Button>
+													<div className="flex items-center gap-2">
+														<span>{column.label}</span>
+														<SortIcon
+															className={cn(
+																'h-3.5 w-3.5 transition-opacity',
+																isSorted ? 'opacity-100' : 'opacity-40',
 															)}
-														</div>
-													)}
-												</td>
+														/>
+													</div>
+												</Button>
+											) : (
+												<span>{column.label}</span>
 											)}
-										</tr>
-									))}
-								</tbody>
-							</table>
+										</th>
+									);
+								})}
+								{rowActions && <th className="pb-3 font-medium w-12" />}
+							</tr>
+						</thead>
+						<tbody>
+							{loading && paginatedData.length === 0 ? (
+								// Show skeleton loaders when loading and no data
+								Array.from({ length: effectiveRowsPerPage }, () => (
+									<tr
+										key={`skeleton-${Math.random().toString(36).substring(2, 9)}`}
+										className="border-b last:border-0"
+									>
+										{columns.map((column) => (
+											<td
+												key={column.key}
+												className={cn('py-4 pr-4 first:pl-2 last:pr-2', column.className)}
+											>
+												<Skeleton className="h-4 w-full" />
+											</td>
+										))}
+										{rowActions && <td className="py-4" />}
+									</tr>
+								))
+							) : paginatedData.length === 0 ? (
+								// Show empty message
+								<tr>
+									<td
+										colSpan={columns.length + (rowActions ? 1 : 0)}
+										className="py-12 text-center text-muted-foreground"
+									>
+										{emptyMessage}
+									</td>
+								</tr>
+							) : (
+								// Show actual data
+								paginatedData.map((item) => (
+									<tr
+										key={getRowKey(item)}
+										className={cn(
+											'border-b last:border-0 transition-colors',
+											rowActions?.onEdit && 'cursor-pointer hover:bg-muted/50',
+											getRowClassName?.(item),
+											loading && 'opacity-50',
+										)}
+										onClick={() => rowActions?.onEdit?.(item)}
+										onKeyDown={(e) => {
+											if (e.key === 'Enter' || e.key === ' ') {
+												e.preventDefault();
+												rowActions?.onEdit?.(item);
+											}
+										}}
+										tabIndex={rowActions?.onEdit ? 0 : undefined}
+										role={rowActions?.onEdit ? 'button' : undefined}
+									>
+										{columns.map((column) => (
+											<td
+												key={column.key}
+												className={cn('py-4 pr-4 first:pl-2 last:pr-2', column.className)}
+											>
+												{column.render
+													? column.render(item)
+													: String(item[column.key as keyof T] ?? '')}
+											</td>
+										))}
+										{rowActions && (
+											<td
+												className="py-4"
+												onClick={(e) => {
+													e.stopPropagation();
+												}}
+												onKeyDown={(e) => {
+													if (e.key === 'Enter' || e.key === ' ') {
+														e.stopPropagation();
+													}
+												}}
+											>
+												{rowActions.render ? (
+													rowActions.render(item)
+												) : (
+													<div className="flex items-center gap-2">
+														{rowActions.onDelete && (
+															<Button
+																variant="ghost"
+																size="icon"
+																className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+																onClick={() => rowActions.onDelete?.(item)}
+															>
+																<LuTrash2 className="h-4 w-4" />
+															</Button>
+														)}
+													</div>
+												)}
+											</td>
+										)}
+									</tr>
+								))
+							)}
+						</tbody>
+					</table>
+				</div>
+				<div className="mt-4 flex items-center justify-between">
+					<div className="text-sm text-muted-foreground">
+						{effectiveTotalCount === 0
+							? 'Geen resultaten'
+							: effectiveTotalCount === 1
+								? '1 resultaat'
+								: `${startIndex + 1}-${Math.min(endIndex, effectiveTotalCount)} van ${effectiveTotalCount} resultaten`}
+					</div>
+					<div className="flex items-center gap-4">
+						<div className="flex items-center gap-2">
+							<span className="text-sm text-muted-foreground">Rijen per pagina:</span>
+							<Select
+								value={String(effectiveRowsPerPage)}
+								onValueChange={(value) => handleRowsPerPageChange(Number.parseInt(value, 10))}
+							>
+								<SelectTrigger className="h-8 w-[70px]">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="10">10</SelectItem>
+									<SelectItem value="20">20</SelectItem>
+									<SelectItem value="50">50</SelectItem>
+									<SelectItem value="100">100</SelectItem>
+								</SelectContent>
+							</Select>
 						</div>
-						<div className="mt-4 flex items-center justify-between">
-							<div className="text-sm text-muted-foreground">
-								{effectiveTotalCount === 0
-									? 'Geen resultaten'
-									: effectiveTotalCount === 1
-										? '1 resultaat'
-										: `${startIndex + 1}-${Math.min(endIndex, effectiveTotalCount)} van ${effectiveTotalCount} resultaten`}
-							</div>
-							<div className="flex items-center gap-4">
-								<div className="flex items-center gap-2">
-									<span className="text-sm text-muted-foreground">Rijen per pagina:</span>
-									<Select
-										value={String(effectiveRowsPerPage)}
-										onValueChange={(value) => handleRowsPerPageChange(Number.parseInt(value, 10))}
-									>
-										<SelectTrigger className="h-8 w-[70px]">
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="10">10</SelectItem>
-											<SelectItem value="20">20</SelectItem>
-											<SelectItem value="50">50</SelectItem>
-											<SelectItem value="100">100</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-								<div className="flex items-center gap-2">
-									<Button
-										variant="outline"
-										size="icon"
-										className="h-8 w-8"
-										onClick={() => handlePageChange(Math.max(1, effectiveCurrentPage - 1))}
-										disabled={effectiveCurrentPage === 1}
-									>
-										<LuChevronLeft className="h-4 w-4" />
-									</Button>
-									<span className="text-sm text-muted-foreground">
-										Pagina {effectiveCurrentPage} van {totalPages}
-									</span>
-									<Button
-										variant="outline"
-										size="icon"
-										className="h-8 w-8"
-										onClick={() => handlePageChange(Math.min(totalPages, effectiveCurrentPage + 1))}
-										disabled={effectiveCurrentPage === totalPages}
-									>
-										<LuChevronRight className="h-4 w-4" />
-									</Button>
-								</div>
-							</div>
+						<div className="flex items-center gap-2">
+							<Button
+								variant="outline"
+								size="icon"
+								className="h-8 w-8"
+								onClick={() => handlePageChange(Math.max(1, effectiveCurrentPage - 1))}
+								disabled={effectiveCurrentPage === 1 || loading}
+							>
+								<LuChevronLeft className="h-4 w-4" />
+							</Button>
+							<span className="text-sm text-muted-foreground">
+								Pagina {effectiveCurrentPage} van {totalPages}
+							</span>
+							<Button
+								variant="outline"
+								size="icon"
+								className="h-8 w-8"
+								onClick={() => handlePageChange(Math.min(totalPages, effectiveCurrentPage + 1))}
+								disabled={effectiveCurrentPage === totalPages || loading}
+							>
+								<LuChevronRight className="h-4 w-4" />
+							</Button>
 						</div>
-					</>
-				)}
+					</div>
+				</div>
 			</CardContent>
 		</Card>
 	);

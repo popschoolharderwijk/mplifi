@@ -9,15 +9,11 @@ interface RoleBadgeProps {
 
 /**
  * A badge component that displays a role with its icon and label.
- * Shows "Geen rol" for null roles.
+ * Returns null for null roles (no badge displayed).
  */
 export function RoleBadge({ role, className }: RoleBadgeProps) {
 	if (!role) {
-		return (
-			<Badge variant="outline" className={cn('gap-1', className)}>
-				Geen rol
-			</Badge>
-		);
+		return null;
 	}
 
 	const config = roleLabels[role];
