@@ -423,22 +423,21 @@ WHERE NOT EXISTS (
 -- -----------------------------------------------------------------------------
 -- TEACHER AVAILABILITY (for RLS testing)
 -- -----------------------------------------------------------------------------
--- Logic: Assign availability slots to all 10 teachers
--- - Each teacher has different time slots to prevent conflicts
--- - Teachers never teach different lessons at the same time
--- - Availability spans multiple days and times
+-- Logic: Each teacher gets availability slots that are LARGER than their lesson times.
+-- This represents realistic availability where teachers have free time for new students.
+-- Overlapping/adjacent blocks are merged into single blocks.
 --
--- Schedule:
---   Teacher 1 (Alice): Mon 09:00-12:00, Wed 14:00-17:00
---   Teacher 2 (Bob): Tue 10:00-13:00, Thu 14:00-17:00
---   Teacher 3 (Charlie): Mon 14:00-17:00, Fri 09:00-12:00
---   Teacher 4 (Diana): Tue 14:00-17:00, Thu 09:00-12:00
---   Teacher 5 (Eve): Mon 14:00-17:00 (Bandcoaching group lesson)
---   Teacher 6 (Frank): Wed 09:00-12:00, Fri 14:00-17:00
---   Teacher 7 (Grace): Mon 10:00-13:00, Thu 10:00-13:00
---   Teacher 8 (Henry): Tue 09:00-12:00, Fri 10:00-13:00
---   Teacher 9 (Iris): Wed 10:00-13:00, Thu 14:00-17:00
---   Teacher 10 (Jack): No availability needed (no students)
+-- Extended schedule (covers lessons + extra availability):
+--   Teacher 1 (Alice): Mon 08:00-18:00 (full day), Wed 10:00-20:00, Fri 09:00-13:00 (extra)
+--   Teacher 2 (Bob): Tue 09:00-18:00 (full day), Thu 08:00-18:00 (full day), Sat 10:00-14:00 (extra)
+--   Teacher 3 (Charlie): Mon 12:00-19:00, Wed 14:00-18:00 (extra), Fri 08:00-14:00
+--   Teacher 4 (Diana): Tue 10:00-20:00, Thu 08:00-14:00, Sat 09:00-12:00 (extra)
+--   Teacher 5 (Eve): Mon 09:00-17:00 (more than just bandcoaching), Thu 14:00-18:00 (extra)
+--   Teacher 6 (Frank): Mon 14:00-17:00 (extra), Wed 08:00-14:00, Fri 12:00-19:00
+--   Teacher 7 (Grace): Mon 08:00-15:00, Thu 09:00-15:00, Fri 10:00-14:00 (extra)
+--   Teacher 8 (Henry): Tue 08:00-14:00, Wed 15:00-19:00 (extra), Fri 09:00-15:00
+--   Teacher 9 (Iris): Wed 09:00-15:00, Thu 12:00-19:00, Tue 14:00-17:00 (extra)
+--   Teacher 10 (Jack): Tue 10:00-14:00, Thu 10:00-14:00 (has availability but no students)
 -- -----------------------------------------------------------------------------
 INSERT INTO public.teacher_availability (teacher_id, day_of_week, start_time, end_time)
 SELECT
@@ -447,42 +446,53 @@ SELECT
   availability_data.start_time::TIME,
   availability_data.end_time::TIME
 FROM (VALUES
-  -- Teacher 1 (Alice)
-  ('teacher-alice@test.nl', 1, '09:00', '12:00'),  -- Monday
-  ('teacher-alice@test.nl', 3, '14:00', '17:00'),  -- Wednesday
+  -- Teacher 1 (Alice) - Extended availability with extra slots
+  ('teacher-alice@test.nl', 1, '08:00', '18:00'),  -- Monday full day (covers 09:00-12:00 + 14:00-17:00 lessons)
+  ('teacher-alice@test.nl', 3, '10:00', '20:00'),  -- Wednesday extended (covers 14:00-17:00 lessons + extra)
+  ('teacher-alice@test.nl', 5, '09:00', '13:00'),  -- Friday morning (extra availability, no lessons)
 
-  -- Teacher 2 (Bob)
-  ('teacher-bob@test.nl', 2, '10:00', '13:00'),    -- Tuesday
-  ('teacher-bob@test.nl', 4, '14:00', '17:00'),   -- Thursday
+  -- Teacher 2 (Bob) - Extended availability
+  ('teacher-bob@test.nl', 2, '09:00', '18:00'),    -- Tuesday full day (covers 10:00-13:00 + 14:00-17:00)
+  ('teacher-bob@test.nl', 4, '08:00', '18:00'),    -- Thursday full day (covers 10:00-13:00 + 14:00-17:00)
+  ('teacher-bob@test.nl', 6, '10:00', '14:00'),    -- Saturday morning (extra availability)
 
-  -- Teacher 3 (Charlie)
-  ('teacher-charlie@test.nl', 1, '14:00', '17:00'), -- Monday
-  ('teacher-charlie@test.nl', 5, '09:00', '12:00'), -- Friday
+  -- Teacher 3 (Charlie) - Extended availability
+  ('teacher-charlie@test.nl', 1, '12:00', '19:00'), -- Monday extended (covers 14:00-17:00)
+  ('teacher-charlie@test.nl', 3, '14:00', '18:00'), -- Wednesday afternoon (extra)
+  ('teacher-charlie@test.nl', 5, '08:00', '14:00'), -- Friday extended (covers 09:00-12:00)
 
-  -- Teacher 4 (Diana)
-  ('teacher-diana@test.nl', 2, '14:00', '17:00'),  -- Tuesday
-  ('teacher-diana@test.nl', 4, '09:00', '12:00'),  -- Thursday
+  -- Teacher 4 (Diana) - Extended availability
+  ('teacher-diana@test.nl', 2, '10:00', '20:00'),  -- Tuesday extended (covers 14:00-17:00)
+  ('teacher-diana@test.nl', 4, '08:00', '14:00'),  -- Thursday extended (covers 09:00-12:00)
+  ('teacher-diana@test.nl', 6, '09:00', '12:00'),  -- Saturday morning (extra)
 
-  -- Teacher 5 (Eve) - Bandcoaching
-  ('teacher-eve@test.nl', 1, '14:00', '17:00'),   -- Monday
+  -- Teacher 5 (Eve) - Extended beyond just Bandcoaching
+  ('teacher-eve@test.nl', 1, '09:00', '17:00'),    -- Monday extended (covers 14:00-15:00 bandcoaching + extra)
+  ('teacher-eve@test.nl', 4, '14:00', '18:00'),    -- Thursday afternoon (extra availability)
 
-  -- Teacher 6 (Frank)
-  ('teacher-frank@test.nl', 3, '09:00', '12:00'),  -- Wednesday
-  ('teacher-frank@test.nl', 5, '14:00', '17:00'),  -- Friday
+  -- Teacher 6 (Frank) - Extended availability
+  ('teacher-frank@test.nl', 1, '14:00', '17:00'),  -- Monday afternoon (extra)
+  ('teacher-frank@test.nl', 3, '08:00', '14:00'),  -- Wednesday extended (covers 09:00-12:00)
+  ('teacher-frank@test.nl', 5, '12:00', '19:00'),  -- Friday extended (covers 14:00-17:00)
 
-  -- Teacher 7 (Grace)
-  ('teacher-grace@test.nl', 1, '10:00', '13:00'), -- Monday
-  ('teacher-grace@test.nl', 4, '10:00', '13:00'), -- Thursday
+  -- Teacher 7 (Grace) - Extended availability
+  ('teacher-grace@test.nl', 1, '08:00', '15:00'),  -- Monday extended (covers 10:00-13:00)
+  ('teacher-grace@test.nl', 4, '09:00', '15:00'),  -- Thursday extended (covers 10:00-13:00)
+  ('teacher-grace@test.nl', 5, '10:00', '14:00'),  -- Friday late morning (extra)
 
-  -- Teacher 8 (Henry)
-  ('teacher-henry@test.nl', 2, '09:00', '12:00'),  -- Tuesday
-  ('teacher-henry@test.nl', 5, '10:00', '13:00'), -- Friday
+  -- Teacher 8 (Henry) - Extended availability
+  ('teacher-henry@test.nl', 2, '08:00', '14:00'),  -- Tuesday extended (covers 09:00-12:00)
+  ('teacher-henry@test.nl', 3, '15:00', '19:00'),  -- Wednesday afternoon (extra)
+  ('teacher-henry@test.nl', 5, '09:00', '15:00'),  -- Friday extended (covers 10:00-13:00)
 
-  -- Teacher 9 (Iris)
-  ('teacher-iris@test.nl', 3, '10:00', '13:00'),  -- Wednesday
-  ('teacher-iris@test.nl', 4, '14:00', '17:00')   -- Thursday
+  -- Teacher 9 (Iris) - Extended availability
+  ('teacher-iris@test.nl', 2, '14:00', '17:00'),   -- Tuesday afternoon (extra)
+  ('teacher-iris@test.nl', 3, '09:00', '15:00'),   -- Wednesday extended (covers 10:00-13:00)
+  ('teacher-iris@test.nl', 4, '12:00', '19:00'),   -- Thursday extended (covers 14:00-17:00)
 
-  -- Teacher 10 (Jack): No availability (no students)
+  -- Teacher 10 (Jack) - Has availability but no students
+  ('teacher-jack@test.nl', 2, '10:00', '14:00'),   -- Tuesday late morning
+  ('teacher-jack@test.nl', 4, '10:00', '14:00')    -- Thursday late morning
 ) AS availability_data(teacher_email, day_of_week, start_time, end_time)
 INNER JOIN public.profiles p ON p.email = availability_data.teacher_email
 INNER JOIN public.teachers t ON t.user_id = p.user_id
@@ -500,35 +510,25 @@ WHERE NOT EXISTS (
 -- Logic: Create lesson agreements between 9 teachers and 60 students
 -- - Teacher 10 (Jack) has NO students
 -- - All 8 lesson types are represented
--- - No conflicts: teachers never teach different lessons at the same time
--- - No conflicts: students never have multiple lessons at the same time
+-- - STRICT RULE: Each (teacher, day_of_week, start_time) is unique (except Bandcoaching)
 -- - Bandcoaching is a group lesson with 8 students at the same time
--- - Students can have 1-4 lesson agreements (max 4)
+-- - Students can have 1-2 lesson agreements
 --
--- Student distribution (60 students):
---   - 20 students with 1 lesson agreement
---   - 20 students with 2 lesson agreements
---   - 15 students with 3 lesson agreements
---   - 5 students with 4 lesson agreements
---   Total: 20×1 + 20×2 + 15×3 + 5×4 = 20 + 40 + 45 + 20 = 125 lesson agreements
+-- Total lesson agreements: 88
+--   - Bandcoaching: 8 students × 1 slot = 8 agreements (group lesson)
+--   - Alice: 12 unique slots = 12 agreements
+--   - Bob: 12 unique slots = 12 agreements
+--   - Charlie: 12 unique slots = 12 agreements
+--   - Diana: 8 unique slots = 8 agreements (45 min lessons = fewer slots)
+--   - Frank: 12 unique slots = 12 agreements
+--   - Grace: 12 unique slots = 12 agreements
+--   - Henry: 12 unique slots = 12 agreements
+--   - Iris: 12 unique slots = 12 agreements
+--   Total: 8 + 12×8 = 8 + 96 = 104 agreements
 --
--- Conflict prevention strategy:
---   - Each lesson agreement has unique (day_of_week, start_time) combination per teacher
---   - Each lesson agreement has unique (day_of_week, start_time) combination per student
---   - Lesson durations: 30 min (most), 45 min (DJ/Beats), 60 min (Bandcoaching)
---   - Time slots are spaced to prevent overlaps
---
--- Bandcoaching group lesson:
---   - Teacher 5 (Eve) teaches Bandcoaching
---   - 8 students (001-008) have the same lesson at Monday 14:00
---   - All 8 students share the same teacher, day, and time
---
--- Time slot allocation:
---   - Monday: 09:00, 10:00, 11:00, 14:00, 15:00, 16:00, 17:00
---   - Tuesday: 09:00, 10:00, 11:00, 14:00, 15:00, 16:00, 17:00
---   - Wednesday: 09:00, 10:00, 11:00, 14:00, 15:00, 16:00, 17:00
---   - Thursday: 09:00, 10:00, 11:00, 14:00, 15:00, 16:00, 17:00
---   - Friday: 09:00, 10:00, 11:00, 14:00, 15:00, 16:00, 17:00
+-- Time slot allocation (30 min slots):
+--   - 09:00, 09:30, 10:00, 10:30, 11:00, 11:30 (morning block: 6 slots)
+--   - 14:00, 14:30, 15:00, 15:30, 16:00, 16:30 (afternoon block: 6 slots)
 -- -----------------------------------------------------------------------------
 INSERT INTO public.lesson_agreements (student_user_id, teacher_id, lesson_type_id, day_of_week, start_time, start_date, is_active)
 SELECT
@@ -543,276 +543,156 @@ FROM (VALUES
   -- ========================================================================
   -- BANDCOACHING GROUP LESSON (8 students, same time)
   -- ========================================================================
-  -- Teacher 5 (Eve) - Bandcoaching - Monday 14:00
-  -- Students 001-008 all have the same lesson at the same time
-  ('student-001@test.nl', 'teacher-eve@test.nl', 'Bandcoaching', 1, '14:00', CURRENT_DATE, true),
-  ('student-002@test.nl', 'teacher-eve@test.nl', 'Bandcoaching', 1, '14:00', CURRENT_DATE, true),
-  ('student-003@test.nl', 'teacher-eve@test.nl', 'Bandcoaching', 1, '14:00', CURRENT_DATE, true),
-  ('student-004@test.nl', 'teacher-eve@test.nl', 'Bandcoaching', 1, '14:00', CURRENT_DATE, true),
-  ('student-005@test.nl', 'teacher-eve@test.nl', 'Bandcoaching', 1, '14:00', CURRENT_DATE, true),
-  ('student-006@test.nl', 'teacher-eve@test.nl', 'Bandcoaching', 1, '14:00', CURRENT_DATE, true),
-  ('student-007@test.nl', 'teacher-eve@test.nl', 'Bandcoaching', 1, '14:00', CURRENT_DATE, true),
-  ('student-008@test.nl', 'teacher-eve@test.nl', 'Bandcoaching', 1, '14:00', CURRENT_DATE, true),
+  -- Teacher 5 (Eve) - Bandcoaching - Monday 14:00 (1 hour group lesson)
+  -- Students 001-008 all have the same lesson at the same time (THIS IS ALLOWED)
+  ('student-001@test.nl', 'teacher-eve@test.nl', 'Bandcoaching', 1, '14:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-002@test.nl', 'teacher-eve@test.nl', 'Bandcoaching', 1, '14:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-003@test.nl', 'teacher-eve@test.nl', 'Bandcoaching', 1, '14:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-004@test.nl', 'teacher-eve@test.nl', 'Bandcoaching', 1, '14:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-005@test.nl', 'teacher-eve@test.nl', 'Bandcoaching', 1, '14:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-006@test.nl', 'teacher-eve@test.nl', 'Bandcoaching', 1, '14:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-007@test.nl', 'teacher-eve@test.nl', 'Bandcoaching', 1, '14:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-008@test.nl', 'teacher-eve@test.nl', 'Bandcoaching', 1, '14:00', CURRENT_DATE - INTERVAL '6 months', true),
 
   -- ========================================================================
-  -- TEACHER 1 (Alice) - Gitaar, Drums, Zang
+  -- TEACHER 1 (Alice) - Gitaar, Drums, Zang - 12 UNIQUE slots
   -- ========================================================================
-  -- Conflict prevention: Each lesson type gets unique time slots
-  -- Gitaar: Mon 09:00-12:00, Wed 14:00-17:00
-  -- Drums: Mon 14:00-17:00, Wed 09:00-12:00
-  -- Zang: Tue 09:00-12:00, Thu 14:00-17:00
-  --
-  -- Students with 1 lesson agreement (9 students)
-  ('student-009@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '09:00', CURRENT_DATE, true),
-  ('student-010@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '10:00', CURRENT_DATE, true),
-  ('student-011@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '11:00', CURRENT_DATE, true),
-  ('student-012@test.nl', 'teacher-alice@test.nl', 'Gitaar', 3, '14:00', CURRENT_DATE, true),
-  ('student-013@test.nl', 'teacher-alice@test.nl', 'Gitaar', 3, '15:00', CURRENT_DATE, true),
-  ('student-014@test.nl', 'teacher-alice@test.nl', 'Drums', 1, '14:00', CURRENT_DATE, true),
-  ('student-015@test.nl', 'teacher-alice@test.nl', 'Drums', 1, '15:00', CURRENT_DATE, true),
-  ('student-016@test.nl', 'teacher-alice@test.nl', 'Zang', 2, '09:00', CURRENT_DATE, true),
-  ('student-017@test.nl', 'teacher-alice@test.nl', 'Zang', 2, '10:00', CURRENT_DATE, true),
-
-  -- Students with 2 lesson agreements (5 students)
-  ('student-018@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '12:00', CURRENT_DATE, true),
-  ('student-018@test.nl', 'teacher-alice@test.nl', 'Drums', 5, '09:00', CURRENT_DATE, true),
-  ('student-019@test.nl', 'teacher-alice@test.nl', 'Gitaar', 5, '16:00', CURRENT_DATE, true),
-  ('student-019@test.nl', 'teacher-alice@test.nl', 'Zang', 4, '14:00', CURRENT_DATE, true),
-  ('student-020@test.nl', 'teacher-alice@test.nl', 'Drums', 1, '16:00', CURRENT_DATE, true),
-  ('student-020@test.nl', 'teacher-alice@test.nl', 'Zang', 2, '11:00', CURRENT_DATE, true),
-  ('student-021@test.nl', 'teacher-alice@test.nl', 'Gitaar', 3, '17:00', CURRENT_DATE, true),
-  ('student-021@test.nl', 'teacher-alice@test.nl', 'Drums', 3, '10:00', CURRENT_DATE, true),
-  ('student-022@test.nl', 'teacher-alice@test.nl', 'Zang', 2, '12:00', CURRENT_DATE, true),
-  ('student-022@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '09:00', CURRENT_DATE, true),
-
-  -- Students with 3 lesson agreements (3 students)
-  ('student-023@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '10:00', CURRENT_DATE, true),
-  ('student-023@test.nl', 'teacher-alice@test.nl', 'Drums', 1, '14:00', CURRENT_DATE, true),
-  ('student-023@test.nl', 'teacher-alice@test.nl', 'Zang', 4, '15:00', CURRENT_DATE, true),
-  ('student-024@test.nl', 'teacher-alice@test.nl', 'Drums', 3, '11:00', CURRENT_DATE, true),
-  ('student-024@test.nl', 'teacher-alice@test.nl', 'Zang', 4, '16:00', CURRENT_DATE, true),
-  ('student-024@test.nl', 'teacher-alice@test.nl', 'Gitaar', 3, '14:00', CURRENT_DATE, true),
-  ('student-025@test.nl', 'teacher-alice@test.nl', 'Zang', 4, '17:00', CURRENT_DATE, true),
-  ('student-025@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '11:00', CURRENT_DATE, true),
-  ('student-025@test.nl', 'teacher-alice@test.nl', 'Drums', 3, '12:00', CURRENT_DATE, true),
+  -- Monday morning 09:00-12:00 (Gitaar): 6 slots
+  ('student-009@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '09:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-010@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '09:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-011@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '10:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-012@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '10:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-013@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '11:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-014@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '11:30', CURRENT_DATE - INTERVAL '6 months', true),
+  -- Monday afternoon 14:00-17:00 (Drums): 6 slots
+  ('student-015@test.nl', 'teacher-alice@test.nl', 'Drums', 1, '14:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-016@test.nl', 'teacher-alice@test.nl', 'Drums', 1, '14:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-017@test.nl', 'teacher-alice@test.nl', 'Drums', 1, '15:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-018@test.nl', 'teacher-alice@test.nl', 'Drums', 1, '15:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-019@test.nl', 'teacher-alice@test.nl', 'Drums', 1, '16:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-020@test.nl', 'teacher-alice@test.nl', 'Drums', 1, '16:30', CURRENT_DATE - INTERVAL '6 months', true),
 
   -- ========================================================================
-  -- TEACHER 2 (Bob) - Bas, Keyboard
+  -- TEACHER 2 (Bob) - Bas, Keyboard - 12 UNIQUE slots
   -- ========================================================================
-  -- Conflict prevention: Each lesson type gets unique time slots
-  -- Bas: Tue 10:00-13:00, Thu 15:00-17:00
-  -- Keyboard: Tue 14:00-17:00, Thu 10:00-13:00
-  --
-  -- Students with 1 lesson agreement (9 students)
-  ('student-026@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '10:00', CURRENT_DATE, true),
-  ('student-027@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '11:00', CURRENT_DATE, true),
-  ('student-028@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '12:00', CURRENT_DATE, true),
-  ('student-029@test.nl', 'teacher-bob@test.nl', 'Bas', 4, '15:00', CURRENT_DATE, true),
-  ('student-030@test.nl', 'teacher-bob@test.nl', 'Bas', 4, '16:00', CURRENT_DATE, true),
-  ('student-031@test.nl', 'teacher-bob@test.nl', 'Keyboard', 2, '14:00', CURRENT_DATE, true),
-  ('student-032@test.nl', 'teacher-bob@test.nl', 'Keyboard', 2, '15:00', CURRENT_DATE, true),
-  ('student-033@test.nl', 'teacher-bob@test.nl', 'Keyboard', 4, '10:00', CURRENT_DATE, true),
-  ('student-034@test.nl', 'teacher-bob@test.nl', 'Keyboard', 4, '11:00', CURRENT_DATE, true),
-
-  -- Students with 2 lesson agreements (5 students)
-  ('student-035@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '13:00', CURRENT_DATE, true),
-  ('student-035@test.nl', 'teacher-bob@test.nl', 'Keyboard', 2, '16:00', CURRENT_DATE, true),
-  ('student-036@test.nl', 'teacher-bob@test.nl', 'Keyboard', 4, '12:00', CURRENT_DATE, true),
-  ('student-036@test.nl', 'teacher-bob@test.nl', 'Bas', 4, '17:00', CURRENT_DATE, true),
-  ('student-037@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '10:00', CURRENT_DATE, true),
-  ('student-037@test.nl', 'teacher-bob@test.nl', 'Keyboard', 2, '17:00', CURRENT_DATE, true),
-  ('student-038@test.nl', 'teacher-bob@test.nl', 'Keyboard', 4, '13:00', CURRENT_DATE, true),
-  ('student-038@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '11:00', CURRENT_DATE, true),
-  ('student-039@test.nl', 'teacher-bob@test.nl', 'Bas', 4, '15:00', CURRENT_DATE, true),
-  ('student-039@test.nl', 'teacher-bob@test.nl', 'Keyboard', 4, '10:00', CURRENT_DATE, true),
-
-  -- Students with 3 lesson agreements (3 students)
-  ('student-040@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '12:00', CURRENT_DATE, true),
-  ('student-040@test.nl', 'teacher-bob@test.nl', 'Keyboard', 2, '14:00', CURRENT_DATE, true),
-  ('student-040@test.nl', 'teacher-bob@test.nl', 'Bas', 4, '16:00', CURRENT_DATE, true),
-  ('student-041@test.nl', 'teacher-bob@test.nl', 'Keyboard', 4, '11:00', CURRENT_DATE, true),
-  ('student-041@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '13:00', CURRENT_DATE, true),
-  ('student-041@test.nl', 'teacher-bob@test.nl', 'Keyboard', 2, '15:00', CURRENT_DATE, true),
-  ('student-042@test.nl', 'teacher-bob@test.nl', 'Bas', 4, '17:00', CURRENT_DATE, true),
-  ('student-042@test.nl', 'teacher-bob@test.nl', 'Keyboard', 4, '12:00', CURRENT_DATE, true),
-  ('student-042@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '10:00', CURRENT_DATE, true),
+  -- Tuesday morning 10:00-13:00 (Bas): 6 slots
+  ('student-021@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '10:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-022@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '10:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-023@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '11:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-024@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '11:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-025@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '12:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-026@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '12:30', CURRENT_DATE - INTERVAL '6 months', true),
+  -- Tuesday afternoon 14:00-17:00 (Keyboard): 6 slots
+  ('student-027@test.nl', 'teacher-bob@test.nl', 'Keyboard', 2, '14:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-028@test.nl', 'teacher-bob@test.nl', 'Keyboard', 2, '14:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-029@test.nl', 'teacher-bob@test.nl', 'Keyboard', 2, '15:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-030@test.nl', 'teacher-bob@test.nl', 'Keyboard', 2, '15:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-031@test.nl', 'teacher-bob@test.nl', 'Keyboard', 2, '16:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-032@test.nl', 'teacher-bob@test.nl', 'Keyboard', 2, '16:30', CURRENT_DATE - INTERVAL '6 months', true),
 
   -- ========================================================================
-  -- TEACHER 3 (Charlie) - Saxofoon
+  -- TEACHER 3 (Charlie) - Saxofoon - 12 UNIQUE slots
   -- ========================================================================
-  -- Students with 1 lesson agreement (7 students)
-  ('student-043@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '14:00', CURRENT_DATE, true),
-  ('student-044@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '15:00', CURRENT_DATE, true),
-  ('student-045@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '16:00', CURRENT_DATE, true),
-  ('student-046@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '09:00', CURRENT_DATE, true),
-  ('student-047@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '10:00', CURRENT_DATE, true),
-  ('student-048@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '11:00', CURRENT_DATE, true),
-  ('student-049@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '17:00', CURRENT_DATE, true),
-
-  -- Students with 2 lesson agreements (4 students)
-  ('student-050@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '14:00', CURRENT_DATE, true),
-  ('student-050@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '09:00', CURRENT_DATE, true),
-  ('student-051@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '15:00', CURRENT_DATE, true),
-  ('student-051@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '10:00', CURRENT_DATE, true),
-  ('student-052@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '16:00', CURRENT_DATE, true),
-  ('student-052@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '11:00', CURRENT_DATE, true),
-  ('student-053@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '17:00', CURRENT_DATE, true),
-  ('student-053@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '09:00', CURRENT_DATE, true),
-
-  -- Students with 3 lesson agreements (2 students)
-  ('student-054@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '14:00', CURRENT_DATE, true),
-  ('student-054@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '15:00', CURRENT_DATE, true),
-  ('student-054@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '10:00', CURRENT_DATE, true),
-  ('student-055@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '16:00', CURRENT_DATE, true),
-  ('student-055@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '09:00', CURRENT_DATE, true),
-  ('student-055@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '11:00', CURRENT_DATE, true),
+  -- Monday afternoon 14:00-17:00: 6 slots
+  ('student-033@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '14:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-034@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '14:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-035@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '15:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-036@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '15:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-037@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '16:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-038@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '16:30', CURRENT_DATE - INTERVAL '6 months', true),
+  -- Friday morning 09:00-12:00: 6 slots
+  ('student-039@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '09:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-040@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '09:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-041@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '10:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-042@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '10:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-043@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '11:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-044@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '11:30', CURRENT_DATE - INTERVAL '6 months', true),
 
   -- ========================================================================
-  -- TEACHER 4 (Diana) - DJ / Beats (45 minutes)
+  -- TEACHER 4 (Diana) - DJ / Beats (45 min lessons) - 8 UNIQUE slots
   -- ========================================================================
-  -- Students with 1 lesson agreement (7 students)
-  ('student-056@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 2, '14:00', CURRENT_DATE, true),
-  ('student-057@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 2, '15:00', CURRENT_DATE, true),
-  ('student-058@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 2, '16:00', CURRENT_DATE, true),
-  ('student-059@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 4, '09:00', CURRENT_DATE, true),
-  ('student-060@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 4, '10:00', CURRENT_DATE, true),
-  ('student-009@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 4, '11:00', CURRENT_DATE, true),
-  ('student-010@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 2, '17:00', CURRENT_DATE, true),
-
-  -- Students with 2 lesson agreements (4 students)
-  ('student-011@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 2, '14:00', CURRENT_DATE, true),
-  ('student-011@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 4, '09:00', CURRENT_DATE, true),
-  ('student-012@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 2, '15:00', CURRENT_DATE, true),
-  ('student-012@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 4, '10:00', CURRENT_DATE, true),
-  ('student-013@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 2, '16:00', CURRENT_DATE, true),
-  ('student-013@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 4, '11:00', CURRENT_DATE, true),
-  ('student-014@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 2, '17:00', CURRENT_DATE, true),
-  ('student-014@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 4, '09:00', CURRENT_DATE, true),
-
-  -- Students with 3 lesson agreements (2 students)
-  ('student-015@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 2, '14:00', CURRENT_DATE, true),
-  ('student-015@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 2, '15:00', CURRENT_DATE, true),
-  ('student-015@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 4, '10:00', CURRENT_DATE, true),
-  ('student-016@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 2, '16:00', CURRENT_DATE, true),
-  ('student-016@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 4, '09:00', CURRENT_DATE, true),
-  ('student-016@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 4, '11:00', CURRENT_DATE, true),
+  -- Tuesday afternoon 14:00-17:00 (45 min = 4 lessons): 4 slots
+  ('student-045@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 2, '14:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-046@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 2, '14:45', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-047@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 2, '15:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-048@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 2, '16:15', CURRENT_DATE - INTERVAL '6 months', true),
+  -- Thursday morning 09:00-12:00 (45 min = 4 lessons): 4 slots
+  ('student-049@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 4, '09:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-050@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 4, '09:45', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-051@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 4, '10:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-052@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 4, '11:15', CURRENT_DATE - INTERVAL '6 months', true),
 
   -- ========================================================================
-  -- TEACHER 6 (Frank) - Gitaar
+  -- TEACHER 6 (Frank) - Gitaar - 12 UNIQUE slots
   -- ========================================================================
-  -- Students with 1 lesson agreement (7 students)
-  ('student-017@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '09:00', CURRENT_DATE, true),
-  ('student-018@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '10:00', CURRENT_DATE, true),
-  ('student-019@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '11:00', CURRENT_DATE, true),
-  ('student-020@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '14:00', CURRENT_DATE, true),
-  ('student-021@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '15:00', CURRENT_DATE, true),
-  ('student-022@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '16:00', CURRENT_DATE, true),
-  ('student-023@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '12:00', CURRENT_DATE, true),
-
-  -- Students with 2 lesson agreements (4 students)
-  ('student-024@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '09:00', CURRENT_DATE, true),
-  ('student-024@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '14:00', CURRENT_DATE, true),
-  ('student-025@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '10:00', CURRENT_DATE, true),
-  ('student-025@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '15:00', CURRENT_DATE, true),
-  ('student-026@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '11:00', CURRENT_DATE, true),
-  ('student-026@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '16:00', CURRENT_DATE, true),
-  ('student-027@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '12:00', CURRENT_DATE, true),
-  ('student-027@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '14:00', CURRENT_DATE, true),
-
-  -- Students with 3 lesson agreements (2 students)
-  ('student-028@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '09:00', CURRENT_DATE, true),
-  ('student-028@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '10:00', CURRENT_DATE, true),
-  ('student-028@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '15:00', CURRENT_DATE, true),
-  ('student-029@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '11:00', CURRENT_DATE, true),
-  ('student-029@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '14:00', CURRENT_DATE, true),
-  ('student-029@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '16:00', CURRENT_DATE, true),
+  -- Wednesday morning 09:00-12:00: 6 slots
+  ('student-053@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '09:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-054@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '09:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-055@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '10:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-056@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '10:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-057@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '11:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-058@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '11:30', CURRENT_DATE - INTERVAL '6 months', true),
+  -- Friday afternoon 14:00-17:00: 6 slots
+  ('student-059@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '14:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-060@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '14:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-009@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '15:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-010@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '15:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-011@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '16:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-012@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '16:30', CURRENT_DATE - INTERVAL '6 months', true),
 
   -- ========================================================================
-  -- TEACHER 7 (Grace) - Drums
+  -- TEACHER 7 (Grace) - Drums - 12 UNIQUE slots
   -- ========================================================================
-  -- Students with 1 lesson agreement (7 students)
-  ('student-030@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '10:00', CURRENT_DATE, true),
-  ('student-031@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '11:00', CURRENT_DATE, true),
-  ('student-032@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '12:00', CURRENT_DATE, true),
-  ('student-033@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '10:00', CURRENT_DATE, true),
-  ('student-034@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '11:00', CURRENT_DATE, true),
-  ('student-035@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '12:00', CURRENT_DATE, true),
-  ('student-036@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '13:00', CURRENT_DATE, true),
-
-  -- Students with 2 lesson agreements (4 students)
-  ('student-037@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '10:00', CURRENT_DATE, true),
-  ('student-037@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '10:00', CURRENT_DATE, true),
-  ('student-038@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '11:00', CURRENT_DATE, true),
-  ('student-038@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '11:00', CURRENT_DATE, true),
-  ('student-039@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '12:00', CURRENT_DATE, true),
-  ('student-039@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '12:00', CURRENT_DATE, true),
-  ('student-040@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '13:00', CURRENT_DATE, true),
-  ('student-040@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '10:00', CURRENT_DATE, true),
-
-  -- Students with 3 lesson agreements (2 students)
-  ('student-041@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '10:00', CURRENT_DATE, true),
-  ('student-041@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '11:00', CURRENT_DATE, true),
-  ('student-041@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '11:00', CURRENT_DATE, true),
-  ('student-042@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '12:00', CURRENT_DATE, true),
-  ('student-042@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '10:00', CURRENT_DATE, true),
-  ('student-042@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '12:00', CURRENT_DATE, true),
+  -- Monday late morning 10:00-13:00: 6 slots
+  ('student-013@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '10:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-014@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '10:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-021@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '11:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-022@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '11:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-023@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '12:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-024@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '12:30', CURRENT_DATE - INTERVAL '6 months', true),
+  -- Thursday late morning 10:00-13:00: 6 slots
+  ('student-025@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '10:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-026@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '10:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-027@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '11:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-028@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '11:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-029@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '12:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-030@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '12:30', CURRENT_DATE - INTERVAL '6 months', true),
 
   -- ========================================================================
-  -- TEACHER 8 (Henry) - Zang
+  -- TEACHER 8 (Henry) - Zang - 12 UNIQUE slots
   -- ========================================================================
-  -- Students with 1 lesson agreement (7 students)
-  ('student-043@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '09:00', CURRENT_DATE, true),
-  ('student-044@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '10:00', CURRENT_DATE, true),
-  ('student-045@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '11:00', CURRENT_DATE, true),
-  ('student-046@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '10:00', CURRENT_DATE, true),
-  ('student-047@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '11:00', CURRENT_DATE, true),
-  ('student-048@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '12:00', CURRENT_DATE, true),
-  ('student-049@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '12:00', CURRENT_DATE, true),
-
-  -- Students with 2 lesson agreements (4 students)
-  ('student-050@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '09:00', CURRENT_DATE, true),
-  ('student-050@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '10:00', CURRENT_DATE, true),
-  ('student-051@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '10:00', CURRENT_DATE, true),
-  ('student-051@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '11:00', CURRENT_DATE, true),
-  ('student-052@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '11:00', CURRENT_DATE, true),
-  ('student-052@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '12:00', CURRENT_DATE, true),
-  ('student-053@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '12:00', CURRENT_DATE, true),
-  ('student-053@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '10:00', CURRENT_DATE, true),
-
-  -- Students with 3 lesson agreements (2 students)
-  ('student-054@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '09:00', CURRENT_DATE, true),
-  ('student-054@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '10:00', CURRENT_DATE, true),
-  ('student-054@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '11:00', CURRENT_DATE, true),
-  ('student-055@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '11:00', CURRENT_DATE, true),
-  ('student-055@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '10:00', CURRENT_DATE, true),
-  ('student-055@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '12:00', CURRENT_DATE, true),
+  -- Tuesday morning 09:00-12:00: 6 slots
+  ('student-031@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '09:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-032@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '09:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-033@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '10:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-034@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '10:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-035@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '11:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-036@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '11:30', CURRENT_DATE - INTERVAL '6 months', true),
+  -- Friday late morning 10:00-13:00: 6 slots
+  ('student-037@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '10:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-038@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '10:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-039@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '11:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-040@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '11:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-041@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '12:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-042@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '12:30', CURRENT_DATE - INTERVAL '6 months', true),
 
   -- ========================================================================
-  -- TEACHER 9 (Iris) - Bas
+  -- TEACHER 9 (Iris) - Bas - 12 UNIQUE slots
   -- ========================================================================
-  -- Students with 1 lesson agreement (3 students)
-  ('student-056@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '10:00', CURRENT_DATE, true),
-  ('student-057@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '11:00', CURRENT_DATE, true),
-  ('student-058@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '14:00', CURRENT_DATE, true),
-
-  -- Students with 2 lesson agreements (2 students)
-  ('student-059@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '10:00', CURRENT_DATE, true),
-  ('student-059@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '14:00', CURRENT_DATE, true),
-  ('student-060@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '11:00', CURRENT_DATE, true),
-  ('student-060@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '15:00', CURRENT_DATE, true),
-
-  -- Students with 3 lesson agreements (1 student)
-  ('student-017@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '12:00', CURRENT_DATE, true),
-  ('student-017@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '16:00', CURRENT_DATE, true),
-  ('student-017@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '17:00', CURRENT_DATE, true),
-
-  -- Students with 4 lesson agreements (5 students - max)
-  -- These students have agreements with multiple teachers
-  ('student-018@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '13:00', CURRENT_DATE, true),
-  ('student-019@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '16:00', CURRENT_DATE, true),
-  ('student-020@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '12:00', CURRENT_DATE, true),
-  ('student-021@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '17:00', CURRENT_DATE, true),
-  ('student-022@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '13:00', CURRENT_DATE, true)
+  -- Wednesday late morning 10:00-13:00: 6 slots
+  ('student-043@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '10:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-044@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '10:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-045@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '11:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-046@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '11:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-047@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '12:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-048@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '12:30', CURRENT_DATE - INTERVAL '6 months', true),
+  -- Thursday afternoon 14:00-17:00: 6 slots
+  ('student-049@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '14:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-050@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '14:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-051@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '15:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-052@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '15:30', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-053@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '16:00', CURRENT_DATE - INTERVAL '6 months', true),
+  ('student-054@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '16:30', CURRENT_DATE - INTERVAL '6 months', true)
 
   -- ========================================================================
   -- NOTE: Teacher 10 (Jack) has NO lesson agreements (no students)

@@ -12,16 +12,19 @@ const studentBUserId = fixtures.requireUserId(TestUsers.STUDENT_002);
 const studentCUserId = fixtures.requireUserId(TestUsers.STUDENT_003);
 const studentDUserId = fixtures.requireUserId(TestUsers.STUDENT_004);
 
-// Existing teacher ID for UPDATE/DELETE block tests
-const testTeacherId = fixtures.allTeachers[0].id;
+// Use Bob's teacher ID for UPDATE/DELETE block tests (not Alice, since Alice is used in the test)
+const testTeacherId = fixtures.requireTeacherId(TestUsers.TEACHER_BOB);
 
 /**
  * Teachers INSERT/UPDATE/DELETE permissions:
  *
  * ADMINS and SITE_ADMINS:
  * - Can insert teachers
- * - Can update teachers
+ * - Can update any teacher
  * - Can delete teachers
+ *
+ * TEACHERS:
+ * - Can update their own teacher record (especially for bio)
  *
  * All other roles (staff, user without role) cannot insert, update, or delete teachers.
  * Note: Teachers are identified by the teachers table, not by a role.
@@ -118,7 +121,7 @@ describe('RLS: teachers UPDATE - blocked for non-admin roles', () => {
 		expect(data).toHaveLength(0);
 	});
 
-	it('teacher cannot update teacher', async () => {
+	it('teacher cannot update other teachers', async () => {
 		const db = await createClientAs(TestUsers.TEACHER_ALICE);
 
 		const { data, error } = await db
@@ -127,6 +130,7 @@ describe('RLS: teachers UPDATE - blocked for non-admin roles', () => {
 			.eq('id', testTeacherId)
 			.select();
 
+		// Should fail - teacher can only update their own record
 		expect(error).toBeNull();
 		expect(data).toHaveLength(0);
 	});
@@ -145,6 +149,50 @@ describe('RLS: teachers UPDATE - blocked for non-admin roles', () => {
 			.eq('id', teachers[0].id)
 			.select();
 
+		expect(error).toBeNull();
+		expect(data).toHaveLength(0);
+	});
+});
+
+describe('RLS: teachers UPDATE - teacher own record', () => {
+	let initialState: DatabaseState;
+	const { setupState, verifyState } = setupDatabaseStateVerification();
+
+	beforeAll(async () => {
+		initialState = await setupState();
+	});
+
+	afterAll(async () => {
+		await verifyState(initialState);
+	});
+
+	it('teacher can update own teacher record (bio)', async () => {
+		const db = await createClientAs(TestUsers.TEACHER_ALICE);
+		const aliceTeacherId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
+
+		// Get original bio
+		const { data: original } = await db.from('teachers').select('bio').eq('id', aliceTeacherId).single();
+		const originalBio = original?.bio;
+
+		// Update bio
+		const newBio = 'Updated bio by teacher';
+		const { data, error } = await db.from('teachers').update({ bio: newBio }).eq('id', aliceTeacherId).select();
+
+		expect(error).toBeNull();
+		expect(data).toHaveLength(1);
+		expect(data?.[0]?.bio).toBe(newBio);
+
+		// Restore original bio
+		await db.from('teachers').update({ bio: originalBio }).eq('id', aliceTeacherId);
+	});
+
+	it('teacher cannot update other teachers records', async () => {
+		const db = await createClientAs(TestUsers.TEACHER_ALICE);
+		const bobTeacherId = fixtures.requireTeacherId(TestUsers.TEACHER_BOB);
+
+		const { data, error } = await db.from('teachers').update({ bio: 'Hacked bio' }).eq('id', bobTeacherId).select();
+
+		// Should fail - teacher can only update their own record
 		expect(error).toBeNull();
 		expect(data).toHaveLength(0);
 	});

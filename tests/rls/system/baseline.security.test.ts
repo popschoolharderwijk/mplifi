@@ -11,6 +11,9 @@ const EXPECTED_RLS_TABLES = [
 	'teachers',
 	'teacher_availability',
 	'teacher_lesson_types',
+	'lesson_agreements',
+	'students',
+	'lesson_appointment_deviations',
 ];
 
 const EXPECTED_POLICIES: Record<string, string[]> = {
@@ -53,7 +56,8 @@ const EXPECTED_POLICIES: Record<string, string[]> = {
 		'teachers_select_staff',
 		// INSERT policy
 		'teachers_insert_admin',
-		// UPDATE policy
+		// UPDATE policies
+		'teachers_update_own',
 		'teachers_update_admin',
 		// DELETE policy
 		'teachers_delete_admin',
@@ -81,6 +85,41 @@ const EXPECTED_POLICIES: Record<string, string[]> = {
 		// DELETE policy
 		'teacher_lesson_types_delete_admin',
 	],
+	lesson_agreements: [
+		// SELECT policies
+		'lesson_agreements_select_student',
+		'lesson_agreements_select_teacher',
+		'lesson_agreements_select_staff',
+		// INSERT policy
+		'lesson_agreements_insert_staff',
+		// UPDATE policy
+		'lesson_agreements_update_staff',
+		// DELETE policy
+		'lesson_agreements_delete_staff',
+	],
+	students: [
+		// SELECT policies
+		'students_select_own',
+		'students_select_staff',
+		// UPDATE policy - admin can update student notes
+		'students_update_admin',
+		// No INSERT/DELETE policies - students are managed via triggers
+	],
+	lesson_appointment_deviations: [
+		// SELECT policies
+		'lesson_appointment_deviations_select_teacher',
+		'lesson_appointment_deviations_select_student',
+		'lesson_appointment_deviations_select_staff',
+		// INSERT policies
+		'lesson_appointment_deviations_insert_teacher',
+		'lesson_appointment_deviations_insert_staff',
+		// UPDATE policies
+		'lesson_appointment_deviations_update_teacher',
+		'lesson_appointment_deviations_update_staff',
+		// DELETE policies
+		'lesson_appointment_deviations_delete_teacher',
+		'lesson_appointment_deviations_delete_staff',
+	],
 };
 
 const EXPECTED_FUNCTIONS = [
@@ -100,6 +139,11 @@ const EXPECTED_FUNCTIONS = [
 	'prevent_user_id_change',
 	'prevent_profile_email_change',
 	'prevent_last_site_admin_removal',
+	// Lesson agreements triggers
+	'trigger_ensure_student_on_agreement_insert',
+	'trigger_cleanup_student_on_agreement_delete',
+	// Lesson appointment deviations triggers
+	'enforce_deviation_immutable_fields',
 	// Authorization helpers
 	'can_delete_user',
 	// Introspection functions for CI testing
@@ -108,6 +152,8 @@ const EXPECTED_FUNCTIONS = [
 	'get_table_policies',
 	'function_exists',
 	'get_public_table_names',
+	// Pagination functions
+	'get_lesson_agreements_paginated',
 ];
 
 describe('RLS Baseline Security Checks', () => {

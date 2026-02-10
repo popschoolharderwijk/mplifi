@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { MUSIC_ICONS } from '@/constants/icons';
 import { DAY_NAMES_DISPLAY, getDayName } from '@/lib/dateHelpers';
 import { cn } from '@/lib/utils';
+import type { LessonAgreementWithTeacher } from '@/types/lesson-agreements';
 import type { LessonAgreement } from './LessonAgreementDialog';
 import { LessonAgreementDialog } from './LessonAgreementDialog';
 
@@ -17,7 +18,7 @@ interface LessonAgreementItemProps {
 	readOnly?: boolean;
 }
 
-function getTeacherDisplayName(teacher: LessonAgreement['teacher']): string {
+function getTeacherDisplayName(teacher: LessonAgreementWithTeacher['teacher']): string {
 	if (teacher.first_name && teacher.last_name) {
 		return `${teacher.first_name} ${teacher.last_name}`;
 	}
@@ -32,7 +33,7 @@ function formatTime(time: string): string {
 	return `${hours}:${minutes}`;
 }
 
-function getTooltipText(agreement: LessonAgreement, teacherName: string): string {
+function getTooltipText(agreement: LessonAgreementWithTeacher, teacherName: string): string {
 	const dayName = getDayName(agreement.day_of_week);
 	const time = formatTime(agreement.start_time);
 	return `${agreement.lesson_type.name}\n${teacherName}\n${dayName} om ${time}`;

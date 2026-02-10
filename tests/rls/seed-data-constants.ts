@@ -9,24 +9,25 @@
  */
 export const LESSON_AGREEMENTS = {
 	// Total number of lesson agreements in seed data
-	TOTAL: 184,
+	// 8 (Bandcoaching) + 12 (Alice) + 12 (Bob) + 12 (Charlie) + 8 (Diana) + 12 (Frank) + 12 (Grace) + 12 (Henry) + 12 (Iris) = 100
+	TOTAL: 100,
 
 	// Per teacher (from seed.sql)
-	TEACHER_ALICE: 28, // students 009-025
-	TEACHER_BOB: 28, // students 026-042
-	TEACHER_CHARLIE: 21, // students 043-055
-	TEACHER_DIANA: 21, // students 056-060, 009-016
+	TEACHER_ALICE: 12, // students 009-020 (Gitaar 6, Drums 6)
+	TEACHER_BOB: 12, // students 021-032 (Bas 6, Keyboard 6)
+	TEACHER_CHARLIE: 12, // students 033-044 (Saxofoon 12)
+	TEACHER_DIANA: 8, // students 045-052 (DJ/Beats 8, 45 min lessons)
 	TEACHER_EVE: 8, // students 001-008 (Bandcoaching group lesson)
-	TEACHER_FRANK: 21, // students 017-029
-	TEACHER_GRACE: 21, // students 030-042
-	TEACHER_HENRY: 21, // students 043-055
-	TEACHER_IRIS: 15, // students 056-060, 017-022
+	TEACHER_FRANK: 12, // students 053-060, 009-012 (Gitaar 12)
+	TEACHER_GRACE: 12, // students 013-014, 021-030 (Drums 12)
+	TEACHER_HENRY: 12, // students 031-042 (Zang 12)
+	TEACHER_IRIS: 12, // students 043-054 (Bas 12)
 
 	// Per student (from seed.sql)
 	STUDENT_001: 1, // Bandcoaching with Teacher Eve
-	STUDENT_009: 2, // Gitaar with Teacher Alice, DJ/Beats with Teacher Diana
-	STUDENT_010: 2, // Gitaar with Teacher Alice, DJ/Beats with Teacher Diana
-	STUDENT_026: 3, // Bas with Teacher Bob, Gitaar (2x) with Teacher Frank
+	STUDENT_009: 2, // Gitaar with Teacher Alice, Gitaar with Teacher Frank
+	STUDENT_010: 2, // Gitaar with Teacher Alice, Gitaar with Teacher Frank
+	STUDENT_026: 2, // Bas with Teacher Bob, Drums with Teacher Grace
 } as const;
 
 /**
@@ -34,18 +35,20 @@ export const LESSON_AGREEMENTS = {
  */
 export const TEACHER_AVAILABILITY = {
 	// Total number of availability slots in seed data
-	TOTAL: 17, // 9 teachers, teacher 10 has none, teacher 5 has 1 slot, others have 2
+	// Alice: 3, Bob: 3, Charlie: 3, Diana: 3, Eve: 2, Frank: 3, Grace: 3, Henry: 3, Iris: 3, Jack: 2 = 28
+	TOTAL: 28,
 
-	// Per teacher (from seed.sql)
-	TEACHER_ALICE: 2, // Mon 09:00-12:00, Wed 14:00-17:00
-	TEACHER_BOB: 2, // Tue 10:00-13:00, Thu 14:00-17:00
-	TEACHER_CHARLIE: 2, // Mon 14:00-17:00, Fri 09:00-12:00
-	TEACHER_DIANA: 2, // Tue 14:00-17:00, Thu 09:00-12:00
-	TEACHER_EVE: 1, // Mon 14:00-17:00 (Bandcoaching)
-	TEACHER_FRANK: 2, // Wed 09:00-12:00, Fri 14:00-17:00
-	TEACHER_GRACE: 2, // Mon 10:00-13:00, Thu 10:00-13:00
-	TEACHER_HENRY: 2, // Tue 09:00-12:00, Fri 10:00-13:00
-	TEACHER_IRIS: 2, // Wed 10:00-13:00, Thu 14:00-17:00
+	// Per teacher (from seed.sql) - Extended availability slots
+	TEACHER_ALICE: 3, // Mon 08:00-18:00, Wed 10:00-20:00, Fri 09:00-13:00
+	TEACHER_BOB: 3, // Tue 09:00-18:00, Thu 08:00-18:00, Sat 10:00-14:00
+	TEACHER_CHARLIE: 3, // Mon 12:00-19:00, Wed 14:00-18:00, Fri 08:00-14:00
+	TEACHER_DIANA: 3, // Tue 10:00-20:00, Thu 08:00-14:00, Sat 09:00-12:00
+	TEACHER_EVE: 2, // Mon 09:00-17:00, Thu 14:00-18:00
+	TEACHER_FRANK: 3, // Mon 14:00-17:00, Wed 08:00-14:00, Fri 12:00-19:00
+	TEACHER_GRACE: 3, // Mon 08:00-15:00, Thu 09:00-15:00, Fri 10:00-14:00
+	TEACHER_HENRY: 3, // Tue 08:00-14:00, Wed 15:00-19:00, Fri 09:00-15:00
+	TEACHER_IRIS: 3, // Tue 14:00-17:00, Wed 09:00-15:00, Thu 12:00-19:00
+	TEACHER_JACK: 2, // Tue 10:00-14:00, Thu 10:00-14:00 (no students but has availability)
 } as const;
 
 /**

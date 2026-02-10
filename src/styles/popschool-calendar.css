@@ -1,0 +1,219 @@
+/* =====================================================
+   Popschool Calendar Styling for react-big-calendar
+   Overrides default library styles to match dark theme
+   ===================================================== */
+
+.popschool-calendar {
+	/* Reset library defaults */
+	& .rbc-calendar {
+		@apply font-sans;
+	}
+
+	/* Toolbar / Header */
+	& .rbc-toolbar {
+		@apply flex flex-wrap items-center justify-between gap-3 border-b border-border bg-secondary/30 px-4 py-3 mb-0;
+	}
+
+	& .rbc-toolbar-label {
+		@apply text-lg font-semibold text-foreground capitalize;
+	}
+
+	& .rbc-btn-group {
+		@apply flex gap-1;
+	}
+
+	& .rbc-btn-group button {
+		@apply rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors;
+		@apply hover:bg-accent hover:text-accent-foreground;
+	}
+
+	& .rbc-btn-group button.rbc-active {
+		@apply bg-primary text-primary-foreground border-primary;
+	}
+
+	/* Month View */
+	& .rbc-month-view {
+		@apply border-0;
+	}
+
+	& .rbc-month-header {
+		@apply border-b border-border bg-secondary/50;
+	}
+
+	& .rbc-header {
+		@apply border-l border-border py-3 pb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground first:border-l-0;
+	}
+
+	/* Week/Day view header with day name and date */
+	& .rbc-header > a,
+	& .rbc-header > span {
+		@apply block py-1;
+	}
+
+	& .rbc-month-row {
+		@apply border-b border-border last:border-b-0;
+	}
+
+	& .rbc-day-bg {
+		@apply border-l border-border first:border-l-0;
+	}
+
+	& .rbc-off-range-bg {
+		@apply bg-muted/30;
+	}
+
+	& .rbc-today {
+		@apply bg-primary/10;
+	}
+
+	/* Date cells */
+	& .rbc-date-cell {
+		@apply px-2 py-1 text-right text-sm text-foreground;
+	}
+
+	& .rbc-date-cell.rbc-now {
+		@apply font-bold text-primary;
+	}
+
+	& .rbc-date-cell.rbc-off-range {
+		@apply text-muted-foreground/50;
+	}
+
+	/* Week & Day Views */
+	& .rbc-time-view {
+		@apply border-0;
+	}
+
+	& .rbc-time-header {
+		@apply border-b border-border;
+	}
+
+	& .rbc-time-header-content {
+		@apply border-l border-border;
+	}
+
+	& .rbc-time-header-gutter {
+		@apply bg-secondary/30;
+	}
+
+	& .rbc-allday-cell {
+		@apply border-b border-border hidden;
+	}
+
+	& .rbc-time-header-cell {
+		@apply min-h-0;
+	}
+
+	& .rbc-day-slot .rbc-time-slot {
+		@apply border-t border-border/50;
+	}
+
+	& .rbc-timeslot-group {
+		@apply border-b border-border/50;
+	}
+
+	& .rbc-time-gutter {
+		@apply bg-secondary/30 text-xs text-muted-foreground;
+	}
+
+	& .rbc-time-slot {
+		@apply text-xs;
+	}
+
+	& .rbc-label {
+		@apply px-2;
+	}
+
+	& .rbc-time-content {
+		@apply border-t border-border;
+	}
+
+	& .rbc-time-column {
+		@apply border-l border-border first:border-l-0;
+	}
+
+	& .rbc-current-time-indicator {
+		@apply bg-primary h-0.5;
+	}
+
+	/* Events */
+	& .rbc-event {
+		@apply rounded-md border-0 px-2 py-1 text-xs font-medium shadow-sm;
+	}
+
+	& .rbc-event-label {
+		@apply text-[10px] opacity-90;
+	}
+
+	& .rbc-event-content {
+		@apply text-xs leading-tight;
+	}
+
+	& .rbc-event.rbc-selected {
+		@apply ring-2 ring-ring ring-offset-1 ring-offset-background;
+	}
+
+	& .rbc-show-more {
+		@apply text-xs font-medium text-primary hover:underline;
+	}
+
+	/* Agenda View */
+	& .rbc-agenda-view {
+		@apply border-0;
+	}
+
+	& .rbc-agenda-view table.rbc-agenda-table {
+		@apply w-full border-collapse;
+	}
+
+	& .rbc-agenda-view table.rbc-agenda-table thead > tr > th {
+		@apply border-b border-border bg-secondary/50 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground;
+	}
+
+	& .rbc-agenda-view table.rbc-agenda-table tbody > tr > td {
+		@apply border-b border-border px-3 py-2 text-sm text-foreground;
+	}
+
+	& .rbc-agenda-view table.rbc-agenda-table tbody > tr.rbc-agenda-date-cell {
+		@apply bg-secondary/20;
+	}
+
+	& .rbc-agenda-date-cell {
+		@apply font-medium text-foreground;
+	}
+
+	& .rbc-agenda-time-cell {
+		@apply text-muted-foreground whitespace-nowrap;
+	}
+
+	& .rbc-agenda-event-cell {
+		@apply w-full;
+	}
+
+	/* Drag and Drop */
+	& .rbc-addons-dnd .rbc-addons-dnd-resize-ns-icon,
+	& .rbc-addons-dnd .rbc-addons-dnd-resize-ew-icon {
+		@apply hidden;
+	}
+
+	& .rbc-addons-dnd-resizable {
+		@apply relative;
+	}
+
+	& .rbc-addons-dnd .rbc-event {
+		@apply cursor-move;
+	}
+
+	& .rbc-addons-dnd-dragged-event {
+		@apply opacity-50;
+	}
+
+	& .rbc-addons-dnd-drag-preview {
+		@apply opacity-90 shadow-lg;
+	}
+
+	/* Row backgrounds for week/day view */
+	& .rbc-day-slot .rbc-events-container {
+		@apply mr-2;
+	}
+}
