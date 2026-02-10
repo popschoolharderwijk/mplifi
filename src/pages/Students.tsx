@@ -400,19 +400,7 @@ export default function Students() {
 		setDeletingStudent(true);
 
 		try {
-			// Delete student (this will cascade delete lesson_agreements)
-			const { error: deleteError } = await supabase.from('students').delete().eq('id', deleteDialog.student.id);
-
-			if (deleteError) {
-				console.error('Error deleting student:', deleteError);
-				toast.error('Fout bij verwijderen leerling', {
-					description: deleteError.message,
-				});
-				setDeletingStudent(false);
-				return;
-			}
-
-			// If also delete user, call delete-user function
+			// If also delete user, call delete-user function which will cascade delete everything
 			if (deleteDialog.deleteUser) {
 				const { error: userDeleteError } = await supabase.functions.invoke('delete-user', {
 					body: { userId: deleteDialog.student.user_id },
@@ -421,12 +409,36 @@ export default function Students() {
 				if (userDeleteError) {
 					console.error('Error deleting user:', userDeleteError);
 					toast.error('Fout bij verwijderen gebruiker', {
-						description: 'Leerling is verwijderd, maar gebruiker kon niet worden verwijderd.',
+						description: userDeleteError.message,
 					});
-				} else {
-					toast.success('Leerling en gebruiker verwijderd');
+					setDeletingStudent(false);
+					return;
 				}
+
+				toast.success('Leerling en gebruiker verwijderd');
 			} else {
+				// Delete all lesson agreements first - this will trigger automatic student deletion
+				// Students cannot be deleted directly (no DELETE policy), they are automatically
+				// deleted via triggers when all lesson_agreements are removed
+				const agreementIds = deleteDialog.student.agreements.map((a) => a.id);
+
+				if (agreementIds.length > 0) {
+					const { error: agreementsError } = await supabase
+						.from('lesson_agreements')
+						.delete()
+						.in('id', agreementIds);
+
+					if (agreementsError) {
+						console.error('Error deleting lesson agreements:', agreementsError);
+						toast.error('Fout bij verwijderen lesovereenkomsten', {
+							description: agreementsError.message,
+						});
+						setDeletingStudent(false);
+						return;
+					}
+				}
+
+				// The student will be automatically deleted by the trigger when all agreements are removed
 				toast.success('Leerling verwijderd');
 			}
 
@@ -517,13 +529,16 @@ export default function Students() {
 							{/* Show all agreements that will be deleted */}
 							{deleteDialog.student && deleteDialog.student.agreements.length > 0 && (
 								<div className="space-y-2">
-									<p className="text-sm font-medium">De volgende lesovereenkomsten worden verwijderd:</p>
+									<p className="text-sm font-medium">
+										De volgende lesovereenkomsten worden verwijderd:
+									</p>
 									<div className="max-h-60 overflow-y-auto rounded-md border p-3 space-y-2">
 										{deleteDialog.student.agreements.map((agreement) => (
 											<LessonAgreementItem
 												key={agreement.id}
 												agreement={agreement}
 												className="w-full"
+												readOnly
 											/>
 										))}
 									</div>

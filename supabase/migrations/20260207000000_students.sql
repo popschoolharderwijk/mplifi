@@ -155,8 +155,9 @@ EXECUTE FUNCTION public.update_updated_at_column();
 -- GRANT gives table-level permissions, but RLS policies (above) are what
 -- actually control access. GRANT is required for RLS to work, but RLS is the
 -- security boundary. Without matching RLS policies, GRANT alone does NOT grant access.
--- Note: INSERT is not granted - students are managed automatically via triggers.
-GRANT SELECT, UPDATE, DELETE ON public.students TO authenticated;
+-- Note: INSERT and DELETE are not granted - students are managed automatically via triggers.
+-- Students can only be deleted by removing all lesson_agreements (trigger will auto-delete student).
+GRANT SELECT, UPDATE ON public.students TO authenticated;
 
 -- =============================================================================
 -- SECTION 8: ALTER TABLE FOR EXISTING DATABASES

@@ -14,6 +14,7 @@ export type { LessonAgreement };
 interface LessonAgreementItemProps {
 	agreement: LessonAgreement;
 	className?: string;
+	readOnly?: boolean;
 }
 
 function getTeacherDisplayName(teacher: LessonAgreement['teacher']): string {
@@ -37,7 +38,7 @@ function getTooltipText(agreement: LessonAgreement, teacherName: string): string
 	return `${agreement.lesson_type.name}\n${teacherName}\n${dayName} om ${time}`;
 }
 
-export function LessonAgreementItem({ agreement, className }: LessonAgreementItemProps) {
+export function LessonAgreementItem({ agreement, className, readOnly = false }: LessonAgreementItemProps) {
 	const [dialogOpen, setDialogOpen] = useState(false);
 
 	const Icon = agreement.lesson_type.icon ? resolveIconFromList(MUSIC_ICONS, agreement.lesson_type.icon) : undefined;
@@ -48,6 +49,58 @@ export function LessonAgreementItem({ agreement, className }: LessonAgreementIte
 	};
 
 	const tooltipText = getTooltipText(agreement, teacherName);
+
+	const innerContent = (
+		<>
+			{/* Lesson Type Icon */}
+			<div className="shrink-0">
+				<ColorIcon icon={Icon} color={agreement.lesson_type.color} size="md" />
+			</div>
+
+			{/* Teacher Name with Day indicators below */}
+			<div className="flex flex-col gap-1 flex-1 min-w-0">
+				<span className="font-medium truncate text-sm">{teacherName}</span>
+				{/* Day indicators: 7 squares for each day of the week (Monday first) */}
+				<div className="flex gap-1">
+					{DAY_NAMES_DISPLAY.map((dayName, displayIndex) => {
+						// Convert display index (0=Monday) to database day_of_week (0=Sunday)
+						// displayIndex 0 (Monday) = day_of_week 1
+						// displayIndex 6 (Sunday) = day_of_week 0
+						const dayOfWeek = displayIndex === 6 ? 0 : displayIndex + 1;
+						const hasLesson = agreement.day_of_week === dayOfWeek;
+						const isWeekend = displayIndex >= 5; // Saturday (5) and Sunday (6)
+						return (
+							<div
+								key={dayName}
+								className={cn(
+									'h-2.5 w-2.5 rounded-sm border',
+									hasLesson
+										? 'bg-primary border-primary/80'
+										: isWeekend
+											? 'bg-muted/60 border-muted-foreground/60'
+											: 'bg-muted/70 border-muted-foreground/50',
+								)}
+								title={dayName}
+							/>
+						);
+					})}
+				</div>
+			</div>
+		</>
+	);
+
+	if (readOnly) {
+		return (
+			<div
+				className={cn(
+					'inline-flex items-center gap-3 rounded-lg border p-3 text-left w-40 bg-muted/50 cursor-default',
+					className,
+				)}
+			>
+				{innerContent}
+			</div>
+		);
+	}
 
 	return (
 		<>
@@ -70,40 +123,7 @@ export function LessonAgreementItem({ agreement, className }: LessonAgreementIte
 								className,
 							)}
 						>
-							{/* Lesson Type Icon */}
-							<div className="shrink-0">
-								<ColorIcon icon={Icon} color={agreement.lesson_type.color} size="md" />
-							</div>
-
-							{/* Teacher Name with Day indicators below */}
-							<div className="flex flex-col gap-1 flex-1 min-w-0">
-								<span className="font-medium truncate text-sm">{teacherName}</span>
-								{/* Day indicators: 7 squares for each day of the week (Monday first) */}
-								<div className="flex gap-1">
-									{DAY_NAMES_DISPLAY.map((dayName, displayIndex) => {
-										// Convert display index (0=Monday) to database day_of_week (0=Sunday)
-										// displayIndex 0 (Monday) = day_of_week 1
-										// displayIndex 6 (Sunday) = day_of_week 0
-										const dayOfWeek = displayIndex === 6 ? 0 : displayIndex + 1;
-										const hasLesson = agreement.day_of_week === dayOfWeek;
-										const isWeekend = displayIndex >= 5; // Saturday (5) and Sunday (6)
-										return (
-											<div
-												key={dayName}
-												className={cn(
-													'h-2.5 w-2.5 rounded-sm border',
-													hasLesson
-														? 'bg-primary border-primary/80'
-														: isWeekend
-															? 'bg-muted/60 border-muted-foreground/60'
-															: 'bg-muted/70 border-muted-foreground/50',
-												)}
-												title={dayName}
-											/>
-										);
-									})}
-								</div>
-							</div>
+							{innerContent}
 						</button>
 					</TooltipTrigger>
 					<TooltipContent>

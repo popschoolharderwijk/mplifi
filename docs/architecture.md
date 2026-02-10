@@ -34,7 +34,7 @@ teachers + profiles ──► teacher_viewed_by_student (view, beperkte velden)
 |-------|-------------|
 | `profiles` | Gebruikersprofiel (naam, email, telefoon, avatar). Automatisch aangemaakt via trigger bij registratie. |
 | `user_roles` | Expliciete rollen (`site_admin`, `admin`, `staff`). Eén rol per gebruiker. |
-| `students` | Leerling-registratie. Koppelt een `auth.users` aan een student-record. |
+| `students` | Leerling-registratie. Koppelt een `auth.users` aan een student-record. **Automatisch beheerd**: wordt aangemaakt wanneer de eerste lesovereenkomst wordt ingevoegd en automatisch verwijderd wanneer alle lesovereenkomsten zijn verwijderd. Kan niet handmatig worden aangemaakt of verwijderd. |
 | `teachers` | Docent-registratie. Koppelt een `auth.users` aan een teacher-record. |
 | `lesson_types` | Lestypes (bijv. "Gitaar", "Piano"). Referentiedata, zichtbaar voor alle ingelogde gebruikers. |
 | `lesson_agreements` | Lesovereenkomsten tussen student en docent. Bevat dag, tijd, start/einddatum, actief-status en notities. |
@@ -88,10 +88,12 @@ De applicatie gebruikt een role-based access control (RBAC) systeem met de volge
 
 | Actie | student | teacher | staff | admin | site_admin |
 |-------|:-------:|:-------:|:-----:|:-----:|:----------:|
-| SELECT | ❌ | ❌ | ✅ | ✅ | ✅ |
-| INSERT | ❌ | ❌ | ❌ | ✅ | ✅ |
+| SELECT | ✅ (eigen) | ❌ | ✅ | ✅ | ✅ |
+| INSERT | ❌ | ❌ | ❌ | ❌ | ❌ |
 | UPDATE | ❌ | ❌ | ❌ | ✅ | ✅ |
-| DELETE | ❌ | ❌ | ❌ | ✅ | ✅ |
+| DELETE | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+> **Belangrijk**: Students kunnen **NIET** handmatig worden verwijderd, zelfs niet door site_admin. Students worden automatisch aangemaakt wanneer een lesovereenkomst wordt ingevoegd en automatisch verwijderd wanneer alle lesovereenkomsten zijn verwijderd. Om een student te verwijderen, moeten eerst alle bijbehorende lesovereenkomsten worden verwijderd.
 
 ### teachers
 
@@ -147,6 +149,24 @@ De applicatie gebruikt een role-based access control (RBAC) systeem met de volge
 | `can_delete_user(uuid, uuid)` | Check of gebruiker een ander account mag verwijderen | `SECURITY DEFINER` |
 
 > Alle helper functions gebruiken `SECURITY DEFINER` met vaste `search_path` om search_path injection te voorkomen. Toegang is beperkt tot `authenticated` gebruikers.
+
+---
+
+## Automatisch Lifecycle Management
+
+### Students
+
+Students worden **automatisch beheerd** via database triggers:
+
+- **Aanmaken**: Wanneer een `lesson_agreement` wordt ingevoegd, wordt automatisch een `student` record aangemaakt voor de `student_user_id` (als deze nog niet bestaat).
+- **Verwijderen**: Wanneer alle `lesson_agreements` voor een student zijn verwijderd, wordt het `student` record automatisch verwijderd.
+- **Geen handmatige beheer**: Students kunnen **NIET** handmatig worden aangemaakt of verwijderd, zelfs niet door `site_admin`. Er zijn geen INSERT of DELETE policies op de `students` tabel.
+
+**Design rationale**: Students zijn een **gevolg** van lesovereenkomsten, niet een voorwaarde. Dit voorkomt orphaned student records en zorgt voor automatisch lifecycle management.
+
+**CASCADE gedrag**:
+- Als een `auth.users` record wordt verwijderd, worden alle bijbehorende `lesson_agreements` automatisch verwijderd (via `ON DELETE CASCADE`).
+- Wanneer alle `lesson_agreements` zijn verwijderd, wordt de `student` automatisch verwijderd door de trigger.
 
 ---
 

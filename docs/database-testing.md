@@ -95,8 +95,10 @@ fixtures.requireAgreementId(student, teacher) // agreement.id op basis van stude
 
 #### Students (`students/`)
 
-- ✅ SELECT: alleen staff/admin/site_admin
-- ✅ INSERT/UPDATE/DELETE: alleen admin/site_admin
+- ✅ SELECT: studenten zien eigen record, staff/admin/site_admin zien alles
+- ✅ INSERT: geblokkeerd voor alle rollen (automatisch aangemaakt via triggers op lesson_agreements)
+- ✅ UPDATE: alleen admin/site_admin
+- ✅ DELETE: geblokkeerd voor alle rollen, inclusief site_admin (automatisch verwijderd via triggers wanneer alle lesson_agreements zijn verwijderd)
 
 #### Teachers (`teachers/`)
 
