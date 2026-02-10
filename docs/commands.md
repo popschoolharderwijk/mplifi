@@ -86,27 +86,28 @@ git push --force origin main
 ## Supabase CLI
 
 ```bash
-# Link project
-supabase link --project-ref <project-id>
+# Link aan remote dev project (mcp-dev)
+supabase link --project-ref zdvscmogkfyddnnxzkdu
 
-# Start lokale Supabase
+# Of gebruik --linked flag voor gelinkte project
+supabase <command> --linked
+
+# Push migraties naar remote dev
+supabase db push --linked
+
+# Push config naar remote dev
+supabase config push --linked
+
+# Generate types voor gelinkte project
+supabase gen types typescript --linked > src/integrations/supabase/types.ts
+
+# Voor lokale testing (alleen voor CI/tests):
 supabase start
-
-# Start lokale Supabase (minimaal voor tests)
 supabase start -x realtime,storage-api,imgproxy,edge-runtime,logflare,vector,studio,postgres-meta,supavisor
-
-# Stop lokale Supabase
 supabase stop
-
-# Push migraties naar remote
-supabase db push
-
-# Push config naar remote
-supabase config push
-
-# Generate types
-supabase gen types typescript --project-id <project-id> > src/integrations/supabase/types.ts
 ```
+
+> 💡 **Development workflow**: Gebruik `--linked` voor alle commando's die werken met de remote dev instance (mcp-dev). Lokale Supabase wordt alleen gebruikt voor CI tests.
 
 ---
 
@@ -147,28 +148,32 @@ bun run createuser
 
 In development omgevingen (`localdev` en `development`) verschijnt een "Dev Login" knop op de login pagina. Hiermee kun je direct inloggen zonder Magic Link/OTP te hoeven afwachten.
 
+### Rol Selectie
+
+De Dev Login knop heeft een dropdown waarmee je kunt kiezen uit verschillende rollen:
+- **Site Admin** (`site-admin@test.nl`) - Standaard geselecteerd
+- **Admin** (`admin-one@test.nl`)
+- **Teacher** (`teacher-alice@test.nl`)
+- **Staff** (`staff-one@test.nl`)
+- **Student** (`student-001@test.nl`)
+- **User (geen rol)** (`user-001@test.nl`)
+
+Deze users komen uit de seed data (`supabase/seed.sql`) en zijn beschikbaar in de remote dev instance (mcp-dev).
+
 ### Configuratie
 
-Voeg toe aan `.env.localdev` en/of `.env.development`:
+**Optioneel** - Voeg toe aan `.env.development` als je een custom wachtwoord wilt gebruiken:
 
 ```env
-VITE_DEV_LOGIN_EMAIL=dev@example.com
-VITE_DEV_LOGIN_PASSWORD=your-dev-password
+VITE_DEV_LOGIN_PASSWORD=your-custom-password
 ```
 
-### Gebruiker aanmaken
-
-```bash
-# Maak user aan met wachtwoord
-bun run createuser
-```
-
-> ⚠️ De user moet bestaan in Supabase Auth én een wachtwoord hebben. Zonder `VITE_DEV_LOGIN_PASSWORD` wordt de knop disabled getoond.
+Als `VITE_DEV_LOGIN_PASSWORD` niet is ingesteld, wordt het standaard seed wachtwoord gebruikt (`password`).
 
 ### Beveiliging
 
 - De Dev Login knop wordt **volledig verwijderd** uit production builds (Vite dead-code elimination)
-- Zonder de `VITE_DEV_LOGIN_*` env variabelen verschijnt de knop niet
+- Werkt alleen in development modes (`localdev` en `development`)
 - Extra runtime check als fallback
 
 ---

@@ -34,7 +34,11 @@ export async function createClientAs(user: TestUser) {
 		return cached;
 	}
 
-	const TEST_PASSWORD = 'password';
+	const TEST_PASSWORD = process.env.VITE_DEV_LOGIN_PASSWORD;
+
+	if (!TEST_PASSWORD) {
+		throw new Error('VITE_DEV_LOGIN_PASSWORD must be set in environment for tests');
+	}
 
 	const url = process.env.SUPABASE_URL;
 	const key = process.env.SUPABASE_PUBLISHABLE_DEFAULT_KEY;
