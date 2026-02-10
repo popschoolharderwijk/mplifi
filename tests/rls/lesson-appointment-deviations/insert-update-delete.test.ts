@@ -634,3 +634,292 @@ describe('RLS: lesson_appointment_deviations DELETE - admin/staff permissions', 
 		testDeviationId = null;
 	});
 });
+
+// =============================================================================
+// IS_CANCELLED FUNCTIONALITY TESTS
+// =============================================================================
+
+describe('RLS: lesson_appointment_deviations is_cancelled - teacher can cancel lessons', () => {
+	let initialState: DatabaseState;
+	const { setupState, verifyState } = setupDatabaseStateVerification();
+	let testDeviationId: string | null = null;
+
+	beforeAll(async () => {
+		initialState = await setupState();
+	});
+
+	afterAll(async () => {
+		if (testDeviationId) {
+			await dbNoRLS.from('lesson_appointment_deviations').delete().eq('id', testDeviationId);
+		}
+		await verifyState(initialState);
+	});
+
+	it('teacher can insert a cancelled lesson (is_cancelled=true with same original/actual dates)', async () => {
+		const db = await createClientAs(TestUsers.TEACHER_ALICE);
+		const agreementAlice = fixtures.allLessonAgreements.find((a) => a.id === agreementStudent009TeacherAlice);
+		if (!agreementAlice) {
+			throw new Error('Agreement not found');
+		}
+
+		const originalDate = calculateOriginalDate(agreementAlice.day_of_week, new Date('2024-03-05'));
+		const aliceUserId = fixtures.requireUserId(TestUsers.TEACHER_ALICE);
+
+		const newDeviation: LessonAppointmentDeviationInsert = {
+			lesson_agreement_id: agreementStudent009TeacherAlice,
+			original_date: originalDate,
+			original_start_time: agreementAlice.start_time,
+			actual_date: originalDate, // Same as original (lesson is cancelled, not moved)
+			actual_start_time: agreementAlice.start_time, // Same as original
+			is_cancelled: true,
+			created_by_user_id: aliceUserId,
+			last_updated_by_user_id: aliceUserId,
+		};
+
+		const { data, error } = await db.from('lesson_appointment_deviations').insert(newDeviation).select();
+
+		expect(error).toBeNull();
+		expect(data).toHaveLength(1);
+		expect(data?.[0]?.is_cancelled).toBe(true);
+		expect(data?.[0]?.actual_date).toBe(originalDate);
+		expect(data?.[0]?.original_date).toBe(originalDate);
+
+		testDeviationId = data?.[0]?.id ?? null;
+	});
+});
+
+describe('RLS: lesson_appointment_deviations is_cancelled - constraint prevents invalid cancellations', () => {
+	const agreementAlice = fixtures.allLessonAgreements.find((a) => a.id === agreementStudent009TeacherAlice);
+	if (!agreementAlice) {
+		throw new Error('Agreement not found');
+	}
+
+	it('constraint: cannot insert deviation with same dates when is_cancelled=false', async () => {
+		const db = await createClientAs(TestUsers.TEACHER_ALICE);
+
+		const originalDate = calculateOriginalDate(agreementAlice.day_of_week, new Date('2024-03-12'));
+		const aliceUserId = fixtures.requireUserId(TestUsers.TEACHER_ALICE);
+
+		const newDeviation: LessonAppointmentDeviationInsert = {
+			lesson_agreement_id: agreementStudent009TeacherAlice,
+			original_date: originalDate,
+			original_start_time: agreementAlice.start_time,
+			actual_date: originalDate, // Same as original
+			actual_start_time: agreementAlice.start_time, // Same as original
+			is_cancelled: false, // Not cancelled, so this should fail
+			created_by_user_id: aliceUserId,
+			last_updated_by_user_id: aliceUserId,
+		};
+
+		const { data, error } = await db.from('lesson_appointment_deviations').insert(newDeviation).select();
+
+		// Should fail due to constraint: deviation_must_actually_deviate_or_be_cancelled
+		expect(error).not.toBeNull();
+		expect(data).toBeNull();
+	});
+});
+
+describe('RLS: lesson_appointment_deviations is_cancelled - update to cancel/restore', () => {
+	let initialState: DatabaseState;
+	const { setupState, verifyState } = setupDatabaseStateVerification();
+	let testDeviationId: string | null = null;
+
+	beforeAll(async () => {
+		initialState = await setupState();
+
+		// Create a regular deviation (not cancelled)
+		const agreementAlice = fixtures.allLessonAgreements.find((a) => a.id === agreementStudent009TeacherAlice);
+		if (!agreementAlice) {
+			throw new Error('Agreement not found');
+		}
+
+		const originalDate = calculateOriginalDate(agreementAlice.day_of_week, new Date('2024-03-19'));
+		const aliceUserId = fixtures.requireUserId(TestUsers.TEACHER_ALICE);
+
+		const { data } = await dbNoRLS
+			.from('lesson_appointment_deviations')
+			.insert({
+				lesson_agreement_id: agreementStudent009TeacherAlice,
+				original_date: originalDate,
+				original_start_time: agreementAlice.start_time,
+				actual_date: '2024-03-20', // Different date
+				actual_start_time: '14:00',
+				is_cancelled: false,
+				created_by_user_id: aliceUserId,
+				last_updated_by_user_id: aliceUserId,
+			})
+			.select()
+			.single();
+
+		if (data) {
+			testDeviationId = data.id;
+		}
+	});
+
+	afterAll(async () => {
+		if (testDeviationId) {
+			await dbNoRLS.from('lesson_appointment_deviations').delete().eq('id', testDeviationId);
+		}
+		await verifyState(initialState);
+	});
+
+	it('teacher can update deviation to cancelled', async () => {
+		if (!testDeviationId) {
+			throw new Error('Test deviation not created');
+		}
+
+		const db = await createClientAs(TestUsers.TEACHER_ALICE);
+		const aliceUserId = fixtures.requireUserId(TestUsers.TEACHER_ALICE);
+		const agreementAlice = fixtures.allLessonAgreements.find((a) => a.id === agreementStudent009TeacherAlice);
+		if (!agreementAlice) {
+			throw new Error('Agreement not found');
+		}
+
+		const originalDate = calculateOriginalDate(agreementAlice.day_of_week, new Date('2024-03-19'));
+
+		// Cancel the lesson by setting is_cancelled=true and restoring original dates
+		const { data, error } = await db
+			.from('lesson_appointment_deviations')
+			.update({
+				actual_date: originalDate,
+				actual_start_time: agreementAlice.start_time,
+				is_cancelled: true,
+				last_updated_by_user_id: aliceUserId,
+			})
+			.eq('id', testDeviationId)
+			.select();
+
+		expect(error).toBeNull();
+		expect(data).toHaveLength(1);
+		expect(data?.[0]?.is_cancelled).toBe(true);
+	});
+
+	it('teacher can restore a cancelled lesson by deleting the deviation', async () => {
+		if (!testDeviationId) {
+			throw new Error('Test deviation not created');
+		}
+
+		const db = await createClientAs(TestUsers.TEACHER_ALICE);
+
+		// Restore the lesson by deleting the deviation
+		const { data, error } = await db
+			.from('lesson_appointment_deviations')
+			.delete()
+			.eq('id', testDeviationId)
+			.select();
+
+		expect(error).toBeNull();
+		expect(data).toHaveLength(1);
+		expect(data?.[0]?.id).toBe(testDeviationId);
+
+		// Mark as deleted so afterAll doesn't try to delete again
+		testDeviationId = null;
+	});
+});
+
+describe('RLS: lesson_appointment_deviations is_cancelled - auto-delete trigger respects cancelled flag', () => {
+	let initialState: DatabaseState;
+	const { setupState, verifyState } = setupDatabaseStateVerification();
+	let testDeviationId: string | null = null;
+
+	beforeAll(async () => {
+		initialState = await setupState();
+	});
+
+	afterAll(async () => {
+		if (testDeviationId) {
+			await dbNoRLS.from('lesson_appointment_deviations').delete().eq('id', testDeviationId);
+		}
+		await verifyState(initialState);
+	});
+
+	it('cancelled deviation is NOT auto-deleted even when actual matches original', async () => {
+		// Create a cancelled deviation
+		const agreementAlice = fixtures.allLessonAgreements.find((a) => a.id === agreementStudent009TeacherAlice);
+		if (!agreementAlice) {
+			throw new Error('Agreement not found');
+		}
+
+		const originalDate = calculateOriginalDate(agreementAlice.day_of_week, new Date('2024-03-26'));
+		const aliceUserId = fixtures.requireUserId(TestUsers.TEACHER_ALICE);
+
+		const { data: insertData } = await dbNoRLS
+			.from('lesson_appointment_deviations')
+			.insert({
+				lesson_agreement_id: agreementStudent009TeacherAlice,
+				original_date: originalDate,
+				original_start_time: agreementAlice.start_time,
+				actual_date: originalDate, // Same as original
+				actual_start_time: agreementAlice.start_time, // Same as original
+				is_cancelled: true, // Cancelled
+				created_by_user_id: aliceUserId,
+				last_updated_by_user_id: aliceUserId,
+			})
+			.select()
+			.single();
+
+		if (insertData) {
+			testDeviationId = insertData.id;
+		}
+
+		// Verify the deviation was created and still exists
+		const { data: verifyData } = await dbNoRLS
+			.from('lesson_appointment_deviations')
+			.select()
+			.eq('id', testDeviationId ?? '')
+			.single();
+
+		expect(verifyData).not.toBeNull();
+		expect(verifyData?.is_cancelled).toBe(true);
+	});
+
+	it('non-cancelled deviation IS auto-deleted when updated to match original', async () => {
+		// Create a regular deviation (not cancelled)
+		const agreementAlice = fixtures.allLessonAgreements.find((a) => a.id === agreementStudent009TeacherAlice);
+		if (!agreementAlice) {
+			throw new Error('Agreement not found');
+		}
+
+		const originalDate = calculateOriginalDate(agreementAlice.day_of_week, new Date('2024-04-02'));
+		const aliceUserId = fixtures.requireUserId(TestUsers.TEACHER_ALICE);
+
+		const { data: insertData } = await dbNoRLS
+			.from('lesson_appointment_deviations')
+			.insert({
+				lesson_agreement_id: agreementStudent009TeacherAlice,
+				original_date: originalDate,
+				original_start_time: agreementAlice.start_time,
+				actual_date: '2024-04-03', // Different date
+				actual_start_time: '14:00',
+				is_cancelled: false,
+				created_by_user_id: aliceUserId,
+				last_updated_by_user_id: aliceUserId,
+			})
+			.select()
+			.single();
+
+		const tempDeviationId = insertData?.id;
+
+		// Now update it to match original (should trigger auto-delete)
+		const db = await createClientAs(TestUsers.TEACHER_ALICE);
+
+		await db
+			.from('lesson_appointment_deviations')
+			.update({
+				actual_date: originalDate,
+				actual_start_time: agreementAlice.start_time,
+				is_cancelled: false,
+				last_updated_by_user_id: aliceUserId,
+			})
+			.eq('id', tempDeviationId ?? '');
+
+		// Verify the deviation was auto-deleted
+		const { data: verifyData } = await dbNoRLS
+			.from('lesson_appointment_deviations')
+			.select()
+			.eq('id', tempDeviationId ?? '')
+			.maybeSingle();
+
+		expect(verifyData).toBeNull();
+	});
+});

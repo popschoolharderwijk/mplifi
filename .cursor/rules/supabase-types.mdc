@@ -1,0 +1,110 @@
+---
+description: Guidelines for using Supabase generated types
+globs: src/**/*.ts,src/**/*.tsx
+alwaysApply: false
+---
+
+# Supabase Types Guidelines
+
+## Always Use Generated Types First
+
+Before creating custom interfaces or types for database entities, **always check `src/integrations/supabase/types.ts`** for existing generated types.
+
+### Available Type Patterns
+
+```typescript
+import type { Database, Tables } from '@/integrations/supabase/types';
+
+// Preferred: Use Tables helper (simpler syntax)
+type StudentRow = Tables<'students'>;
+type ProfileRow = Tables<'profiles'>;
+type LessonTypeRow = Tables<'lesson_types'>;
+
+// Alternative: Use Database path (for insert/update types)
+type StudentInsert = Database['public']['Tables']['students']['Insert'];
+type StudentUpdate = Database['public']['Tables']['students']['Update'];
+
+// Access enum types
+type LessonFrequency = Database['public']['Enums']['lesson_frequency'];
+type UserRole = Database['public']['Enums']['user_role'];
+```
+
+### When You Need a Subset of Fields
+
+Use `Pick` to select specific fields from generated types:
+
+```typescript
+// Good: Use Pick with Supabase types
+type StudentProfileData = Pick<ProfileRow, 'email' | 'first_name' | 'last_name' | 'avatar_url'>;
+
+// Bad: Manually redefine fields
+interface StudentProfileData {
+  email: string;
+  first_name: string | null;
+  // ... duplicating what's already in ProfileRow
+}
+```
+
+### When You Need Joined/Combined Types
+
+Extend or combine Supabase types:
+
+```typescript
+// Student with profile data (joined query result)
+type StudentWithProfile = StudentRow & {
+  profile: Pick<ProfileRow, 'email' | 'first_name' | 'last_name' | 'avatar_url'>;
+};
+```
+
+## Centralize Custom Types in `src/types/`
+
+When you need custom types that extend Supabase types (e.g., joined relations, component-specific data structures), **place them in `src/types/`** instead of defining them inline in components.
+
+### Existing Type Files
+
+- `src/types/students.ts` - Student-related types (StudentInfoCardData, StudentInfoModalData, etc.)
+- `src/types/teachers.ts` - Teacher-related types (TeacherWithProfile, TeacherWithProfileAndLessonTypes, etc.)
+- `src/types/lesson-agreements.ts` - Lesson agreement types (LessonAgreementWithStudent, etc.)
+
+### Pattern for Type Files
+
+```typescript
+// src/types/students.ts
+import type { Tables } from '@/integrations/supabase/types';
+
+type StudentRow = Tables<'students'>;
+type ProfileRow = Tables<'profiles'>;
+
+// Define field subsets
+export type StudentCardProfileFields = Pick<ProfileRow, 'email' | 'first_name' | 'last_name' | 'avatar_url'>;
+
+// Define combined types
+export type StudentWithProfile = StudentRow & {
+  profile: StudentCardProfileFields;
+};
+
+// Define component data interfaces
+export interface StudentInfoCardData {
+  id: string;
+  user_id: string;
+  profile: StudentCardProfileFields;
+}
+```
+
+### Re-export Types from Components
+
+Components should import from `src/types/` and re-export for convenience:
+
+```typescript
+// In component file
+import type { StudentInfoCardData } from '@/types/students';
+export type { StudentInfoCardData };
+```
+
+### Benefits
+
+1. **Type safety**: Types are auto-generated from the database schema
+2. **Consistency**: No drift between database and TypeScript types
+3. **Maintainability**: Changes to the database schema are reflected after running `supabase gen types typescript --linked`
+4. **Less code**: Avoid duplicating type definitions
+5. **Discoverability**: All entity types in one place (`src/types/`)

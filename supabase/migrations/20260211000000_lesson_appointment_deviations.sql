@@ -5,11 +5,13 @@
 -- 1. lesson_appointment_deviations table for managing temporary changes to lesson agreements
 -- 2. RLS policies for the table
 -- 3. Triggers for data integrity
+-- 4. Auto-delete logic for no-op deviations
+-- 5. Support for cancelling individual lesson occurrences
 --
 -- Lesson appointment deviations allow teachers/admins to temporarily change
 -- lesson dates/times from the regular schedule defined in lesson_agreements.
 -- For example: a lesson normally on Monday 13:00 can be moved to Thursday 14:00
--- for a specific week.
+-- for a specific week, or cancelled entirely.
 -- =============================================================================
 
 -- =============================================================================
@@ -36,6 +38,9 @@ CREATE TABLE IF NOT EXISTS public.lesson_appointment_deviations (
   actual_date DATE NOT NULL, -- The actual date when the lesson takes place
   actual_start_time TIME NOT NULL, -- The actual start time (actual_date contains only date, no time)
 
+  -- Cancellation flag
+  is_cancelled BOOLEAN NOT NULL DEFAULT false, -- When true, the lesson for this specific date is cancelled/deleted
+
   -- Optional reason for the deviation
   reason TEXT,
 
@@ -48,7 +53,13 @@ CREATE TABLE IF NOT EXISTS public.lesson_appointment_deviations (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
   -- Data integrity constraints
-  CONSTRAINT deviation_date_check CHECK (actual_date >= original_date - INTERVAL '7 days' AND actual_date <= original_date + INTERVAL '7 days')
+  CONSTRAINT deviation_date_check CHECK (actual_date >= original_date - INTERVAL '7 days' AND actual_date <= original_date + INTERVAL '7 days'),
+  -- Deviation must either be cancelled, or actually deviate from the original schedule
+  CONSTRAINT deviation_must_actually_deviate_or_be_cancelled CHECK (
+    is_cancelled = true
+    OR actual_date IS DISTINCT FROM original_date
+    OR actual_start_time IS DISTINCT FROM original_start_time
+  )
 );
 
 -- Indexes
@@ -61,8 +72,13 @@ CREATE INDEX IF NOT EXISTS idx_lesson_appointment_deviations_last_updated_by_use
 -- Unique constraint: only one deviation per lesson_agreement + original_date combination
 CREATE UNIQUE INDEX IF NOT EXISTS idx_lesson_appointment_deviations_unique ON public.lesson_appointment_deviations(lesson_agreement_id, original_date);
 
+-- Partial index for efficient filtering of cancelled lessons
+CREATE INDEX IF NOT EXISTS idx_lesson_appointment_deviations_is_cancelled
+ON public.lesson_appointment_deviations(is_cancelled)
+WHERE is_cancelled = true;
+
 -- Table and column documentation
-COMMENT ON TABLE public.lesson_appointment_deviations IS 'Tracks temporary changes to lesson schedules. Allows teachers/admins to move lessons from their regular schedule (defined in lesson_agreements) to different dates/times for specific weeks.';
+COMMENT ON TABLE public.lesson_appointment_deviations IS 'Tracks temporary changes to lesson schedules. Allows teachers/admins to move lessons from their regular schedule (defined in lesson_agreements) to different dates/times for specific weeks, or cancel them entirely.';
 
 COMMENT ON COLUMN public.lesson_appointment_deviations.id IS 'Primary key, UUID generated automatically';
 COMMENT ON COLUMN public.lesson_appointment_deviations.lesson_agreement_id IS 'Reference to lesson_agreements table. CASCADE delete: if lesson agreement is deleted, all its deviations are deleted.';
@@ -70,11 +86,15 @@ COMMENT ON COLUMN public.lesson_appointment_deviations.original_date IS 'The dat
 COMMENT ON COLUMN public.lesson_appointment_deviations.original_start_time IS 'The original start time according to the lesson agreement. Stored for consistency and clarity, even though it also exists in lesson_agreements.start_time.';
 COMMENT ON COLUMN public.lesson_appointment_deviations.actual_date IS 'The actual date when the lesson takes place';
 COMMENT ON COLUMN public.lesson_appointment_deviations.actual_start_time IS 'The actual start time (actual_date contains only date, no time)';
+COMMENT ON COLUMN public.lesson_appointment_deviations.is_cancelled IS 'When true, the lesson for this specific date is cancelled/deleted. The actual_date/actual_start_time fields will equal the original values in this case.';
 COMMENT ON COLUMN public.lesson_appointment_deviations.reason IS 'Optional reason for the deviation (e.g., "Teacher unavailable", "Student request")';
 COMMENT ON COLUMN public.lesson_appointment_deviations.created_by_user_id IS 'Who created this deviation (for audit trail and accountability)';
 COMMENT ON COLUMN public.lesson_appointment_deviations.last_updated_by_user_id IS 'Who last updated this deviation (updated on every UPDATE)';
 COMMENT ON COLUMN public.lesson_appointment_deviations.created_at IS 'Timestamp when this record was created';
 COMMENT ON COLUMN public.lesson_appointment_deviations.updated_at IS 'Timestamp when this record was last updated (automatically maintained by trigger)';
+
+COMMENT ON CONSTRAINT deviation_must_actually_deviate_or_be_cancelled ON public.lesson_appointment_deviations
+IS 'Prevents creating deviations that do not actually deviate from the original schedule, unless the lesson is cancelled. If is_cancelled is false and actual_date = original_date AND actual_start_time = original_start_time, the deviation is useless and should not exist.';
 
 -- =============================================================================
 -- SECTION 3: ENABLE RLS
@@ -249,6 +269,40 @@ CREATE TRIGGER enforce_deviation_immutable_fields_trigger
 BEFORE UPDATE ON public.lesson_appointment_deviations
 FOR EACH ROW
 EXECUTE FUNCTION public.enforce_deviation_immutable_fields();
+
+-- Trigger function to auto-delete deviations that become no-ops after UPDATE
+-- This provides better UX: when a user drags an event back to its original
+-- position, the deviation is automatically cleaned up instead of blocking.
+-- Note: cancelled deviations are NOT auto-deleted, even if they match original schedule.
+CREATE OR REPLACE FUNCTION public.auto_delete_noop_deviation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  -- If actual matches original AND not cancelled, delete this deviation instead of updating
+  IF NEW.actual_date = NEW.original_date
+     AND NEW.actual_start_time = NEW.original_start_time
+     AND NEW.is_cancelled = false THEN
+    DELETE FROM public.lesson_appointment_deviations WHERE id = NEW.id;
+    -- Return NULL to skip the UPDATE (row is already deleted)
+    RETURN NULL;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- Set function owner to postgres for SECURITY DEFINER
+ALTER FUNCTION public.auto_delete_noop_deviation() OWNER TO postgres;
+
+-- Create trigger to auto-delete no-op deviations on UPDATE
+-- Runs BEFORE UPDATE so we can return NULL to skip the update
+CREATE TRIGGER auto_delete_noop_deviation_trigger
+BEFORE UPDATE ON public.lesson_appointment_deviations
+FOR EACH ROW
+EXECUTE FUNCTION public.auto_delete_noop_deviation();
 
 -- =============================================================================
 -- SECTION 6: PERMISSIONS

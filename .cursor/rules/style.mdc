@@ -8,3 +8,54 @@ alwaysApply: true
 * Tools, CLI tools should always be completely written in English (output, input and code)
 * For loading spinners, always use `LuLoaderCircle` from `react-icons/lu` with `animate-spin` class
 * Never use `any`, always deduce the required type and use that
+
+## Loading States: Skeleton vs Spinner
+
+Use **Skeleton** for content loading (modals, cards, lists) and **Spinner** for actions/operations.
+
+### When to use Skeleton
+
+- Loading modal content
+- Loading card content
+- Loading list items
+- Loading page sections
+- Any case where you know the layout structure beforehand
+
+```tsx
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Match the skeleton to the actual content layout
+<div className="space-y-2">
+  <Skeleton className="h-4 w-24" />   {/* Label */}
+  <Skeleton className="h-5 w-40" />   {/* Value */}
+</div>
+
+// For avatars
+<Skeleton className="h-10 w-10 rounded-full" />
+
+// For text lines
+<Skeleton className="h-4 w-full" />
+<Skeleton className="h-4 w-3/4" />
+```
+
+### When to use Spinner
+
+- Form submission
+- Button actions (save, delete, etc.)
+- Background operations where layout is unknown
+
+```tsx
+import { LuLoaderCircle } from 'react-icons/lu';
+
+<Button disabled={saving}>
+  {saving && <LuLoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+  Opslaan
+</Button>
+```
+
+### Skeleton Best Practices
+
+1. **Match the layout**: Skeleton should mirror the actual content structure
+2. **Use appropriate sizes**: Match widths to expected content (e.g., `w-24` for short labels, `w-40` for values)
+3. **Maintain spacing**: Use the same gap/space classes as the actual content
+4. **Consider permissions**: Show skeleton for sections the user will see (e.g., `canViewFullData && <Skeleton ... />`)

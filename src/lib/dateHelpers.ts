@@ -106,3 +106,22 @@ export function displayDayToDbDay(displayIndex: number): number {
 export function dbDayToDisplayDay(dbIndex: number): number {
 	return dbIndex === 0 ? 6 : dbIndex - 1;
 }
+
+/**
+ * Format a date string to Dutch format (e.g., "maandag 10 februari")
+ * @param dateStr - Date string in ISO format (YYYY-MM-DD or full ISO)
+ * @returns Formatted date string in Dutch
+ */
+export function formatDate(dateStr: string): string {
+	const date = new Date(dateStr);
+	return format(date, 'EEEE d MMMM', { locale: nl });
+}
+
+/**
+ * Format a time string by removing seconds if present (HH:MM:SS -> HH:MM)
+ * @param timeStr - Time string, possibly with seconds
+ * @returns Time string in HH:MM format
+ */
+export function formatTime(timeStr: string): string {
+	return timeStr.substring(0, 5);
+}

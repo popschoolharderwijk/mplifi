@@ -36,15 +36,9 @@ export type LessonAgreementWithTeacher = Pick<
 /**
  * Lesson appointment deviation with its related lesson agreement
  */
-export type LessonAppointmentDeviationWithAgreement = Pick<
+export type LessonAppointmentDeviationWithAgreement = Omit<
 	LessonAppointmentDeviationRow,
-	| 'id'
-	| 'lesson_agreement_id'
-	| 'original_date'
-	| 'original_start_time'
-	| 'actual_date'
-	| 'actual_start_time'
-	| 'reason'
+	'created_at' | 'updated_at' | 'created_by_user_id' | 'last_updated_by_user_id'
 > & {
 	lesson_agreements: LessonAgreementWithStudent;
 };

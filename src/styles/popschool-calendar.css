@@ -157,7 +157,7 @@
 		@apply text-xs font-medium text-primary hover:underline;
 	}
 
-	/* Agenda View */
+	/* Agenda View - list style */
 	& .rbc-agenda-view {
 		@apply border-0;
 	}
@@ -166,20 +166,21 @@
 		@apply w-full border-collapse;
 	}
 
+	/* Match week view header styling exactly */
 	& .rbc-agenda-view table.rbc-agenda-table thead > tr > th {
-		@apply border-b border-border bg-secondary/50 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground;
+		@apply border-b border-border bg-secondary/50 py-3 px-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground;
 	}
 
 	& .rbc-agenda-view table.rbc-agenda-table tbody > tr > td {
-		@apply border-b border-border px-3 py-2 text-sm text-foreground;
+		@apply border-b border-border py-3 px-3 text-sm text-foreground;
 	}
 
-	& .rbc-agenda-view table.rbc-agenda-table tbody > tr.rbc-agenda-date-cell {
-		@apply bg-secondary/20;
+	& .rbc-agenda-view table.rbc-agenda-table tbody > tr:hover > td {
+		@apply bg-muted/20;
 	}
 
 	& .rbc-agenda-date-cell {
-		@apply font-medium text-foreground;
+		@apply text-foreground font-medium whitespace-nowrap;
 	}
 
 	& .rbc-agenda-time-cell {
@@ -188,6 +189,45 @@
 
 	& .rbc-agenda-event-cell {
 		@apply w-full;
+	}
+
+	/* Override ALL inline styles for events in agenda view */
+	& .rbc-agenda-view .rbc-event {
+		background-color: transparent !important;
+		background: transparent !important;
+		border: none !important;
+		border-color: transparent !important;
+		border-width: 0 !important;
+		border-left-width: 0 !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
+		opacity: 1 !important;
+		padding: 0 !important;
+		color: inherit !important;
+	}
+
+	& .rbc-agenda-view .rbc-event,
+	& .rbc-agenda-view .rbc-event-content {
+		@apply text-sm text-foreground;
+	}
+
+	/* Hide warning icon in agenda view */
+	& .rbc-agenda-view .rbc-event svg {
+		display: none !important;
+	}
+
+	& .rbc-agenda-view .rbc-event > div {
+		display: inline !important;
+		position: static !important;
+	}
+
+	& .rbc-agenda-view .rbc-event > div > span {
+		display: inline !important;
+	}
+
+	/* Empty state */
+	& .rbc-agenda-empty {
+		@apply text-center text-muted-foreground py-12 text-sm;
 	}
 
 	/* Drag and Drop */

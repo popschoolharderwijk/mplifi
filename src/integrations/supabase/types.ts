@@ -100,6 +100,7 @@ export type Database = {
 					created_at: string;
 					created_by_user_id: string;
 					id: string;
+					is_cancelled: boolean;
 					last_updated_by_user_id: string;
 					lesson_agreement_id: string;
 					original_date: string;
@@ -113,6 +114,7 @@ export type Database = {
 					created_at?: string;
 					created_by_user_id: string;
 					id?: string;
+					is_cancelled?: boolean;
 					last_updated_by_user_id: string;
 					lesson_agreement_id: string;
 					original_date: string;
@@ -126,6 +128,7 @@ export type Database = {
 					created_at?: string;
 					created_by_user_id?: string;
 					id?: string;
+					is_cancelled?: boolean;
 					last_updated_by_user_id?: string;
 					lesson_agreement_id?: string;
 					original_date?: string;
