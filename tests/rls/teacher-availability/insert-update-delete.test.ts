@@ -1,8 +1,20 @@
-import { describe, expect, it } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { createClientAs, createClientBypassRLS } from '../../db';
 import { fixtures } from '../fixtures';
 import { TestUsers } from '../test-users';
 import type { TeacherAvailabilityInsert } from '../types';
+import { setupDatabaseStateVerification, type DatabaseState } from '../db-state';
+
+let initialState: DatabaseState;
+const { setupState, verifyState } = setupDatabaseStateVerification();
+
+beforeAll(async () => {
+	initialState = await setupState();
+});
+
+afterAll(async () => {
+	await verifyState(initialState);
+});
 
 const dbNoRLS = createClientBypassRLS();
 
@@ -33,7 +45,7 @@ describe('RLS: teacher_availability INSERT - blocked for non-teacher/admin roles
 	};
 
 	it('user without role cannot insert availability', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		const { data, error } = await db.from('teacher_availability').insert(newAvailability).select();
 
@@ -42,7 +54,7 @@ describe('RLS: teacher_availability INSERT - blocked for non-teacher/admin roles
 	});
 
 	it('student cannot insert availability', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		const { data, error } = await db.from('teacher_availability').insert(newAvailability).select();
 
@@ -51,7 +63,7 @@ describe('RLS: teacher_availability INSERT - blocked for non-teacher/admin roles
 	});
 
 	it('staff cannot insert availability', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const { data, error } = await db.from('teacher_availability').insert(newAvailability).select();
 
@@ -146,7 +158,7 @@ describe('RLS: teacher_availability INSERT - admin permissions', () => {
 
 describe('RLS: teacher_availability UPDATE - blocked for non-teacher/admin roles', () => {
 	it('user without role cannot update availability', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		// Get an existing availability record
 		const { data: existing } = await dbNoRLS
@@ -171,7 +183,7 @@ describe('RLS: teacher_availability UPDATE - blocked for non-teacher/admin roles
 	});
 
 	it('staff cannot update availability', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const { data: existing } = await dbNoRLS
 			.from('teacher_availability')
@@ -280,7 +292,7 @@ describe('RLS: teacher_availability UPDATE - admin permissions', () => {
 
 describe('RLS: teacher_availability DELETE - blocked for non-teacher/admin roles', () => {
 	it('user without role cannot delete availability', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		const { data: existing } = await dbNoRLS
 			.from('teacher_availability')
@@ -300,7 +312,7 @@ describe('RLS: teacher_availability DELETE - blocked for non-teacher/admin roles
 	});
 
 	it('staff cannot delete availability', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const { data: existing } = await dbNoRLS
 			.from('teacher_availability')

@@ -35,7 +35,7 @@ describe('RLS: students SELECT', () => {
 	});
 
 	it('staff sees all students', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const { data, error } = await db.from('students').select('*');
 
@@ -44,8 +44,8 @@ describe('RLS: students SELECT', () => {
 	});
 
 	it('student can see only their own record', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const studentAUserId = fixtures.requireUserId(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
+		const studentAUserId = fixtures.requireUserId(TestUsers.STUDENT_001);
 
 		const { data, error } = await db.from('students').select('*');
 
@@ -55,8 +55,8 @@ describe('RLS: students SELECT', () => {
 	});
 
 	it('student cannot see other students', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const studentBId = fixtures.requireStudentId(TestUsers.STUDENT_B);
+		const db = await createClientAs(TestUsers.STUDENT_001);
+		const studentBId = fixtures.requireStudentId(TestUsers.STUDENT_002);
 
 		const { data, error } = await db.from('students').select('*').eq('id', studentBId);
 
@@ -74,7 +74,7 @@ describe('RLS: students SELECT', () => {
 	});
 
 	it('user without role cannot see any students', async () => {
-		const db = await createClientAs(TestUsers.USER_A);
+		const db = await createClientAs(TestUsers.USER_001);
 
 		const { data, error } = await db.from('students').select('*');
 

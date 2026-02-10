@@ -28,12 +28,12 @@ De lokale Supabase wordt automatisch geseeded met testgebruikers uit `supabase/s
 
 | Type | Gebruikers |
 |------|-----------|
-| **site_admin** | `site-admin@test.nl` |
-| **admin** | `admin-one@test.nl`, `admin-two@test.nl` |
-| **staff** | `staff@test.nl` |
-| **teachers** | `teacher-alice@test.nl`, `teacher-bob@test.nl` |
-| **students** | `student-a@test.nl` t/m `student-d@test.nl` |
-| **users (geen rol)** | `user-a@test.nl`, `user-b@test.nl` |
+| **site_admin** | `site-admin@test.nl` (1) |
+| **admin** | `admin-one@test.nl`, `admin-two@test.nl` (2) |
+| **staff** | `staff-one@test.nl` t/m `staff-five@test.nl` (5) |
+| **teachers** | `teacher-alice@test.nl` t/m `teacher-jack@test.nl` (10) |
+| **students** | `student-001@test.nl` t/m `student-060@test.nl` (60) |
+| **users (geen rol)** | `user-001@test.nl` t/m `user-010@test.nl` (10) |
 
 Daarnaast bevat de seed:
 - **Lesson types**: Referentiedata voor lestypes

@@ -25,7 +25,7 @@ describe('RLS: profiles SELECT', () => {
 	});
 
 	it('staff sees all profiles', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const { data, error } = await db.from('profiles').select('*');
 
@@ -47,7 +47,7 @@ describe('RLS: profiles SELECT', () => {
 	});
 
 	it('user without role sees only own profile', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		// Query profiles - RLS should filter to only their row
 		const { data, error } = await db.from('profiles').select('*');
@@ -57,18 +57,18 @@ describe('RLS: profiles SELECT', () => {
 
 		const [user] = data ?? [];
 		expect(user).toBeDefined();
-		expect(user.email).toBe(TestUsers.STUDENT_A);
+		expect(user.email).toBe(TestUsers.STUDENT_001);
 	});
 
 	it('user cannot see other user profiles', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		const { data, error } = await db.from('profiles').select('*');
 
 		expect(error).toBeNull();
 
 		const emails = data?.map((p) => p.email) ?? [];
-		expect(emails).not.toContain(TestUsers.STUDENT_B);
+		expect(emails).not.toContain(TestUsers.STUDENT_002);
 		expect(emails).not.toContain(TestUsers.TEACHER_ALICE);
 	});
 });

@@ -29,7 +29,7 @@ describe('RLS: lesson_types SELECT', () => {
 	});
 
 	it('staff sees all lesson types', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const { data, error } = await db.from('lesson_types').select('*');
 
@@ -47,7 +47,7 @@ describe('RLS: lesson_types SELECT', () => {
 	});
 
 	it('student without role sees all lesson types', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		const { data, error } = await db.from('lesson_types').select('*');
 
@@ -56,7 +56,7 @@ describe('RLS: lesson_types SELECT', () => {
 	});
 
 	it('user without role sees all lesson types', async () => {
-		const db = await createClientAs(TestUsers.USER_A);
+		const db = await createClientAs(TestUsers.USER_001);
 
 		const { data, error } = await db.from('lesson_types').select('*');
 

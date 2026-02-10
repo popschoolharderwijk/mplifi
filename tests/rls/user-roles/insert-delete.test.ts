@@ -23,10 +23,10 @@ const { requireUserId, allUserRoles } = fixtures;
  */
 
 describe('RLS: user_roles INSERT - blocked for non-admin roles', () => {
-	const targetUserId = requireUserId(TestUsers.STUDENT_A);
+	const targetUserId = requireUserId(TestUsers.STUDENT_001);
 
 	it('user without role cannot insert user_role', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		const newUserRole: UserRoleInsert = { user_id: targetUserId, role: 'staff' };
 		const { data, error } = await db.from('user_roles').insert(newUserRole).select();
@@ -37,7 +37,7 @@ describe('RLS: user_roles INSERT - blocked for non-admin roles', () => {
 	});
 
 	it('staff cannot insert user_role', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const newUserRole: UserRoleInsert = { user_id: targetUserId, role: 'staff' };
 		const { data, error } = await db.from('user_roles').insert(newUserRole).select();
@@ -48,7 +48,7 @@ describe('RLS: user_roles INSERT - blocked for non-admin roles', () => {
 });
 
 describe('RLS: user_roles INSERT - admin permissions', () => {
-	const targetUserId = requireUserId(TestUsers.STUDENT_B);
+	const targetUserId = requireUserId(TestUsers.STUDENT_002);
 	let initialState: DatabaseState;
 	const { setupState, verifyState } = setupDatabaseStateVerification();
 
@@ -104,8 +104,8 @@ describe('RLS: user_roles INSERT - admin permissions', () => {
 
 describe('RLS: user_roles DELETE - blocked for non-admin roles', () => {
 	it('user without role cannot delete roles', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const userId = requireUserId(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STUDENT_001);
+		const userId = requireUserId(TestUsers.STAFF_ONE);
 
 		const { data, error } = await db.from('user_roles').delete().eq('user_id', userId).select();
 
@@ -115,7 +115,7 @@ describe('RLS: user_roles DELETE - blocked for non-admin roles', () => {
 	});
 
 	it('staff cannot delete roles', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 		const userId = requireUserId(TestUsers.ADMIN_ONE);
 
 		const { data, error } = await db.from('user_roles').delete().eq('user_id', userId).select();
@@ -126,7 +126,7 @@ describe('RLS: user_roles DELETE - blocked for non-admin roles', () => {
 });
 
 describe('RLS: user_roles DELETE - admin permissions', () => {
-	const targetUserId = requireUserId(TestUsers.STUDENT_C);
+	const targetUserId = requireUserId(TestUsers.STUDENT_003);
 	let initialState: DatabaseState;
 	const { setupState, verifyState } = setupDatabaseStateVerification();
 

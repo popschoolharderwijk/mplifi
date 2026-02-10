@@ -7,8 +7,8 @@ const { requireProfile } = fixtures;
 
 describe('Constraints: phone_number validation', () => {
 	it('allows valid 10-digit phone number', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const profile = requireProfile(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
+		const profile = requireProfile(TestUsers.STUDENT_001);
 		const originalPhoneNumber = profile.phone_number;
 
 		const { data, error } = await db
@@ -26,8 +26,8 @@ describe('Constraints: phone_number validation', () => {
 	});
 
 	it('allows NULL phone number', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const profile = requireProfile(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
+		const profile = requireProfile(TestUsers.STUDENT_001);
 		const originalPhoneNumber = profile.phone_number;
 
 		const { data, error } = await db
@@ -45,8 +45,8 @@ describe('Constraints: phone_number validation', () => {
 	});
 
 	it('rejects phone number with less than 10 digits', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const profile = requireProfile(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
+		const profile = requireProfile(TestUsers.STUDENT_001);
 
 		const { data, error } = await db
 			.from('profiles')
@@ -60,8 +60,8 @@ describe('Constraints: phone_number validation', () => {
 	});
 
 	it('rejects phone number with more than 10 digits', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const profile = requireProfile(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
+		const profile = requireProfile(TestUsers.STUDENT_001);
 
 		const { data, error } = await db
 			.from('profiles')
@@ -75,8 +75,8 @@ describe('Constraints: phone_number validation', () => {
 	});
 
 	it('rejects phone number with non-numeric characters', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const profile = requireProfile(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
+		const profile = requireProfile(TestUsers.STUDENT_001);
 
 		const { data, error } = await db
 			.from('profiles')
@@ -90,8 +90,8 @@ describe('Constraints: phone_number validation', () => {
 	});
 
 	it('rejects phone number with spaces', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const profile = requireProfile(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
+		const profile = requireProfile(TestUsers.STUDENT_001);
 
 		const { data, error } = await db
 			.from('profiles')
@@ -105,8 +105,8 @@ describe('Constraints: phone_number validation', () => {
 	});
 
 	it('rejects empty string phone number', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const profile = requireProfile(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
+		const profile = requireProfile(TestUsers.STUDENT_001);
 
 		const { data, error } = await db
 			.from('profiles')

@@ -1,14 +1,26 @@
-import { describe, expect, it } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { createClientAs, createClientBypassRLS } from '../../db';
 import { fixtures } from '../fixtures';
 import { TestUsers } from '../test-users';
+import { setupDatabaseStateVerification, type DatabaseState } from '../db-state';
 
 const { requireProfile, allUserRoles } = fixtures;
 
+let initialState: DatabaseState;
+const { setupState, verifyState } = setupDatabaseStateVerification();
+
+beforeAll(async () => {
+	initialState = await setupState();
+});
+
+afterAll(async () => {
+	await verifyState(initialState);
+});
+
 describe('Triggers: profiles immutability', () => {
 	it('user_id cannot be changed', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const profile = requireProfile(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
+		const profile = requireProfile(TestUsers.STUDENT_001);
 		const fakeUserId = '00000000-0000-0000-0000-999999999999';
 
 		const { error } = await db
@@ -23,8 +35,8 @@ describe('Triggers: profiles immutability', () => {
 	});
 
 	it('email cannot be changed directly on profiles', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const profile = requireProfile(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
+		const profile = requireProfile(TestUsers.STUDENT_001);
 
 		const { error } = await db
 			.from('profiles')
@@ -38,8 +50,8 @@ describe('Triggers: profiles immutability', () => {
 	});
 
 	it('updated_at is automatically updated on profile change', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const profile = requireProfile(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
+		const profile = requireProfile(TestUsers.STUDENT_001);
 		const originalUpdatedAt = profile.updated_at;
 
 		// Wait a moment to ensure time difference

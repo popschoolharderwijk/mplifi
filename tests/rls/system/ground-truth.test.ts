@@ -4,15 +4,16 @@ import { fixtures } from '../fixtures';
 const { allProfiles, allUserRoles } = fixtures;
 
 describe('RLS: verify ground truth', () => {
-	it('should have exactly 12 profiles', () => {
-		expect(allProfiles).toHaveLength(12);
+	it('should have exactly 88 profiles', () => {
+		// 1 site_admin, 2 admins, 5 staff, 10 teachers, 60 students, 10 users (no role)
+		expect(allProfiles).toHaveLength(88);
 	});
 
-	it('should have exactly 4 user roles (only explicit roles)', () => {
-		// Only site_admin, admin (2), staff have explicit roles
+	it('should have exactly 8 user roles (only explicit roles)', () => {
+		// Only site_admin, admin (2), staff (5) have explicit roles
 		// Teachers are identified by the teachers table, not by a role
-		// Users A-D have no role entry
-		expect(allUserRoles).toHaveLength(4);
+		// Students and users without role have no role entry
+		expect(allUserRoles).toHaveLength(8);
 	});
 
 	it('should have 1 site_admin', () => {
@@ -25,9 +26,9 @@ describe('RLS: verify ground truth', () => {
 		expect(admins).toHaveLength(2);
 	});
 
-	it('should have 1 staff', () => {
+	it('should have 5 staff', () => {
 		const staff = allUserRoles.filter((ur) => ur.role === 'staff');
-		expect(staff).toHaveLength(1);
+		expect(staff).toHaveLength(5);
 	});
 
 	it('should have 0 teachers in user_roles (teachers are in teachers table)', () => {
@@ -44,24 +45,31 @@ describe('RLS: verify ground truth', () => {
 		}
 	});
 
-	it('should have 8 users without explicit roles', () => {
-		// Teachers (alice, bob), students (A-D), and regular users (A-B) exist in profiles but have no entry in user_roles
+	it('should have 80 users without explicit roles', () => {
+		// Teachers (10), students (60), and regular users (10) exist in profiles but have no entry in user_roles
 		// Teachers are identified by the teachers table, not by a role
 		const userIdsWithRoles = new Set(allUserRoles.map((ur) => ur.user_id));
 		const profilesWithoutRoles = allProfiles.filter((p) => !userIdsWithRoles.has(p.user_id));
-		expect(profilesWithoutRoles).toHaveLength(8);
+		expect(profilesWithoutRoles).toHaveLength(80);
 
-		const emails = profilesWithoutRoles.map((p) => p.email).sort();
-		expect(emails).toEqual([
-			'student-a@test.nl',
-			'student-b@test.nl',
-			'student-c@test.nl',
-			'student-d@test.nl',
-			'teacher-alice@test.nl',
-			'teacher-bob@test.nl',
-			'user-a@test.nl',
-			'user-b@test.nl',
-		]);
+		// Verify we have the expected distribution
+		const teacherEmails = profilesWithoutRoles
+			.filter((p) => p.email.startsWith('teacher-'))
+			.map((p) => p.email)
+			.sort();
+		expect(teacherEmails).toHaveLength(10);
+
+		const studentEmails = profilesWithoutRoles
+			.filter((p) => p.email.startsWith('student-'))
+			.map((p) => p.email)
+			.sort();
+		expect(studentEmails).toHaveLength(60);
+
+		const userEmails = profilesWithoutRoles
+			.filter((p) => p.email.startsWith('user-'))
+			.map((p) => p.email)
+			.sort();
+		expect(userEmails).toHaveLength(10);
 	});
 
 	it('should have correct email for site_admin', () => {

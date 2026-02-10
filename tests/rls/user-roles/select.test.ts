@@ -25,7 +25,7 @@ describe('RLS: user_roles SELECT', () => {
 	});
 
 	it('staff sees all user roles', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const { data, error } = await db.from('user_roles').select('*');
 
@@ -45,7 +45,7 @@ describe('RLS: user_roles SELECT', () => {
 	});
 
 	it('user without role sees nothing in user_roles', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		const { data, error } = await db.from('user_roles').select('*');
 
@@ -55,8 +55,8 @@ describe('RLS: user_roles SELECT', () => {
 	});
 
 	it('user without role cannot see other user roles', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const otherUserId = requireUserId(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STUDENT_001);
+		const otherUserId = requireUserId(TestUsers.STAFF_ONE);
 
 		const { data, error } = await db.from('user_roles').select('*').eq('user_id', otherUserId);
 

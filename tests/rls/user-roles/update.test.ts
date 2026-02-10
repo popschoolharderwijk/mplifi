@@ -1,12 +1,24 @@
-import { describe, expect, it } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { createClientAs } from '../../db';
 import { fixtures } from '../fixtures';
 import { TestUsers } from '../test-users';
+import { setupDatabaseStateVerification, type DatabaseState } from '../db-state';
+
+let initialState: DatabaseState;
+const { setupState, verifyState } = setupDatabaseStateVerification();
+
+beforeAll(async () => {
+	initialState = await setupState();
+});
+
+afterAll(async () => {
+	await verifyState(initialState);
+});
 
 const { allUserRoles, getProfile, getUserId, requireUserId } = fixtures;
 
 // Get target user_id for role update tests (use staff user)
-const targetUserId = getUserId(TestUsers.STAFF);
+const targetUserId = getUserId(TestUsers.STAFF_ONE);
 
 if (!targetUserId) {
 	throw new Error('Could not find staff user for role update tests');
@@ -14,7 +26,7 @@ if (!targetUserId) {
 
 describe('RLS: user_roles UPDATE - other users', () => {
 	it('user without role cannot update user roles', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		const { data, error } = await db
 			.from('user_roles')
@@ -28,7 +40,7 @@ describe('RLS: user_roles UPDATE - other users', () => {
 	});
 
 	it('staff cannot update user roles', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const { data, error } = await db
 			.from('user_roles')
@@ -125,8 +137,8 @@ describe('RLS: user_roles UPDATE - other users', () => {
 
 describe('RLS: user_roles UPDATE - own role', () => {
 	it('user without role has no role to update', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const userId = requireUserId(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
+		const userId = requireUserId(TestUsers.STUDENT_001);
 
 		// Users without a role have no entry in user_roles
 		const { data, error } = await db.from('user_roles').update({ role: 'staff' }).eq('user_id', userId).select();
@@ -136,9 +148,9 @@ describe('RLS: user_roles UPDATE - own role', () => {
 	});
 
 	it('staff cannot update own role', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
-		const staffProfile = getProfile(TestUsers.STAFF);
+		const staffProfile = getProfile(TestUsers.STAFF_ONE);
 		if (!staffProfile) {
 			throw new Error('Could not find staff profile');
 		}

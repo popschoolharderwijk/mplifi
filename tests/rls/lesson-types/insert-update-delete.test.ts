@@ -1,7 +1,19 @@
-import { describe, expect, it } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { createClientAs } from '../../db';
 import { TestUsers } from '../test-users';
 import type { LessonTypeInsert } from '../types';
+import { setupDatabaseStateVerification, type DatabaseState } from '../db-state';
+
+let initialState: DatabaseState;
+const { setupState, verifyState } = setupDatabaseStateVerification();
+
+beforeAll(async () => {
+	initialState = await setupState();
+});
+
+afterAll(async () => {
+	await verifyState(initialState);
+});
 
 /**
  * Lesson types INSERT/UPDATE/DELETE permissions:
@@ -29,7 +41,7 @@ describe('RLS: lesson_types INSERT - blocked for non-admin roles', () => {
 	};
 
 	it('user without role cannot insert lesson type', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		const { data, error } = await db.from('lesson_types').insert(newLessonType).select();
 
@@ -48,7 +60,7 @@ describe('RLS: lesson_types INSERT - blocked for non-admin roles', () => {
 	});
 
 	it('staff cannot insert lesson type', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const { data, error } = await db.from('lesson_types').insert(newLessonType).select();
 
@@ -103,7 +115,7 @@ describe('RLS: lesson_types INSERT - admin permissions', () => {
 
 describe('RLS: lesson_types UPDATE - blocked for non-admin roles', () => {
 	it('user without role cannot update lesson type', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		// Get first lesson type to try updating
 		const { data: lessonTypes } = await db.from('lesson_types').select('id').limit(1);
@@ -141,7 +153,7 @@ describe('RLS: lesson_types UPDATE - blocked for non-admin roles', () => {
 	});
 
 	it('staff cannot update lesson type', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const { data: lessonTypes } = await db.from('lesson_types').select('id').limit(1);
 		if (!lessonTypes || lessonTypes.length === 0) {
@@ -216,7 +228,7 @@ describe('RLS: lesson_types UPDATE - admin permissions', () => {
 
 describe('RLS: lesson_types DELETE - blocked for non-admin roles', () => {
 	it('user without role cannot delete lesson type', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		const { data: lessonTypes } = await db.from('lesson_types').select('id').limit(1);
 		if (!lessonTypes || lessonTypes.length === 0) {
@@ -245,7 +257,7 @@ describe('RLS: lesson_types DELETE - blocked for non-admin roles', () => {
 	});
 
 	it('staff cannot delete lesson type', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const { data: lessonTypes } = await db.from('lesson_types').select('id').limit(1);
 		if (!lessonTypes || lessonTypes.length === 0) {

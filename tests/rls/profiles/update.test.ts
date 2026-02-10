@@ -1,14 +1,26 @@
-import { describe, expect, it } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { createClientAs } from '../../db';
 import { fixtures } from '../fixtures';
 import { TestUsers } from '../test-users';
+import { setupDatabaseStateVerification, type DatabaseState } from '../db-state';
 
 const { requireProfile, requireUserId } = fixtures;
 
+let initialState: DatabaseState;
+const { setupState, verifyState } = setupDatabaseStateVerification();
+
+beforeAll(async () => {
+	initialState = await setupState();
+});
+
+afterAll(async () => {
+	await verifyState(initialState);
+});
+
 describe('RLS: profiles UPDATE - own profile', () => {
 	it('user without role can update own profile', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const profile = requireProfile(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
+		const profile = requireProfile(TestUsers.STUDENT_001);
 
 		const { data, error } = await db
 			.from('profiles')
@@ -22,7 +34,10 @@ describe('RLS: profiles UPDATE - own profile', () => {
 		expect(data?.[0]?.last_name).toBe('User A');
 
 		// Restore original
-		await db.from('profiles').update({ first_name: 'Student', last_name: 'A' }).eq('user_id', profile.user_id);
+		await db
+			.from('profiles')
+			.update({ first_name: profile.first_name, last_name: profile.last_name })
+			.eq('user_id', profile.user_id);
 	});
 
 	it('teacher can update own profile', async () => {
@@ -41,12 +56,15 @@ describe('RLS: profiles UPDATE - own profile', () => {
 		expect(data?.[0]?.last_name).toBe('Alice');
 
 		// Restore original
-		await db.from('profiles').update({ first_name: 'Teacher', last_name: 'Alice' }).eq('user_id', profile.user_id);
+		await db
+			.from('profiles')
+			.update({ first_name: profile.first_name, last_name: profile.last_name })
+			.eq('user_id', profile.user_id);
 	});
 
 	it('staff can update own profile', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
-		const profile = requireProfile(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
+		const profile = requireProfile(TestUsers.STAFF_ONE);
 
 		const { data, error } = await db
 			.from('profiles')
@@ -60,7 +78,10 @@ describe('RLS: profiles UPDATE - own profile', () => {
 		expect(data?.[0]?.last_name).toBe('Staff');
 
 		// Restore original
-		await db.from('profiles').update({ first_name: 'Staff', last_name: null }).eq('user_id', profile.user_id);
+		await db
+			.from('profiles')
+			.update({ first_name: profile.first_name, last_name: profile.last_name })
+			.eq('user_id', profile.user_id);
 	});
 
 	it('admin can update own profile', async () => {
@@ -79,7 +100,10 @@ describe('RLS: profiles UPDATE - own profile', () => {
 		expect(data?.[0]?.last_name).toBe('Admin');
 
 		// Restore original
-		await db.from('profiles').update({ first_name: 'Admin', last_name: 'One' }).eq('user_id', profile.user_id);
+		await db
+			.from('profiles')
+			.update({ first_name: profile.first_name, last_name: profile.last_name })
+			.eq('user_id', profile.user_id);
 	});
 
 	it('site_admin can update own profile', async () => {
@@ -98,14 +122,17 @@ describe('RLS: profiles UPDATE - own profile', () => {
 		expect(data?.[0]?.last_name).toBe('Site Admin');
 
 		// Restore original
-		await db.from('profiles').update({ first_name: 'Site', last_name: 'Admin' }).eq('user_id', profile.user_id);
+		await db
+			.from('profiles')
+			.update({ first_name: profile.first_name, last_name: profile.last_name })
+			.eq('user_id', profile.user_id);
 	});
 });
 
 describe('RLS: profiles UPDATE - other profiles', () => {
 	it('user without role cannot update other profiles', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
-		const targetUserId = requireUserId(TestUsers.STUDENT_B);
+		const db = await createClientAs(TestUsers.STUDENT_001);
+		const targetUserId = requireUserId(TestUsers.STUDENT_002);
 
 		const { data, error } = await db
 			.from('profiles')
@@ -119,7 +146,7 @@ describe('RLS: profiles UPDATE - other profiles', () => {
 
 	it('teacher cannot update other profiles', async () => {
 		const db = await createClientAs(TestUsers.TEACHER_ALICE);
-		const targetUserId = requireUserId(TestUsers.STUDENT_A);
+		const targetUserId = requireUserId(TestUsers.STUDENT_001);
 
 		const { data, error } = await db
 			.from('profiles')
@@ -132,7 +159,7 @@ describe('RLS: profiles UPDATE - other profiles', () => {
 	});
 
 	it('staff cannot update other profiles', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 		// Try to update teacher profile
 		const teacherUserId = requireUserId(TestUsers.TEACHER_ALICE);
 
@@ -171,8 +198,8 @@ describe('RLS: profiles UPDATE - other profiles', () => {
 
 	it('site_admin can update any profile', async () => {
 		const db = await createClientAs(TestUsers.SITE_ADMIN);
-		const staffUserId = requireUserId(TestUsers.STAFF);
-		const originalProfile = requireProfile(TestUsers.STAFF);
+		const staffUserId = requireUserId(TestUsers.STAFF_ONE);
+		const originalProfile = requireProfile(TestUsers.STAFF_ONE);
 
 		const { data, error } = await db
 			.from('profiles')

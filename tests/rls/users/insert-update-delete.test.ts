@@ -1,10 +1,22 @@
-import { describe, expect, it } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { createClientAs, createClientBypassRLS } from '../../db';
 import { fixtures } from '../fixtures';
 import { TestUsers } from '../test-users';
+import { setupDatabaseStateVerification, type DatabaseState } from '../db-state';
 
 const dbNoRLS = createClientBypassRLS();
 const { requireUserId, requireProfile } = fixtures;
+
+let initialState: DatabaseState;
+const { setupState, verifyState } = setupDatabaseStateVerification();
+
+beforeAll(async () => {
+	initialState = await setupState();
+});
+
+afterAll(async () => {
+	await verifyState(initialState);
+});
 
 /**
  * Users without role, teacher, or student permissions:
@@ -23,8 +35,8 @@ const { requireUserId, requireProfile } = fixtures;
 describe('RLS: users without role/teacher/student - INSERT/UPDATE/DELETE', () => {
 	describe('profiles table', () => {
 		it('USER_A can update own profile', async () => {
-			const db = await createClientAs(TestUsers.USER_A);
-			const ownProfile = requireProfile(TestUsers.USER_A);
+			const db = await createClientAs(TestUsers.USER_001);
+			const ownProfile = requireProfile(TestUsers.USER_001);
 			const newFirstName = 'Updated';
 
 			const { data, error } = await db
@@ -42,8 +54,8 @@ describe('RLS: users without role/teacher/student - INSERT/UPDATE/DELETE', () =>
 		});
 
 		it('USER_A cannot update other profiles', async () => {
-			const db = await createClientAs(TestUsers.USER_A);
-			const otherProfile = requireProfile(TestUsers.USER_B);
+			const db = await createClientAs(TestUsers.USER_001);
+			const otherProfile = requireProfile(TestUsers.USER_002);
 
 			const { data, error } = await db
 				.from('profiles')
@@ -56,7 +68,7 @@ describe('RLS: users without role/teacher/student - INSERT/UPDATE/DELETE', () =>
 		});
 
 		it('USER_A cannot insert profiles', async () => {
-			const db = await createClientAs(TestUsers.USER_A);
+			const db = await createClientAs(TestUsers.USER_001);
 
 			const { data, error } = await db
 				.from('profiles')
@@ -71,8 +83,8 @@ describe('RLS: users without role/teacher/student - INSERT/UPDATE/DELETE', () =>
 		});
 
 		it('USER_A cannot delete profiles', async () => {
-			const db = await createClientAs(TestUsers.USER_A);
-			const otherProfile = requireProfile(TestUsers.USER_B);
+			const db = await createClientAs(TestUsers.USER_001);
+			const otherProfile = requireProfile(TestUsers.USER_002);
 
 			const { data, error } = await db.from('profiles').delete().eq('user_id', otherProfile.user_id).select();
 
@@ -83,8 +95,8 @@ describe('RLS: users without role/teacher/student - INSERT/UPDATE/DELETE', () =>
 
 	describe('students table', () => {
 		it('USER_A cannot insert students', async () => {
-			const db = await createClientAs(TestUsers.USER_A);
-			const ownUserId = requireUserId(TestUsers.USER_A);
+			const db = await createClientAs(TestUsers.USER_001);
+			const ownUserId = requireUserId(TestUsers.USER_001);
 
 			const { data, error } = await db.from('students').insert({ user_id: ownUserId }).select();
 
@@ -95,8 +107,8 @@ describe('RLS: users without role/teacher/student - INSERT/UPDATE/DELETE', () =>
 
 	describe('teachers table', () => {
 		it('USER_A cannot insert teachers', async () => {
-			const db = await createClientAs(TestUsers.USER_A);
-			const ownUserId = requireUserId(TestUsers.USER_A);
+			const db = await createClientAs(TestUsers.USER_001);
+			const ownUserId = requireUserId(TestUsers.USER_001);
 
 			const { data, error } = await db.from('teachers').insert({ user_id: ownUserId }).select();
 
@@ -107,7 +119,7 @@ describe('RLS: users without role/teacher/student - INSERT/UPDATE/DELETE', () =>
 
 	describe('lesson_agreements table', () => {
 		it('USER_A cannot insert lesson agreements', async () => {
-			const db = await createClientAs(TestUsers.USER_A);
+			const db = await createClientAs(TestUsers.USER_001);
 
 			// Get valid IDs using bypass RLS
 			const { data: student } = await dbNoRLS.from('students').select('id').limit(1).single();
@@ -138,7 +150,7 @@ describe('RLS: users without role/teacher/student - INSERT/UPDATE/DELETE', () =>
 
 	describe('lesson_types table', () => {
 		it('USER_A cannot insert lesson types', async () => {
-			const db = await createClientAs(TestUsers.USER_A);
+			const db = await createClientAs(TestUsers.USER_001);
 
 			const { data, error } = await db
 				.from('lesson_types')
@@ -159,8 +171,8 @@ describe('RLS: users without role/teacher/student - INSERT/UPDATE/DELETE', () =>
 
 	describe('user_roles table', () => {
 		it('USER_A cannot insert user roles', async () => {
-			const db = await createClientAs(TestUsers.USER_A);
-			const ownUserId = requireUserId(TestUsers.USER_A);
+			const db = await createClientAs(TestUsers.USER_001);
+			const ownUserId = requireUserId(TestUsers.USER_001);
 
 			const { data, error } = await db.from('user_roles').insert({ user_id: ownUserId, role: 'staff' }).select();
 

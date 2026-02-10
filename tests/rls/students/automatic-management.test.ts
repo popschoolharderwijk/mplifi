@@ -1,13 +1,27 @@
-import { describe, expect, it } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { createClientAs, createClientBypassRLS } from '../../db';
 import { fixtures } from '../fixtures';
 import { TestUsers } from '../test-users';
 import type { LessonAgreementInsert } from '../types';
+import { setupDatabaseStateVerification, type DatabaseState } from '../db-state';
+
+let initialState: DatabaseState;
+const { setupState, verifyState } = setupDatabaseStateVerification();
+
+beforeAll(async () => {
+	initialState = await setupState();
+});
+
+afterAll(async () => {
+	await verifyState(initialState);
+});
 
 const dbNoRLS = createClientBypassRLS();
 
 // User IDs for testing
-const studentCUserId = fixtures.requireUserId(TestUsers.STUDENT_C);
+// Use a student that doesn't exist in seed data, or use a user without role
+// We'll use USER_001 which has no student record initially
+const studentCUserId = fixtures.requireUserId(TestUsers.USER_001);
 const teacherAliceId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
 const lessonTypeId = fixtures.requireLessonTypeId('Gitaar');
 
@@ -20,7 +34,7 @@ const lessonTypeId = fixtures.requireLessonTypeId('Gitaar');
  */
 describe('RLS: students automatic management via lesson agreements', () => {
 	it('student is automatically created when lesson agreement is inserted and deleted when all agreements are removed', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		// Verify student does not exist
 		const { data: studentsBefore } = await dbNoRLS.from('students').select('*').eq('user_id', studentCUserId);
@@ -65,7 +79,7 @@ describe('RLS: students automatic management via lesson agreements', () => {
 	});
 
 	it('student is created with 2 agreements and remains when 1 is deleted, but is deleted when the 2nd is removed', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		// Verify student does not exist initially
 		const { data: studentsInitial } = await dbNoRLS.from('students').select('*').eq('user_id', studentCUserId);
@@ -161,7 +175,7 @@ describe('RLS: students automatic management via lesson agreements', () => {
 	});
 
 	it('expired agreements still count - student remains even if all agreements are expired', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		// Create an expired agreement
 		const expiredAgreement: LessonAgreementInsert = {
@@ -201,7 +215,7 @@ describe('RLS: students automatic management via lesson agreements', () => {
 	});
 
 	it('multiple agreements deleted in one operation removes student automatically', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		// Create multiple agreements for the same student
 		const agreement1: LessonAgreementInsert = {

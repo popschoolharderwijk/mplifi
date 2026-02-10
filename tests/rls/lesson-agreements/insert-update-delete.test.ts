@@ -1,13 +1,26 @@
-import { describe, expect, it } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { createClientAs } from '../../db';
 import { fixtures } from '../fixtures';
 import { TestUsers } from '../test-users';
 import type { LessonAgreementInsert } from '../types';
+import { setupDatabaseStateVerification, type DatabaseState } from '../db-state';
 
-const studentAUserId = fixtures.requireUserId(TestUsers.STUDENT_A);
+let initialState: DatabaseState;
+const { setupState, verifyState } = setupDatabaseStateVerification();
+
+beforeAll(async () => {
+	initialState = await setupState();
+});
+
+afterAll(async () => {
+	await verifyState(initialState);
+});
+
+// Use student-009 who has agreement with teacher-alice
+const studentAUserId = fixtures.requireUserId(TestUsers.STUDENT_009);
 const teacherAliceId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
 const lessonTypeId = fixtures.requireLessonTypeId('Gitaar');
-const testAgreementId = fixtures.requireAgreementId(TestUsers.STUDENT_A, TestUsers.TEACHER_ALICE);
+const testAgreementId = fixtures.requireAgreementId(TestUsers.STUDENT_009, TestUsers.TEACHER_ALICE);
 
 /**
  * Lesson agreements INSERT/UPDATE/DELETE permissions:
@@ -32,7 +45,7 @@ describe('RLS: lesson_agreements INSERT - blocked for students and teachers', ()
 	};
 
 	it('student cannot insert lesson agreement', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		const { data, error } = await db.from('lesson_agreements').insert(newAgreement).select();
 
@@ -63,7 +76,7 @@ describe('RLS: lesson_agreements INSERT - staff permissions', () => {
 	};
 
 	it('staff can insert lesson agreement', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const { data, error } = await db.from('lesson_agreements').insert(newAgreement).select();
 
@@ -113,7 +126,8 @@ describe('RLS: lesson_agreements INSERT - staff permissions', () => {
 
 describe('RLS: lesson_agreements UPDATE - blocked for students and teachers', () => {
 	it('student cannot update lesson agreement', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		// Use student-009 who has the agreement but cannot update it
+		const db = await createClientAs(TestUsers.STUDENT_009);
 
 		// Use agreement ID that student can see but cannot update
 		const { data, error } = await db
@@ -144,7 +158,7 @@ describe('RLS: lesson_agreements UPDATE - blocked for students and teachers', ()
 
 describe('RLS: lesson_agreements UPDATE - staff permissions', () => {
 	it('staff can update lesson agreement', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		// Get first agreement to update
 		const { data: agreements } = await db.from('lesson_agreements').select('*').limit(1);
@@ -227,7 +241,8 @@ describe('RLS: lesson_agreements UPDATE - staff permissions', () => {
 
 describe('RLS: lesson_agreements DELETE - blocked for students and teachers', () => {
 	it('student cannot delete lesson agreement', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		// Use student-009 who has the agreement but cannot delete it
+		const db = await createClientAs(TestUsers.STUDENT_009);
 
 		// Use agreement ID that student can see but cannot delete
 		const { data, error } = await db.from('lesson_agreements').delete().eq('id', testAgreementId).select();
@@ -250,7 +265,7 @@ describe('RLS: lesson_agreements DELETE - blocked for students and teachers', ()
 
 describe('RLS: lesson_agreements DELETE - staff permissions', () => {
 	it('staff can delete lesson agreement', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		// Create an agreement to delete
 		const newAgreement: LessonAgreementInsert = {

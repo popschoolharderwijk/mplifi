@@ -39,7 +39,7 @@ describe('RLS: anonymous user access', () => {
 			const { data, error } = await db
 				.from('profiles')
 				.update({ first_name: 'Hacked', last_name: null })
-				.eq('email', 'student-a@test.nl')
+				.eq('email', 'student-001@test.nl')
 				.select();
 
 			// Should return empty result (RLS blocks)
@@ -50,7 +50,7 @@ describe('RLS: anonymous user access', () => {
 		it('anon cannot delete profiles', async () => {
 			const db = createClientAnon();
 
-			const { data, error } = await db.from('profiles').delete().eq('email', 'student-a@test.nl').select();
+			const { data, error } = await db.from('profiles').delete().eq('email', 'student-001@test.nl').select();
 
 			expect(error).toBeNull();
 			expect(data).toHaveLength(0);
@@ -169,7 +169,7 @@ describe('RLS: anonymous user access', () => {
 			// Role helper functions are REVOKE'd from PUBLIC and only granted to authenticated.
 			// Anon should NOT be able to call these functions.
 			const { data, error } = await db.rpc('is_site_admin', {
-				_user_id: '00000000-0000-0000-0000-000000000001',
+				_user_id: '10000000-0001-0000-0000-000000000000',
 			});
 
 			// Anon must be blocked from calling this function

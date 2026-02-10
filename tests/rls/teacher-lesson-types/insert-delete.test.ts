@@ -10,8 +10,11 @@ const dbNoRLS = createClientBypassRLS();
 const aliceTeacherId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
 const bobTeacherId = fixtures.requireTeacherId(TestUsers.TEACHER_BOB);
 const guitarLessonTypeId = fixtures.requireLessonTypeId('Gitaar');
-const singingLessonTypeId = fixtures.requireLessonTypeId('Zang');
-// Use Drums for tests - it's not linked to any teacher in seed.sql
+// Alice already has Gitaar, Drums, and Zang in seed.sql
+// Bob already has Bas and Keyboard in seed.sql
+// Use Saxofoon for tests - Alice doesn't have it
+const saxofoonLessonTypeId = fixtures.requireLessonTypeId('Saxofoon');
+// Use Drums for Bob - Bob doesn't have it
 const drumsLessonTypeId = fixtures.requireLessonTypeId('Drums');
 
 /**
@@ -32,11 +35,11 @@ const drumsLessonTypeId = fixtures.requireLessonTypeId('Drums');
 describe('RLS: teacher_lesson_types INSERT - blocked for non-admin roles', () => {
 	const newLink: TeacherLessonTypeInsert = {
 		teacher_id: aliceTeacherId,
-		lesson_type_id: singingLessonTypeId,
+		lesson_type_id: saxofoonLessonTypeId,
 	};
 
 	it('user without role cannot insert lesson type link', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		const { data, error } = await db.from('teacher_lesson_types').insert(newLink).select();
 
@@ -45,7 +48,7 @@ describe('RLS: teacher_lesson_types INSERT - blocked for non-admin roles', () =>
 	});
 
 	it('student cannot insert lesson type link', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		const { data, error } = await db.from('teacher_lesson_types').insert(newLink).select();
 
@@ -63,7 +66,7 @@ describe('RLS: teacher_lesson_types INSERT - blocked for non-admin roles', () =>
 	});
 
 	it('staff cannot insert lesson type link', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const { data, error } = await db.from('teacher_lesson_types').insert(newLink).select();
 
@@ -78,7 +81,7 @@ describe('RLS: teacher_lesson_types INSERT - admin permissions', () => {
 
 		const newLink: TeacherLessonTypeInsert = {
 			teacher_id: aliceTeacherId,
-			lesson_type_id: singingLessonTypeId,
+			lesson_type_id: saxofoonLessonTypeId,
 		};
 
 		const { data, error } = await db.from('teacher_lesson_types').insert(newLink).select();
@@ -86,7 +89,7 @@ describe('RLS: teacher_lesson_types INSERT - admin permissions', () => {
 		expect(error).toBeNull();
 		expect(data).toHaveLength(1);
 		expect(data?.[0]?.teacher_id).toBe(aliceTeacherId);
-		expect(data?.[0]?.lesson_type_id).toBe(singingLessonTypeId);
+		expect(data?.[0]?.lesson_type_id).toBe(saxofoonLessonTypeId);
 
 		// Cleanup
 		if (data?.[0]) {
@@ -124,7 +127,7 @@ describe('RLS: teacher_lesson_types INSERT - admin permissions', () => {
 
 describe('RLS: teacher_lesson_types DELETE - blocked for non-admin roles', () => {
 	it('user without role cannot delete lesson type link', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		const { data, error } = await db
 			.from('teacher_lesson_types')
@@ -152,7 +155,7 @@ describe('RLS: teacher_lesson_types DELETE - blocked for non-admin roles', () =>
 	});
 
 	it('staff cannot delete lesson type link', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const { data, error } = await db
 			.from('teacher_lesson_types')
@@ -181,12 +184,12 @@ describe('RLS: teacher_lesson_types DELETE - admin permissions', () => {
 	it('admin can delete lesson type link', async () => {
 		const db = await createClientAs(TestUsers.ADMIN_ONE);
 
-		// Create a test link to delete (use Drums - not in seed for Alice)
+		// Create a test link to delete (use Saxofoon - not in seed for Alice)
 		const insertResult = await dbNoRLS
 			.from('teacher_lesson_types')
 			.insert({
 				teacher_id: aliceTeacherId,
-				lesson_type_id: drumsLessonTypeId,
+				lesson_type_id: saxofoonLessonTypeId,
 			})
 			.select();
 
@@ -198,7 +201,7 @@ describe('RLS: teacher_lesson_types DELETE - admin permissions', () => {
 			.from('teacher_lesson_types')
 			.delete()
 			.eq('teacher_id', aliceTeacherId)
-			.eq('lesson_type_id', drumsLessonTypeId)
+			.eq('lesson_type_id', saxofoonLessonTypeId)
 			.select();
 
 		expect(error).toBeNull();

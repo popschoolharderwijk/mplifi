@@ -6,8 +6,8 @@ import { TestUsers } from '../test-users';
 import type { StudentInsert } from '../types';
 
 // User IDs from fixtures for insert tests
-const studentBUserId = fixtures.requireUserId(TestUsers.STUDENT_B);
-const studentCUserId = fixtures.requireUserId(TestUsers.STUDENT_C);
+const studentBUserId = fixtures.requireUserId(TestUsers.STUDENT_002);
+const studentCUserId = fixtures.requireUserId(TestUsers.STUDENT_003);
 
 // Existing student ID for UPDATE/DELETE block tests
 const testStudentId = fixtures.allStudents[0].id;
@@ -29,7 +29,7 @@ describe('RLS: students INSERT - blocked for all roles', () => {
 	const newStudent: StudentInsert = { user_id: studentBUserId };
 
 	it('user without role cannot insert student', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		const { data, error } = await db.from('students').insert(newStudent).select();
 
@@ -48,7 +48,7 @@ describe('RLS: students INSERT - blocked for all roles', () => {
 	});
 
 	it('staff cannot insert student', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const { data, error } = await db.from('students').insert(newStudent).select();
 
@@ -83,7 +83,7 @@ describe('RLS: students INSERT - blocked for all roles', () => {
 
 describe('RLS: students UPDATE - blocked for non-admin roles', () => {
 	it('user without role cannot update student', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		const { data, error } = await db
 			.from('students')
@@ -110,7 +110,7 @@ describe('RLS: students UPDATE - blocked for non-admin roles', () => {
 	});
 
 	it('staff cannot update student', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const { data: students } = await db.from('students').select('id').limit(1);
 		if (!students || students.length === 0) {
@@ -185,7 +185,7 @@ describe('RLS: students UPDATE - admin permissions', () => {
 
 describe('RLS: students DELETE - blocked for all roles', () => {
 	it('user without role cannot delete student', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		const { data, error } = await db.from('students').delete().eq('id', testStudentId).select();
 
@@ -204,7 +204,7 @@ describe('RLS: students DELETE - blocked for all roles', () => {
 	});
 
 	it('staff cannot delete student', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const { data: students } = await db.from('students').select('id').limit(1);
 		if (!students || students.length === 0) {

@@ -35,7 +35,7 @@ describe('RLS: teachers SELECT', () => {
 	});
 
 	it('staff sees all teachers', async () => {
-		const db = await createClientAs(TestUsers.STAFF);
+		const db = await createClientAs(TestUsers.STAFF_ONE);
 
 		const { data, error } = await db.from('teachers').select('*');
 
@@ -65,7 +65,7 @@ describe('RLS: teachers SELECT', () => {
 	});
 
 	it('student cannot see any teachers', async () => {
-		const db = await createClientAs(TestUsers.STUDENT_A);
+		const db = await createClientAs(TestUsers.STUDENT_001);
 
 		const { data, error } = await db.from('teachers').select('*');
 
@@ -74,7 +74,7 @@ describe('RLS: teachers SELECT', () => {
 	});
 
 	it('user without role cannot see any teachers', async () => {
-		const db = await createClientAs(TestUsers.USER_A);
+		const db = await createClientAs(TestUsers.USER_001);
 
 		const { data, error } = await db.from('teachers').select('*');
 
