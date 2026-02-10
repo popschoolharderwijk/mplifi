@@ -216,7 +216,7 @@ BEGIN
     'authenticated',                                    -- aud
     'authenticated',                                    -- role
     email,
-    '$2a$10$yBzT6M450XE/0xAgYQHCpu8IMIh0mWzy02C6X231pYCRZm9TSCd5.',  -- encrypted_password
+    '$2a$10$9e974vMhtRxGA42trytRd.tC0yXzEhsKO0xN8lgoLjy5psvhsJTY.',  -- encrypted_password
     now(),                                              -- email_confirmed_at
     '{"provider":"email","providers":["email"]}',       -- raw_app_meta_data
 	json_build_object(         							-- raw_user_meta_data

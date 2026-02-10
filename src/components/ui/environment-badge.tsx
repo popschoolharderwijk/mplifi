@@ -23,7 +23,7 @@ export function EnvironmentBadge({ className }: { className?: string }) {
 				<TooltipTrigger asChild>
 					<span
 						className={cn(
-							'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium cursor-help',
+							'flex items-center gap-1 rounded-md px-0 py-0 text-xs font-medium cursor-help',
 							config.color,
 							className,
 						)}
