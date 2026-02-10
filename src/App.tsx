@@ -9,7 +9,6 @@ import Dashboard from './pages/Dashboard';
 import LessonTypes from './pages/LessonTypes';
 import Login from './pages/Login';
 import MyAvailability from './pages/MyAvailability';
-import MyProfile from './pages/MyProfile';
 import MyStatistics from './pages/MyStatistics';
 import MyStudentProfile from './pages/MyStudentProfile';
 import MyStudents from './pages/MyStudents';
@@ -17,6 +16,7 @@ import NotFound from './pages/NotFound';
 import Settings from './pages/Settings';
 import Students from './pages/Students';
 import TeacherAvailability from './pages/TeacherAvailability';
+import TeacherInfo from './pages/TeacherInfo';
 import Teachers from './pages/Teachers';
 import Users from './pages/Users';
 
@@ -47,9 +47,10 @@ const App = () => (
 						<Route path="/settings" element={<Settings />} />
 						<Route path="/teachers" element={<Teachers />} />
 						<Route path="/teachers/availability" element={<TeacherAvailability />} />
-						<Route path="/teachers/my-profile" element={<MyProfile />} />
+						<Route path="/teachers/my-profile" element={<TeacherInfo />} />
 						<Route path="/teachers/my-availability" element={<MyAvailability />} />
 						<Route path="/teachers/my-statistics" element={<MyStatistics />} />
+						<Route path="/teachers/:id" element={<TeacherInfo />} />
 						<Route path="/students" element={<Students />} />
 						<Route path="/students/my-students" element={<MyStudents />} />
 						<Route path="/students/my-profile" element={<MyStudentProfile />} />

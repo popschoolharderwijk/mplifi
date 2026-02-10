@@ -183,6 +183,12 @@ CREATE POLICY teachers_insert_admin
 ON public.teachers FOR INSERT TO authenticated
 WITH CHECK (public.is_admin((select auth.uid())) OR public.is_site_admin((select auth.uid())));
 
+-- Teachers can update their own record (especially for bio)
+CREATE POLICY teachers_update_own
+ON public.teachers FOR UPDATE TO authenticated
+USING (user_id = (select auth.uid()))
+WITH CHECK (user_id = (select auth.uid()));
+
 -- Admins and site_admins can update teachers
 CREATE POLICY teachers_update_admin
 ON public.teachers FOR UPDATE TO authenticated

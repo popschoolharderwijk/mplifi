@@ -1,0 +1,12 @@
+---
+alwaysApply: true
+---
+
+* **ALWAYS use `--linked` flag for Supabase commands, NEVER the local database**
+* ALWAYS use:
+  - `supabase db reset --linked` (not `supabase db reset`)
+  - `supabase gen types typescript --linked > src/integrations/supabase/types.ts` (not without --linked)
+  - `supabase db push --linked` (not without --linked)
+  - All other Supabase commands that work with the database must also use `--linked`
+* Local Supabase (`supabase start`) is NOT used as of now.
+* Development workflow always works with the remote dev instance (mcp-dev) via `--linked`

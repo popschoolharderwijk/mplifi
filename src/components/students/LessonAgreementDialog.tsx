@@ -5,32 +5,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { resolveIconFromList } from '@/components/ui/icon-picker';
 import { MUSIC_ICONS } from '@/constants/icons';
 import { DAY_NAMES } from '@/lib/dateHelpers';
+import type { LessonAgreementWithTeacher } from '@/types/lesson-agreements';
 
-export interface LessonAgreement {
-	id: string;
-	day_of_week: number;
-	start_time: string;
-	start_date: string;
-	end_date: string | null;
-	is_active: boolean;
-	notes: string | null;
-	teacher: {
-		first_name: string | null;
-		last_name: string | null;
-		avatar_url: string | null;
-	};
-	lesson_type: {
-		id: string;
-		name: string;
-		icon: string | null;
-		color: string | null;
-	};
-}
+export type { LessonAgreementWithTeacher as LessonAgreement };
 
 interface LessonAgreementDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	agreement: LessonAgreement | null;
+	agreement: LessonAgreementWithTeacher | null;
 }
 
 function formatTime(time: string): string {
@@ -46,7 +28,7 @@ function formatDate(date: string): string {
 	});
 }
 
-function getTeacherDisplayName(teacher: LessonAgreement['teacher']): string {
+function getTeacherDisplayName(teacher: LessonAgreementWithTeacher['teacher']): string {
 	if (teacher.first_name && teacher.last_name) {
 		return `${teacher.first_name} ${teacher.last_name}`;
 	}
@@ -56,7 +38,7 @@ function getTeacherDisplayName(teacher: LessonAgreement['teacher']): string {
 	return 'Onbekend';
 }
 
-function getTeacherInitials(teacher: LessonAgreement['teacher']): string {
+function getTeacherInitials(teacher: LessonAgreementWithTeacher['teacher']): string {
 	if (teacher.first_name && teacher.last_name) {
 		return `${teacher.first_name[0]}${teacher.last_name[0]}`.toUpperCase();
 	}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LuLoaderCircle, LuPlus, LuTriangleAlert } from 'react-icons/lu';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { TeacherFormDialog } from '@/components/teachers/TeacherFormDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -23,36 +23,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useServerTableState } from '@/hooks/useServerTableState';
 import { type LessonType, useLessonTypeFilter, useStatusFilter } from '@/hooks/useTableFilters';
 import { supabase } from '@/integrations/supabase/client';
-
-interface TeacherProfile {
-	email: string;
-	first_name: string | null;
-	last_name: string | null;
-	phone_number: string | null;
-	avatar_url: string | null;
-}
-
-interface TeacherWithProfile {
-	id: string;
-	user_id: string;
-	bio: string | null;
-	is_active: boolean;
-	created_at: string;
-	updated_at: string;
-	profile: TeacherProfile;
-	lesson_types: LessonType[];
-}
-
-interface PaginatedTeachersResponse {
-	data: TeacherWithProfile[];
-	total_count: number;
-	limit: number;
-	offset: number;
-}
+import type { PaginatedTeachersResponse, TeacherWithProfileAndLessonTypes } from '@/types/teachers';
 
 export default function Teachers() {
 	const { isAdmin, isSiteAdmin, isLoading: authLoading } = useAuth();
-	const [teachers, setTeachers] = useState<TeacherWithProfile[]>([]);
+	const navigate = useNavigate();
+	const [teachers, setTeachers] = useState<TeacherWithProfileAndLessonTypes[]>([]);
 	const [lessonTypes, setLessonTypes] = useState<LessonType[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [totalCount, setTotalCount] = useState(0);
@@ -83,11 +59,11 @@ export default function Teachers() {
 
 	const [deleteDialog, setDeleteDialog] = useState<{
 		open: boolean;
-		teacher: TeacherWithProfile | null;
+		teacher: TeacherWithProfileAndLessonTypes | null;
 	} | null>(null);
 	const [teacherFormDialog, setTeacherFormDialog] = useState<{
 		open: boolean;
-		teacher: TeacherWithProfile | null;
+		teacher: TeacherWithProfileAndLessonTypes | null;
 	}>({ open: false, teacher: null });
 	const [deletingTeacher, setDeletingTeacher] = useState(false);
 
@@ -179,7 +155,7 @@ export default function Teachers() {
 	}, [authLoading, loadTeachers]);
 
 	// Helper functions
-	const getUserInitials = useCallback((t: TeacherWithProfile) => {
+	const getUserInitials = useCallback((t: TeacherWithProfileAndLessonTypes) => {
 		const profile = t.profile;
 		if (profile.first_name && profile.last_name) {
 			return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
@@ -190,7 +166,7 @@ export default function Teachers() {
 		return profile.email.slice(0, 2).toUpperCase();
 	}, []);
 
-	const getDisplayName = useCallback((t: TeacherWithProfile) => {
+	const getDisplayName = useCallback((t: TeacherWithProfileAndLessonTypes) => {
 		const profile = t.profile;
 		if (profile.first_name && profile.last_name) {
 			return `${profile.first_name} ${profile.last_name}`;
@@ -213,7 +189,7 @@ export default function Teachers() {
 		return groups;
 	}, [statusFilterGroup, lessonTypeFilterGroup]);
 
-	const columns: DataTableColumn<TeacherWithProfile>[] = useMemo(
+	const columns: DataTableColumn<TeacherWithProfileAndLessonTypes>[] = useMemo(
 		() => [
 			{
 				key: 'teacher',
@@ -300,15 +276,18 @@ export default function Teachers() {
 		[getUserInitials, getDisplayName],
 	);
 
-	const handleEdit = useCallback((teacher: TeacherWithProfile) => {
-		setTeacherFormDialog({ open: true, teacher });
-	}, []);
+	const handleEdit = useCallback(
+		(teacher: TeacherWithProfileAndLessonTypes) => {
+			navigate(`/teachers/${teacher.id}`);
+		},
+		[navigate],
+	);
 
 	const handleCreate = useCallback(() => {
 		setTeacherFormDialog({ open: true, teacher: null });
 	}, []);
 
-	const handleDelete = useCallback((teacher: TeacherWithProfile) => {
+	const handleDelete = useCallback((teacher: TeacherWithProfileAndLessonTypes) => {
 		setDeleteDialog({ open: true, teacher });
 	}, []);
 

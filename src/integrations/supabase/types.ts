@@ -93,6 +93,56 @@ export type Database = {
 					},
 				];
 			};
+			lesson_appointment_deviations: {
+				Row: {
+					actual_date: string;
+					actual_start_time: string;
+					created_at: string;
+					created_by_user_id: string;
+					id: string;
+					last_updated_by_user_id: string;
+					lesson_agreement_id: string;
+					original_date: string;
+					original_start_time: string;
+					reason: string | null;
+					updated_at: string;
+				};
+				Insert: {
+					actual_date: string;
+					actual_start_time: string;
+					created_at?: string;
+					created_by_user_id: string;
+					id?: string;
+					last_updated_by_user_id: string;
+					lesson_agreement_id: string;
+					original_date: string;
+					original_start_time: string;
+					reason?: string | null;
+					updated_at?: string;
+				};
+				Update: {
+					actual_date?: string;
+					actual_start_time?: string;
+					created_at?: string;
+					created_by_user_id?: string;
+					id?: string;
+					last_updated_by_user_id?: string;
+					lesson_agreement_id?: string;
+					original_date?: string;
+					original_start_time?: string;
+					reason?: string | null;
+					updated_at?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'lesson_appointment_deviations_lesson_agreement_id_fkey';
+						columns: ['lesson_agreement_id'];
+						isOneToOne: false;
+						referencedRelation: 'lesson_agreements';
+						referencedColumns: ['id'];
+					},
+				];
+			};
 			lesson_types: {
 				Row: {
 					color: string;
@@ -434,7 +484,6 @@ export type Database = {
 					p_sort_column?: string;
 					p_sort_direction?: string;
 					p_status?: string;
-					p_teacher_id?: string;
 				};
 				Returns: Json;
 			};

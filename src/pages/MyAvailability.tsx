@@ -17,15 +17,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { DAY_NAMES } from '@/lib/dateHelpers';
+import type { Tables } from '@/integrations/supabase/types';
+import { DAY_NAMES, DEFAULT_END_TIME, DEFAULT_START_TIME } from '@/lib/dateHelpers';
 
-interface Availability {
-	id: string;
-	teacher_id: string;
-	day_of_week: number;
-	start_time: string;
-	end_time: string;
-}
+type Availability = Tables<'teacher_availability'>;
 
 const dayNames = DAY_NAMES;
 
@@ -37,8 +32,8 @@ export default function MyAvailability() {
 	const [deletingId, setDeletingId] = useState<string | null>(null);
 	const [form, setForm] = useState({
 		day_of_week: 1,
-		start_time: '09:00',
-		end_time: '17:00',
+		start_time: DEFAULT_START_TIME,
+		end_time: DEFAULT_END_TIME,
 	});
 
 	const loadAvailability = useCallback(async () => {
@@ -104,7 +99,7 @@ export default function MyAvailability() {
 
 		toast.success('Beschikbaarheid toegevoegd');
 		setAddDialogOpen(false);
-		setForm({ day_of_week: 1, start_time: '09:00', end_time: '17:00' });
+		setForm({ day_of_week: 1, start_time: DEFAULT_START_TIME, end_time: DEFAULT_END_TIME });
 		loadAvailability();
 	};
 

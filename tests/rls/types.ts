@@ -14,3 +14,4 @@ export type TeacherInsert = Database['public']['Tables']['teachers']['Insert'];
 export type TeacherAvailabilityInsert = Database['public']['Tables']['teacher_availability']['Insert'];
 export type TeacherLessonTypeInsert = Database['public']['Tables']['teacher_lesson_types']['Insert'];
 export type UserRoleInsert = Database['public']['Tables']['user_roles']['Insert'];
+export type LessonAppointmentDeviationInsert = Database['public']['Tables']['lesson_appointment_deviations']['Insert'];
