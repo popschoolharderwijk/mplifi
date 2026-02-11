@@ -476,6 +476,14 @@ export type Database = {
 					table_name: string;
 				}[];
 			};
+			get_security_definer_views: {
+				Args: never;
+				Returns: {
+					security_invoker: boolean;
+					view_name: string;
+					view_owner: string;
+				}[];
+			};
 			get_student_id: { Args: { _user_id: string }; Returns: string };
 			get_student_status: { Args: { _user_id: string }; Returns: string };
 			get_students_paginated: {

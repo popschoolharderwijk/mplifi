@@ -111,11 +111,43 @@ AS $$
   ORDER BY t.table_name;
 $$;
 
+-- -----------------------------------------------------------------------------
+-- get_security_definer_views: List all views with security_definer (NOT security_invoker)
+-- Returns views that might bypass RLS policies
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_security_definer_views()
+RETURNS TABLE(view_name TEXT, view_owner TEXT, security_invoker BOOLEAN)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+SET row_security = off
+AS $$
+  SELECT
+    c.relname::TEXT AS view_name,
+    r.rolname::TEXT AS view_owner,
+    -- PostgreSQL 15+ stores security_invoker in reloptions
+    -- If security_invoker is not set or is 'false', the view uses definer semantics
+    COALESCE(
+      (SELECT option_value::BOOLEAN
+       FROM pg_options_to_table(c.reloptions)
+       WHERE option_name = 'security_invoker'),
+      false
+    ) AS security_invoker
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  JOIN pg_roles r ON r.oid = c.relowner
+  WHERE n.nspname = 'public'
+    AND c.relkind = 'v'  -- views only
+  ORDER BY c.relname;
+$$;
+
 -- =============================================================================
 -- SECURITY: Ownership and Access Control
 -- =============================================================================
 
 -- Set explicit ownership
+ALTER FUNCTION public.get_security_definer_views() OWNER TO postgres;
 ALTER FUNCTION public.check_rls_enabled(TEXT) OWNER TO postgres;
 ALTER FUNCTION public.policy_exists(TEXT, TEXT) OWNER TO postgres;
 ALTER FUNCTION public.get_table_policies(TEXT) OWNER TO postgres;
@@ -123,6 +155,7 @@ ALTER FUNCTION public.function_exists(TEXT) OWNER TO postgres;
 ALTER FUNCTION public.get_public_table_names() OWNER TO postgres;
 
 -- Remove all public access
+REVOKE ALL ON FUNCTION public.get_security_definer_views() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.check_rls_enabled(TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.policy_exists(TEXT, TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.get_table_policies(TEXT) FROM PUBLIC;
@@ -130,6 +163,7 @@ REVOKE ALL ON FUNCTION public.function_exists(TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.get_public_table_names() FROM PUBLIC;
 
 -- Explicitly revoke from anon (Supabase's anon role doesn't inherit from PUBLIC revokes)
+REVOKE ALL ON FUNCTION public.get_security_definer_views() FROM anon;
 REVOKE ALL ON FUNCTION public.check_rls_enabled(TEXT) FROM anon;
 REVOKE ALL ON FUNCTION public.policy_exists(TEXT, TEXT) FROM anon;
 REVOKE ALL ON FUNCTION public.get_table_policies(TEXT) FROM anon;
@@ -137,6 +171,7 @@ REVOKE ALL ON FUNCTION public.function_exists(TEXT) FROM anon;
 REVOKE ALL ON FUNCTION public.get_public_table_names() FROM anon;
 
 -- Explicitly revoke from authenticated (defense in depth)
+REVOKE ALL ON FUNCTION public.get_security_definer_views() FROM authenticated;
 REVOKE ALL ON FUNCTION public.check_rls_enabled(TEXT) FROM authenticated;
 REVOKE ALL ON FUNCTION public.policy_exists(TEXT, TEXT) FROM authenticated;
 REVOKE ALL ON FUNCTION public.get_table_policies(TEXT) FROM authenticated;
@@ -144,6 +179,7 @@ REVOKE ALL ON FUNCTION public.function_exists(TEXT) FROM authenticated;
 REVOKE ALL ON FUNCTION public.get_public_table_names() FROM authenticated;
 
 -- Grant access only to service_role (CI/backend testing)
+GRANT EXECUTE ON FUNCTION public.get_security_definer_views() TO service_role;
 GRANT EXECUTE ON FUNCTION public.check_rls_enabled(TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.policy_exists(TEXT, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.get_table_policies(TEXT) TO service_role;

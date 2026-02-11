@@ -152,9 +152,23 @@ const EXPECTED_FUNCTIONS = [
 	'get_table_policies',
 	'function_exists',
 	'get_public_table_names',
+	'get_security_definer_views',
 	// Pagination functions
 	'get_lesson_agreements_paginated',
 ];
+
+// Views that are INTENTIONALLY using SECURITY DEFINER semantics (security_invoker = false)
+// These views bypass RLS and must be carefully reviewed for security implications.
+// Each entry requires a documented justification in the migration file.
+//
+// IMPORTANT: Adding a view here should be a conscious security decision with:
+// 1. Documentation in the migration explaining WHY security_definer is needed
+// 2. Explicit authorization checks within the view/function (e.g., auth.uid() checks)
+// 3. Tests verifying that unauthorized users cannot access data through the view
+//
+// teacher_viewed_by_student: Intentional SECURITY DEFINER - uses explicit auth.uid() checks
+// and only exposes limited fields (name, avatar, phone). See migration 20260207000003.
+const ALLOWED_SECURITY_DEFINER_VIEWS = ['teacher_viewed_by_student'];
 
 describe('RLS Baseline Security Checks', () => {
 	describe('RLS is enabled on all tables', () => {
@@ -212,5 +226,59 @@ describe('RLS Baseline Security Checks', () => {
 				expect(data).toBe(true);
 			});
 		}
+	});
+
+	describe('View security configuration', () => {
+		it('no unexpected SECURITY DEFINER views exist', async () => {
+			// Get all views and their security_invoker setting
+			const { data: views, error } = await supabase.rpc('get_security_definer_views');
+
+			expect(error).toBeNull();
+			expect(views).toBeDefined();
+
+			// Filter views that are NOT using security_invoker (i.e., using security_definer semantics)
+			// These bypass RLS and should be explicitly allowed
+			const securityDefinerViews = (views ?? [])
+				.filter((v: { view_name: string; security_invoker: boolean }) => !v.security_invoker)
+				.map((v: { view_name: string }) => v.view_name);
+
+			// Find any views that are security_definer but NOT in our allowlist
+			const unexpectedSecurityDefinerViews = securityDefinerViews.filter(
+				(viewName: string) => !ALLOWED_SECURITY_DEFINER_VIEWS.includes(viewName),
+			);
+
+			// This test will fail if someone adds a new view without security_invoker = on
+			// To fix: either add security_invoker = on to the view, or add it to ALLOWED_SECURITY_DEFINER_VIEWS
+			// with proper documentation and security review
+			expect(unexpectedSecurityDefinerViews).toEqual([]);
+		});
+
+		it('all allowed SECURITY DEFINER views exist', async () => {
+			// Verify that all views in our allowlist actually exist
+			const { data: views, error } = await supabase.rpc('get_security_definer_views');
+
+			expect(error).toBeNull();
+			expect(views).toBeDefined();
+
+			const viewNames = (views ?? []).map((v: { view_name: string }) => v.view_name);
+
+			for (const allowedView of ALLOWED_SECURITY_DEFINER_VIEWS) {
+				expect(viewNames).toContain(allowedView);
+			}
+		});
+
+		it('views with security_invoker respect RLS', async () => {
+			// Get all views with security_invoker = true
+			const { data: views, error } = await supabase.rpc('get_security_definer_views');
+
+			expect(error).toBeNull();
+
+			const securityInvokerViews = (views ?? [])
+				.filter((v: { security_invoker: boolean }) => v.security_invoker)
+				.map((v: { view_name: string }) => v.view_name);
+
+			// Verify view_profiles_with_display_name is using security_invoker
+			expect(securityInvokerViews).toContain('view_profiles_with_display_name');
+		});
 	});
 });
