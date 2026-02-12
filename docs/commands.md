@@ -7,7 +7,7 @@ Er zijn 3 omgevingen geconfigureerd:
 | Command | Omgeving | Env bestand | Gebruik |
 |---------|----------|-------------|---------|
 | `bun dev` | Remote development | `.env.development` | Lovable branch, remote dev server |
-| `bun dev:local` | Lokale Supabase | `.env.localdev` | Lokaal testen met `supabase start` |
+| `bun dev:test` | Test database | `.env.test` | Test database voor development |
 | `bun prod` | Productie | `.env.production` | Productie server |
 
 ### Env bestanden aanmaken
@@ -21,17 +21,11 @@ VITE_SUPABASE_ANON_KEY=eyJ...
 VITE_DEV_LOGIN_PASSWORD=your-dev-password
 ```
 
-**`.env.localdev`** (lokale Supabase):
+**`.env.test`** (test database):
 ```env
-VITE_SUPABASE_URL=http://localhost:54321
-VITE_SUPABASE_ANON_KEY=eyJ...lokale-anon-key
-
-# Voor scripts (createuser, create-storage-bucket)
-SUPABASE_URL=http://localhost:54321
-SUPABASE_SERVICE_ROLE_KEY=eyJ...lokale-service-key
-
-# Dev login bypass (optioneel, zie "Dev Login Bypass" sectie)
-VITE_DEV_LOGIN_PASSWORD=your-dev-password
+VITE_SUPABASE_URL=https://jserlqacarlgtdzrblic.supabase.co
+VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=eyJ...
+VITE_DEV_LOGIN_PASSWORD=your-test-password
 ```
 
 **`.env.production`** (productie):
@@ -40,24 +34,7 @@ VITE_SUPABASE_URL=https://xyz-prod.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJ...
 ```
 
-> 💡 Alleen `.env` staat in `.gitignore`. De `.env.localdev`, `.env.development` en `.env.production` bestanden worden wel gecommit (zonder secrets).
-
-### Lokale Supabase credentials ophalen
-
-Na `supabase start` verschijnen de credentials in de terminal. Je kunt ze ook opvragen met:
-
-```bash
-supabase status
-```
-
-| Waarde | URL | Gebruik |
-|--------|-----|---------|
-| `API URL` | `http://localhost:54321` | → `VITE_SUPABASE_URL` én `SUPABASE_URL` |
-| `Studio URL` | `http://localhost:54323` | Supabase Dashboard (database, auth, etc.) |
-| `anon key` | | → `VITE_SUPABASE_ANON_KEY` |
-| `service_role key` | | → `SUPABASE_SERVICE_ROLE_KEY` (voor scripts) |
-
-> ⚠️ **Let op**: De API draait op poort **54321**, het Dashboard op poort **54323**. Dit zijn verschillende poorten!
+> 💡 Alleen `.env` staat in `.gitignore`. De `.env.test`, `.env.development` en `.env.production` bestanden worden wel gecommit (zonder secrets).
 
 ---
 
@@ -105,7 +82,7 @@ supabase start -x realtime,storage-api,imgproxy,edge-runtime,logflare,vector,stu
 supabase stop
 ```
 
-> 💡 **Development workflow**: Gebruik `--linked` voor alle commando's die werken met de remote dev instance (mcp-dev). Lokale Supabase wordt alleen gebruikt voor CI tests.
+> 💡 **Development workflow**: Gebruik `--linked` voor alle commando's die werken met de remote dev instance (mcp-dev). Lokale Supabase wordt alleen gebruikt voor CI tests. Voor development gebruik je de test database via `bun dev:test`.
 
 ---
 
@@ -124,8 +101,8 @@ bun run create-storage-bucket
 
 ```bash
 # Maak nieuwe gebruiker aan (of update bestaande)
-# Configureer in .env.localdev of .env.development:
-#   SUPABASE_URL=http://localhost:54321          (verplicht, API URL)
+# Configureer in .env.development of .env.test:
+#   SUPABASE_URL=https://...supabase.co          (verplicht, API URL)
 #   SUPABASE_SERVICE_ROLE_KEY=eyJ...             (verplicht, service role key)
 #   DEV_LOGIN_EMAIL=user@example.com             (verplicht, voor createuser script)
 #   DEV_LOGIN_PASSWORD=wachtwoord                (optioneel, zonder = passwordless user)
@@ -144,7 +121,7 @@ bun run createuser
 
 ## Dev Login Bypass
 
-In development omgevingen (`localdev` en `development`) verschijnt een "Dev Login" knop op de login pagina. Hiermee kun je direct inloggen zonder Magic Link/OTP te hoeven afwachten.
+In development omgevingen (`test` en `development`) verschijnt een "Dev Login" knop op de login pagina. Hiermee kun je direct inloggen zonder Magic Link/OTP te hoeven afwachten.
 
 ### Rol Selectie
 
@@ -160,7 +137,7 @@ Deze users komen uit de seed data (`supabase/seed.sql`) en zijn beschikbaar in d
 
 ### Configuratie
 
-**Optioneel** - Voeg toe aan `.env.development` of `.env.localdev` als je een custom wachtwoord wilt gebruiken:
+**Optioneel** - Voeg toe aan `.env.development` of `.env.test` als je een custom wachtwoord wilt gebruiken:
 
 ```env
 VITE_DEV_LOGIN_PASSWORD=your-custom-password
@@ -173,7 +150,7 @@ Als `VITE_DEV_LOGIN_PASSWORD` niet is ingesteld, wordt de Dev Login knop uitgesc
 ### Beveiliging
 
 - De Dev Login knop wordt **volledig verwijderd** uit production builds (Vite dead-code elimination)
-- Werkt alleen in development modes (`localdev` en `development`)
+- Werkt alleen in development modes (`test` en `development`)
 - Extra runtime check als fallback
 
 ---
@@ -184,10 +161,10 @@ Als `VITE_DEV_LOGIN_PASSWORD` niet is ingesteld, wordt de Dev Login knop uitgesc
 # Unit tests (geen Supabase nodig)
 bun test code
 
-# RLS tests (lokale Supabase moet draaien)
+# RLS tests (lokale Supabase moet draaien voor CI)
 bun test rls
 
-# Auth tests (lokale Supabase moet draaien)
+# Auth tests (lokale Supabase moet draaien voor CI)
 bun test auth
 
 # Alle tests

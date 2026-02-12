@@ -18,8 +18,15 @@
 -- 5. Tests in tests/rls/teachers/teacher-viewed-by-student.test.ts verify that
 --    unauthorized callers cannot retrieve rows
 --
--- This is a deliberate design decision. Treat the "SECURITY DEFINER view" linter
--- warning as a false positive for this specific case.
+-- LINTER WARNING:
+-- The Supabase linter will report: "View public.teacher_viewed_by_student is
+-- defined with the SECURITY DEFINER property". This is a FALSE POSITIVE for this
+-- specific case because security is enforced via explicit auth.uid() checks.
+--
+-- WHITELIST ENTRY:
+-- This view is registered in the ALLOWED_SECURITY_DEFINER_VIEWS whitelist in
+-- tests/rls/system/baseline.security.test.ts. Any new SECURITY DEFINER views
+-- must be added to this whitelist with proper documentation and security review.
 --
 -- This view is intended ONLY for students. Staff/admin/site_admin can access the
 -- teachers and profiles tables directly with full details via their own RLS policies.

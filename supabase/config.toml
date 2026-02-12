@@ -1,5 +1,11 @@
 project_id = "mcp"
 
+[remotes.test]
+project_id = "jserlqacarlgtdzrblic"
+
+[remotes.test.db.seed]
+enabled = true
+
 [remotes.dev]
 project_id = "zdvscmogkfyddnnxzkdu"
 
@@ -65,6 +71,10 @@ web3 = 30
 # -------------
 # Remote Auth Overrides
 # These settings override [auth] defaults when pushing to remote projects
+
+[remotes.test.auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://098d4be4-b790-4fca-9806-d5dd653b8946.lovableproject.com/**", "https://id-preview--098d4be4-b790-4fca-9806-d5dd653b8946.lovable.app/**"]
 
 [remotes.dev.auth]
 site_url = "http://localhost:3000"

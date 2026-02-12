@@ -79,14 +79,9 @@ Dit past toe:
 
 Alle authentication settings worden beheerd via `supabase/config.toml` en gepusht naar remote projects. **Geen handmatige Dashboard configuratie nodig!**
 
-#### Lokale Development Settings
-
-De `[auth]` sectie in `config.toml` configureert lokale development.
-
-
 #### Remote Project Settings
 
-De `[remotes.dev.auth]` en `[remotes.prod.auth]` secties overschrijven de defaults voor remote projects:
+De `[remotes.test.auth]`, `[remotes.dev.auth]` en `[remotes.prod.auth]` secties overschrijven de defaults voor remote projects:
 
 #### Settings Pushen naar Remote
 
@@ -148,7 +143,15 @@ VITE_SUPABASE_URL=https://<project-id>.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon-key>
 ```
 
-### Voor lokale tests en development (.env)
+### Voor test database (.env.test)
+
+```bash
+VITE_SUPABASE_URL=https://<project-id>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=<anon-key>
+VITE_DEV_LOGIN_PASSWORD=<test-password>
+```
+
+### Voor scripts en tests (.env)
 
 ```bash
 SUPABASE_URL=https://<project-id>.supabase.co

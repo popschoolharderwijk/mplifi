@@ -6,8 +6,8 @@ const MODE = import.meta.env.MODE;
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 const ENV_CONFIG: Record<string, { label: string; color: string }> = {
-	localdev: { label: 'LOCAL DEV', color: 'bg-green-500/20 text-green-600 dark:text-green-400' },
-	development: { label: 'REMOTE DEV', color: 'bg-orange-500/20 text-orange-600 dark:text-orange-400' },
+	test: { label: 'TEST', color: 'bg-green-500/20 text-green-600 dark:text-green-400' },
+	development: { label: 'DEVELOPMENT', color: 'bg-orange-500/20 text-orange-600 dark:text-orange-400' },
 	production: { label: 'PRODUCTION', color: 'bg-red-500/20 text-red-600 dark:text-red-400' },
 };
 

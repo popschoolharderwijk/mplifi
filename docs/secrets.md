@@ -2,34 +2,38 @@
 
 ## GitHub Secrets
 
-Nodig voor CI workflows. Toe te voegen via:
-**GitHub** → Settings → Secrets and variables → Actions → New repository secret
+Nodig voor CI workflows. Voeg ze toe via:
+
+**[GitHub Actions Secrets → popschoolharderwijk/mcp](https://github.com/popschoolharderwijk/mcp/settings/secrets/actions)**
+
+Voor de PR-test (code + Supabase) moeten deze **5 Supabase-secrets** zijn ingevuld:
 
 | Secret | Waarde | Gebruik |
 |--------|--------|---------|
-| `RESEND_API_KEY` | API key van Resend.com | Email verzenden in tests (SMTP config) |
+| `SUPABASE_ACCESS_TOKEN` | Access token van Supabase (Account → Access Tokens) | `supabase link` en `supabase db reset --linked` in CI |
+| `SUPABASE_PROJECT_REF` | Project ref van het **test** project (bijv. `jserlqacarlgtdzrblic`) | Link naar externe test Supabase in CI |
+| `SUPABASE_URL` | API URL van het test project (bijv. `https://jserlqacarlgtdzrblic.supabase.co`) | Omgeving voor `bun test` in CI |
+| `SUPABASE_PUBLISHABLE_DEFAULT_KEY` | Anon/publishable key van het test project | Omgeving voor `bun test` in CI |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key van het test project | Omgeving voor `bun test` in CI |
 
-### RESEND_API_KEY verkrijgen
+### RESEND_API_KEY (lokaal)
 
-1. Ga naar https://resend.com/api-keys
-2. Maak een nieuwe API key aan
-3. Voeg toe als GitHub secret
+Voor e-mail (SMTP) via Resend moet je lokaal een `RESEND_API_KEY` in je omgeving zetten (bijv. in `.env`). Die waarde wordt meegegeven wanneer je met `supabase config push --linked` de SMTP-config uit `supabase/config.toml` naar het gekoppelde Supabase-project pusht.
 
----
+| Variabele | Waarde | Gebruik |
+|----------|--------|---------|
+| `RESEND_API_KEY` | API key van Resend.com | In `.env` zetten; vereist voor `supabase config push --linked` om SMTP-config naar Supabase te pushen. |
 
-## Lokale Supabase Credentials (CI)
+Verkrijgen: https://resend.com/api-keys
 
-Voor lokale Supabase testing in CI worden credentials **dynamisch opgehaald** van de draaiende instance via `supabase status -o json`. Dit zorgt ervoor dat JWT keys altijd matchen met de secret van de lokale instance.
+### Waar haal je de waarden vandaan?
 
-| Variabele | Bron | Notities |
-|-----------|------|----------|
-| `SUPABASE_URL` | `supabase status` → `API_URL` | Lokale API endpoint |
-| `SUPABASE_PUBLISHABLE_DEFAULT_KEY` | `supabase status` → `ANON_KEY` | Anon key van draaiende instance |
-| `SUPABASE_SERVICE_ROLE_KEY` | `supabase status` → `SERVICE_ROLE_KEY` | Service key van draaiende instance |
+- **SUPABASE_ACCESS_TOKEN**: [Supabase Dashboard](https://supabase.com/dashboard) → avatar → Account settings → Access Tokens → Generate new token
+- **SUPABASE_PROJECT_REF**, **SUPABASE_URL**, **SUPABASE_PUBLISHABLE_DEFAULT_KEY**, **SUPABASE_SERVICE_ROLE_KEY**: Supabase Dashboard → test project → Settings → API (project ref = deel vóór `.supabase.co` in de URL)
 
-Zie `.github/workflows/pull-request-test-code-and-supabase.yml` voor implementatie.
+De PR-workflow gebruikt een **externe** Supabase (test project). Voor elke testrun wordt `supabase db reset --linked` uitgevoerd zodat de database schoon is. Zie `.github/workflows/pull-request-test-code-and-supabase.yml`.
 
-⚠️ **Commit nooit production keys!** Production credentials horen in GitHub Secrets of Supabase Dashboard.
+⚠️ **Commit nooit production of test keys!** Credentials horen in GitHub Secrets of Supabase Dashboard.
 
 ---
 
@@ -66,7 +70,7 @@ Voor custom configuratie kun je extra secrets toevoegen:
 
 ## Dev Login Bypass (alleen development)
 
-Voor snelle login in development omgevingen zonder Magic Link/OTP. Toe te voegen aan `.env.localdev` en/of `.env.development`:
+Voor snelle login in development omgevingen zonder Magic Link/OTP. Toe te voegen aan `.env.test` en/of `.env.development`:
 
 ### Frontend variabelen (voor de Dev Login knop)
 
@@ -83,14 +87,24 @@ Voor snelle login in development omgevingen zonder Magic Link/OTP. Toe te voegen
 | `DEV_LOGIN_FIRST_NAME` | Nee | Voornaam voor user metadata en profiles |
 | `DEV_LOGIN_LAST_NAME` | Nee | Achternaam voor user metadata en profiles |
 
-**Voorbeeld `.env.localdev`:**
+**Voorbeeld `.env.test`:**
 ```env
 # Supabase connectie
-VITE_SUPABASE_URL=http://localhost:54321
+VITE_SUPABASE_URL=https://jserlqacarlgtdzrblic.supabase.co
+VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=eyJ...
+
+# Dev login bypass
+VITE_DEV_LOGIN_PASSWORD=mijn-test-wachtwoord
+```
+
+**Voorbeeld `.env.development` (voor createuser script):**
+```env
+# Supabase connectie
+VITE_SUPABASE_URL=https://zdvscmogkfyddnnxzkdu.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJ...
 
 # Voor createuser script
-SUPABASE_URL=http://localhost:54321
+SUPABASE_URL=https://zdvscmogkfyddnnxzkdu.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 
 DEV_LOGIN_EMAIL=dev@example.com

@@ -24,12 +24,26 @@ jobs:
     if: needs.check-changes.outputs.should_run == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     env:
-      # Required for Supabase SMTP config (env(RESEND_API_KEY) in config.toml)
-      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      # Required for supabase link (externe test project)
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+
+      - name: Check required secrets
+        run: |
+          missing=""
+          [ -z "${{ secrets.SUPABASE_ACCESS_TOKEN }}" ] && missing="$missing SUPABASE_ACCESS_TOKEN"
+          [ -z "${{ secrets.SUPABASE_PROJECT_REF }}" ] && missing="$missing SUPABASE_PROJECT_REF"
+          [ -z "${{ secrets.SUPABASE_URL }}" ] && missing="$missing SUPABASE_URL"
+          [ -z "${{ secrets.SUPABASE_PUBLISHABLE_DEFAULT_KEY }}" ] && missing="$missing SUPABASE_PUBLISHABLE_DEFAULT_KEY"
+          [ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ] && missing="$missing SUPABASE_SERVICE_ROLE_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing GitHub secrets (add at https://github.com/popschoolharderwijk/mcp/settings/secrets/actions):$missing"
+            exit 1
+          fi
+          echo "All required secrets are present."
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -44,31 +58,17 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Start Supabase (local)
-        # Start only the services needed for tests (reduces startup time and memory)
-        run: supabase start -x realtime,storage-api,imgproxy,logflare,vector,studio,postgres-meta,supavisor
+      - name: Link to Supabase test project
+        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
 
-      - name: Wait for Supabase to start
-        run: |
-          timeout=120
-          elapsed=0
-          until curl -s http://localhost:54321/rest/v1/ > /dev/null 2>&1; do
-            if [ $elapsed -ge $timeout ]; then
-              echo "Timeout waiting for Supabase to start"
-              exit 1
-            fi
-            echo "Waiting for Supabase to start..."
-            sleep 2
-            elapsed=$((elapsed + 2))
-          done
-          echo "Supabase started"
+      - name: Reset database (clean state for tests)
+        run: supabase db reset --linked
 
-      - name: Export Supabase credentials
+      - name: Export Supabase credentials (test project)
         run: |
-          # Get credentials from running Supabase instance (ensures JWT secret match)
-          echo "SUPABASE_URL=$(supabase status -o json | jq -r '.API_URL')" >> $GITHUB_ENV
-          echo "SUPABASE_PUBLISHABLE_DEFAULT_KEY=$(supabase status -o json | jq -r '.ANON_KEY')" >> $GITHUB_ENV
-          echo "SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o json | jq -r '.SERVICE_ROLE_KEY')" >> $GITHUB_ENV
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> $GITHUB_ENV
+          echo "SUPABASE_PUBLISHABLE_DEFAULT_KEY=${{ secrets.SUPABASE_PUBLISHABLE_DEFAULT_KEY }}" >> $GITHUB_ENV
+          echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> $GITHUB_ENV
 
       - name: Run all tests
         run: bun test

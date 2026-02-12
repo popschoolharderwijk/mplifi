@@ -170,17 +170,55 @@ Students worden **automatisch beheerd** via database triggers:
 
 ---
 
+## Security: SECURITY DEFINER Views en Functions
+
+### Overzicht
+
+PostgreSQL views en functions kunnen `SECURITY DEFINER` gebruiken, wat betekent dat ze draaien met de rechten van de eigenaar (meestal `postgres`) in plaats van de aanroepende gebruiker. Dit kan RLS policies omzeilen en is daarom een security risico.
+
+### Beveiligingsmaatregelen
+
+1. **Whitelist in baseline tests**: Alle SECURITY DEFINER views moeten expliciet worden toegevoegd aan `ALLOWED_SECURITY_DEFINER_VIEWS` in `tests/rls/system/baseline.security.test.ts`. Nieuwe views zonder `security_invoker = on` zullen de CI tests laten falen.
+
+2. **Verplichte documentatie**: Elke SECURITY DEFINER view/function moet documentatie bevatten over:
+   - Waarom SECURITY DEFINER nodig is
+   - Welke auth.uid() checks worden uitgevoerd
+   - Welke kolommen worden geëxposeerd
+   - Verwijzing naar relevante tests
+
+3. **Automatische tests**: De baseline security tests verifiëren dat:
+   - Geen onverwachte SECURITY DEFINER views bestaan
+   - Alle toegestane SECURITY DEFINER views correct zijn gedocumenteerd
+   - Views met `security_invoker = on` RLS respecteren
+
+### Toegestane SECURITY DEFINER Views
+
+| View | Reden | Mitigaties |
+|------|-------|------------|
+| `teacher_viewed_by_student` | Studenten hebben geen directe RLS toegang tot teachers/profiles, maar moeten beperkte info van hun docenten kunnen zien | Expliciete `auth.uid()` checks, beperkte kolommen (geen email), verificatie dat caller een student is |
+
+### Linter Warnings
+
+De Supabase linter rapporteert warnings voor SECURITY DEFINER views. Voor views in de whitelist zijn dit **false positives** omdat:
+- De security expliciet is geïmplementeerd via `auth.uid()` checks
+- Tests in `tests/rls/` verifiëren dat unauthorized access wordt geblokkeerd
+- De whitelist entry vereist expliciete goedkeuring
+
+---
+
 ## Supabase Omgevingen
 
-Dit project gebruikt twee aparte Supabase omgevingen:
+Dit project gebruikt drie aparte Supabase omgevingen:
 
 | Omgeving | Project ID | Gebruik |
 |----------|------------|---------|
-| **Development** | `zdvscmogkfyddnnxzkdu` (mcp-dev) | Directe connectie vanuit Lovable |
-| **Production** | `bnagepkxryauifzyoxgo` | Productie deployment |
+| **Test** | `jserlqacarlgtdzrblic` | Test database voor development (`bun dev:test`) |
+| **Development** | `zdvscmogkfyddnnxzkdu` (mcp-dev) | Directe connectie vanuit Lovable (`bun dev`) |
+| **Production** | `bnagepkxryauifzyoxgo` | Productie deployment (`bun prod`) |
 
 ### Hoe dit werkt
 
 1. **Lovable** is verbonden met `mcp-dev` - een losse development database
-2. **CI tests** draaien tegen een **lokale Supabase** instance
-3. Bij **merge naar main** worden migraties handmatig toegepast op production via `supabase db push`
+2. **Test database** (`jserlqacarlgtdzrblic`) wordt gebruikt voor lokale development via `bun dev:test`
+3. **CI tests** draaien tegen een **lokale Supabase** instance
+4. Bij **merge naar main** worden migraties handmatig toegepast op production via `supabase db push`
