@@ -62,7 +62,7 @@ jobs:
         run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
 
       - name: Reset database (clean state for tests)
-        run: supabase db reset --linked
+        run: supabase db reset --linked --yes
 
       - name: Export Supabase credentials (test project)
         run: |
