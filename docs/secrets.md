@@ -6,7 +6,7 @@ Nodig voor CI workflows. Voeg ze toe via:
 
 **[GitHub Actions Secrets → popschoolharderwijk/mcp](https://github.com/popschoolharderwijk/mcp/settings/secrets/actions)**
 
-Voor de PR-test (code + Supabase) moeten deze **5 Supabase-secrets** zijn ingevuld:
+Voor de PR-test (code + Supabase) moeten deze **6 secrets** zijn ingevuld:
 
 | Secret | Waarde | Gebruik |
 |--------|--------|---------|
@@ -15,21 +15,15 @@ Voor de PR-test (code + Supabase) moeten deze **5 Supabase-secrets** zijn ingevu
 | `SUPABASE_URL` | API URL van het test project (bijv. `https://jserlqacarlgtdzrblic.supabase.co`) | Omgeving voor `bun test` in CI |
 | `SUPABASE_PUBLISHABLE_DEFAULT_KEY` | Anon/publishable key van het test project | Omgeving voor `bun test` in CI |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key van het test project | Omgeving voor `bun test` in CI |
+| `RESEND_API_KEY` | API key van Resend.com | SMTP/e-mail (o.a. OTP) in het gekoppelde Supabase-project; ook lokaal nodig voor `supabase config push --linked`. |
 
-### RESEND_API_KEY (lokaal)
-
-Voor e-mail (SMTP) via Resend moet je lokaal een `RESEND_API_KEY` in je omgeving zetten (bijv. in `.env`). Die waarde wordt meegegeven wanneer je met `supabase config push --linked` de SMTP-config uit `supabase/config.toml` naar het gekoppelde Supabase-project pusht.
-
-| Variabele | Waarde | Gebruik |
-|----------|--------|---------|
-| `RESEND_API_KEY` | API key van Resend.com | In `.env` zetten; vereist voor `supabase config push --linked` om SMTP-config naar Supabase te pushen. |
-
-Verkrijgen: https://resend.com/api-keys
+Verkrijgen Resend: https://resend.com/api-keys
 
 ### Waar haal je de waarden vandaan?
 
 - **SUPABASE_ACCESS_TOKEN**: [Supabase Dashboard](https://supabase.com/dashboard) → avatar → Account settings → Access Tokens → Generate new token
 - **SUPABASE_PROJECT_REF**, **SUPABASE_URL**, **SUPABASE_PUBLISHABLE_DEFAULT_KEY**, **SUPABASE_SERVICE_ROLE_KEY**: Supabase Dashboard → test project → Settings → API (project ref = deel vóór `.supabase.co` in de URL)
+- **RESEND_API_KEY**: https://resend.com/api-keys
 
 De PR-workflow gebruikt een **externe** Supabase (test project). Voor elke testrun wordt `supabase db reset --linked` uitgevoerd zodat de database schoon is. Zie `.github/workflows/pull-request-test-code-and-supabase.yml`.
 
