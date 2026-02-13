@@ -20,11 +20,14 @@ import {
 	buildTooltipText,
 	dutchFormats,
 	generateRecurringEvents,
-	getActualDateInOriginalWeek,
 	getDateForDayOfWeek,
+	getDroppedDateString,
 } from './agenda/utils';
 
 const DragAndDropCalendar = withDragAndDrop(Calendar);
+
+/** Postgres SQLSTATE for check constraint violation (e.g. deviation_date_check). */
+const PG_CHECK_VIOLATION = '23514';
 
 export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps) {
 	const { user } = useAuth();
@@ -251,8 +254,8 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 			originalStartTime = normalizeTime(agreement.start_time);
 		}
 
-		// Keep actual_date within original_date ± 7 days (deviation_date_check); use same weekday as dropped date
-		const actualDateStr = getActualDateInOriginalWeek(originalDateStr, start);
+		// Use dropped date (DB: actual_date >= CURRENT_DATE).
+		const actualDateStr = getDroppedDateString(start);
 		const actualStartTime = normalizeTimeFromDate(start);
 
 		const pendingEventData: CalendarEvent = {
@@ -348,7 +351,11 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 
 			if (error) {
 				console.error('Error updating deviation:', error);
-				toast.error('Fout bij bijwerken afwijking');
+				const isDateCheck =
+					error.code === PG_CHECK_VIOLATION || (error.message ?? '').toLowerCase().includes('deviation_date_check');
+				toast.error(
+					isDateCheck ? 'Afspraak kan niet in het verleden worden geplaatst.' : 'Fout bij bijwerken afwijking',
+				);
 				setPendingEvent(null);
 				return;
 			}
@@ -367,7 +374,11 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 
 			if (error) {
 				console.error('Error creating deviation:', error);
-				toast.error('Fout bij aanmaken afwijking');
+				const isDateCheck =
+					error.code === PG_CHECK_VIOLATION || (error.message ?? '').toLowerCase().includes('deviation_date_check');
+				toast.error(
+					isDateCheck ? 'Afspraak kan niet in het verleden worden geplaatst.' : 'Fout bij aanmaken afwijking',
+				);
 				setPendingEvent(null);
 				return;
 			}
@@ -422,7 +433,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 			originalStartTime = agreement.start_time;
 		}
 
-		const actualDateStr = getActualDateInOriginalWeek(originalDateStr, start);
+		const actualDateStr = getDroppedDateString(start);
 		const actualStartTime = normalizeTimeFromDate(start);
 		return actualDateStr === originalDateStr && normalizeTime(actualStartTime) === normalizeTime(originalStartTime);
 	};

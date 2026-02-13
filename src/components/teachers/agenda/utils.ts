@@ -39,13 +39,22 @@ export function getDateForDayOfWeek(dayOfWeek: number, referenceDate: Date): Dat
 
 /**
  * Returns a date string in the same week as originalDateStr but with the same weekday and time as droppedStart.
- * Used for deviations so that actual_date satisfies deviation_date_check (original_date ± 7 days).
+ * Same-week-only helper; actual_date is forced to the same week as originalDateStr.
+ * @deprecated Prefer getDroppedDateString for drag-and-drop (actual_date >= CURRENT_DATE in DB).
  */
 export function getActualDateInOriginalWeek(originalDateStr: string, droppedStart: Date): string {
 	const originalDate = new Date(originalDateStr + 'T12:00:00');
 	const targetDayOfWeek = droppedStart.getDay();
 	const actualDate = getDateForDayOfWeek(targetDayOfWeek, originalDate);
 	return actualDate.toISOString().split('T')[0];
+}
+
+/** Returns the calendar date of the drop as YYYY-MM-DD (local date). Use for actual_date when moving appointments (e.g. to next week). */
+export function getDroppedDateString(droppedStart: Date): string {
+	const y = droppedStart.getFullYear();
+	const m = String(droppedStart.getMonth() + 1).padStart(2, '0');
+	const d = String(droppedStart.getDate()).padStart(2, '0');
+	return `${y}-${m}-${d}`;
 }
 
 function getFrequency(agreement: LessonAgreementWithStudent): LessonFrequency {

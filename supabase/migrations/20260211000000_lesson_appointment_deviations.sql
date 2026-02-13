@@ -59,8 +59,8 @@ CREATE TABLE IF NOT EXISTS public.lesson_appointment_deviations (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-  -- Data integrity constraints
-  CONSTRAINT deviation_date_check CHECK (actual_date >= original_date - INTERVAL '7 days' AND actual_date <= original_date + INTERVAL '7 days')
+  -- Data integrity constraints: actual_date must not be in the past (free reschedule to any future date)
+  CONSTRAINT deviation_date_check CHECK (actual_date >= CURRENT_DATE)
   -- Note: The constraint "deviation_must_actually_deviate_or_be_cancelled" has been replaced
   -- by the trigger "enforce_deviation_validity_trigger" which allows "restore to original"
   -- overrides for recurring deviations. See SECTION 5 for details.
