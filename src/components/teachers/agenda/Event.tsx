@@ -1,4 +1,4 @@
-import { LuBan, LuTriangleAlert } from 'react-icons/lu';
+import { LuBan, LuRepeat, LuTriangleAlert } from 'react-icons/lu';
 import type { CalendarEvent } from './types';
 
 interface AgendaEventProps {
@@ -7,15 +7,31 @@ interface AgendaEventProps {
 }
 
 export function AgendaEvent({ event, title }: AgendaEventProps) {
-	const { isDeviation, isCancelled } = event.resource;
+	const { isDeviation, isCancelled, isRecurring } = event.resource;
 
 	return (
-		<div className="h-full w-full overflow-hidden relative">
-			{isCancelled && <LuBan className="absolute top-0.5 right-0.5 h-3 w-3 text-white drop-shadow-md z-10" />}
-			{isDeviation && !isCancelled && (
-				<LuTriangleAlert className="absolute top-0.5 right-0.5 h-3 w-3 text-white drop-shadow-md z-10" />
+		<div className="h-full w-full overflow-hidden">
+			{/* Recurring icon top-right inside bounds so selection ring matches event size */}
+			{isRecurring && (
+				<LuRepeat
+					className="absolute bottom-0 right-0.5 h-3 w-3 text-white drop-shadow-md z-10 shrink-0"
+					title="Afwijkende reeks"
+					aria-hidden
+				/>
 			)}
-			<span className={`text-xs leading-tight ${isCancelled ? 'line-through' : ''}`}>{title}</span>
+			{isCancelled && (
+				<LuBan className={`absolute h-3 w-3 text-white drop-shadow-md z-10 shrink-0 top-0 right-0.5`} />
+			)}
+			{isDeviation && !isCancelled && (
+				<LuTriangleAlert
+					className={`absolute h-3 w-3 text-white drop-shadow-md z-10 shrink-0 top-0 right-0.5`}
+				/>
+			)}
+			<span
+				className={`block text-xs leading-tight overflow-hidden text-ellipsis pr-4 ${isCancelled ? 'line-through' : ''}`}
+			>
+				{title}
+			</span>
 		</div>
 	);
 }

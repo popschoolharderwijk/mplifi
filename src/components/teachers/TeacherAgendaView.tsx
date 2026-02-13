@@ -14,8 +14,18 @@ import { ConfirmCancelDialog } from './agenda/ConfirmCancelDialog';
 import { DetailModal } from './agenda/DetailModal';
 import { AgendaEvent } from './agenda/Event';
 import { Legend } from './agenda/Legend';
+import {
+	RecurrenceChoiceDialog,
+	type RecurrenceScope,
+} from './agenda/RecurrenceChoiceDialog';
 import type { CalendarEvent, TeacherAgendaViewProps } from './agenda/types';
-import { buildTooltipText, dutchFormats, generateRecurringEvents, getDateForDayOfWeek } from './agenda/utils';
+import {
+	buildTooltipText,
+	dutchFormats,
+	generateRecurringEvents,
+	getActualDateInOriginalWeek,
+	getDateForDayOfWeek,
+} from './agenda/utils';
 
 const DragAndDropCalendar = withDragAndDrop(Calendar);
 
@@ -31,6 +41,14 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 	const [isCancelling, setIsCancelling] = useState(false);
 	const [isReverting, setIsReverting] = useState(false);
 	const [cancelLessonConfirmOpen, setCancelLessonConfirmOpen] = useState(false);
+	const [recurrenceChoiceOpen, setRecurrenceChoiceOpen] = useState(false);
+	const [recurrenceChoiceAction, setRecurrenceChoiceAction] = useState<'change' | 'cancel'>('change');
+	const [pendingDrop, setPendingDrop] = useState<{
+		event: CalendarEvent;
+		start: Date;
+		end: Date;
+	} | null>(null);
+	const [pendingCancelScope, setPendingCancelScope] = useState<RecurrenceScope>('single');
 	const [studentInfoModal, setStudentInfoModal] = useState<{
 		open: boolean;
 		student: StudentInfoModalData | null;
@@ -48,7 +66,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 			const { data: agreementsData, error: agreementsError } = await supabase
 				.from('lesson_agreements')
 				.select(
-					'id, day_of_week, start_time, start_date, end_date, is_active, student_user_id, lesson_type_id, lesson_types(id, name, icon, color, is_group_lesson, duration_minutes)',
+					'id, day_of_week, start_time, start_date, end_date, is_active, student_user_id, lesson_type_id, lesson_types(id, name, icon, color, is_group_lesson, duration_minutes, frequency)',
 				)
 				.eq('teacher_id', teacherId)
 				.eq('is_active', true);
@@ -79,7 +97,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 			const { data: deviationsData, error: deviationsError } = await supabase
 				.from('lesson_appointment_deviations')
 				.select(
-					'id, lesson_agreement_id, original_date, original_start_time, actual_date, actual_start_time, reason, is_cancelled, lesson_agreements(id, day_of_week, start_time, start_date, end_date, is_active, student_user_id, lesson_type_id, lesson_types(id, name, icon, color))',
+					'id, lesson_agreement_id, original_date, original_start_time, actual_date, actual_start_time, reason, is_cancelled, recurring, lesson_agreements(id, day_of_week, start_time, start_date, end_date, is_active, student_user_id, lesson_type_id, lesson_types(id, name, icon, color, frequency))',
 				)
 				.eq('lesson_agreements.teacher_id', teacherId);
 
@@ -149,13 +167,33 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		return map;
 	}, [deviations]);
 
+	const recurringByAgreement = useMemo(() => {
+		const map = new Map<string, LessonAppointmentDeviationWithAgreement[]>();
+		for (const deviation of deviations) {
+			if (!deviation.recurring) continue;
+			const list = map.get(deviation.lesson_agreement_id) ?? [];
+			list.push(deviation);
+			map.set(deviation.lesson_agreement_id, list);
+		}
+		for (const list of map.values()) {
+			list.sort((a, b) => b.original_date.localeCompare(a.original_date));
+		}
+		return map;
+	}, [deviations]);
+
 	const events = useMemo(() => {
 		const startDate = new Date(currentDate);
 		startDate.setMonth(startDate.getMonth() - 1);
 		const endDate = new Date(currentDate);
 		endDate.setMonth(endDate.getMonth() + 2);
 
-		const baseEvents = generateRecurringEvents(agreements, startDate, endDate, deviationsMap);
+		const baseEvents = generateRecurringEvents(
+			agreements,
+			startDate,
+			endDate,
+			deviationsMap,
+			recurringByAgreement,
+		);
 
 		if (pendingEvent) {
 			const filteredEvents = baseEvents.filter((e) => {
@@ -174,15 +212,19 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		}
 
 		return baseEvents;
-	}, [agreements, deviationsMap, currentDate, pendingEvent]);
+	}, [agreements, deviationsMap, recurringByAgreement, currentDate, pendingEvent]);
 
-	const handleEventDrop = async ({ event, start, end }: { event: CalendarEvent; start: Date; end: Date }) => {
+	const handleEventDrop = async (
+		{ event, start, end }: { event: CalendarEvent; start: Date; end: Date },
+		scope: RecurrenceScope,
+	) => {
 		if (!canEdit || !user) return;
 
 		const agreement = agreements.find((a) => a.id === event.resource.agreementId);
 		if (!agreement) return;
 
 		const isExistingDeviation = event.resource.isDeviation && event.resource.deviationId;
+		const recurring = scope === 'thisAndFuture';
 
 		let originalDateStr: string;
 		let originalStartTime: string;
@@ -196,7 +238,8 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 			originalStartTime = agreement.start_time;
 		}
 
-		const actualDateStr = start.toISOString().split('T')[0];
+		// Keep actual_date within original_date ± 7 days (deviation_date_check); use same weekday as dropped date
+		const actualDateStr = getActualDateInOriginalWeek(originalDateStr, start);
 		const actualStartTime = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
 
 		const pendingEventData: CalendarEvent = {
@@ -224,6 +267,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 				.update({
 					actual_date: actualDateStr,
 					actual_start_time: actualStartTime,
+					recurring,
 					last_updated_by_user_id: user.id,
 				})
 				.eq('id', existingDeviation.id);
@@ -247,6 +291,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 				original_start_time: originalStartTime,
 				actual_date: actualDateStr,
 				actual_start_time: actualStartTime,
+				recurring,
 				created_by_user_id: user.id,
 				last_updated_by_user_id: user.id,
 			});
@@ -265,16 +310,62 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		setPendingEvent(null);
 	};
 
+	const needsRecurrenceChoice = (event: CalendarEvent) => {
+		// Single deviation (already detached): no popup, move directly
+		if (event.resource.isDeviation && event.resource.deviationId && event.resource.isRecurring === false) {
+			return false;
+		}
+		// Original series or recurring deviation: show choice
+		return true;
+	};
+
+	const normalizeTime = (t: string) => t.slice(0, 5);
+	const isDropBackToOriginalSlot = (args: { event: CalendarEvent; start: Date }) => {
+		const { event, start } = args;
+		const agreement = agreements.find((a) => a.id === event.resource.agreementId);
+		if (!agreement) return false;
+		let originalDateStr: string;
+		let originalStartTime: string;
+		if (event.resource.isDeviation && event.resource.originalDate && event.resource.originalStartTime) {
+			originalDateStr = event.resource.originalDate;
+			originalStartTime = event.resource.originalStartTime;
+		} else {
+			originalDateStr = event.start ? new Date(event.start).toISOString().split('T')[0] : '';
+			originalStartTime = agreement.start_time;
+		}
+		const actualDateStr = getActualDateInOriginalWeek(originalDateStr, start);
+		const actualStartTime = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
+		return actualDateStr === originalDateStr && normalizeTime(actualStartTime) === normalizeTime(originalStartTime);
+	};
+
+	const onEventDropWithChoice = (args: { event: CalendarEvent; start: Date; end: Date }) => {
+		if (isDropBackToOriginalSlot(args)) {
+			// No change: only call API when restoring an existing deviation
+			if (args.event.resource.isDeviation && args.event.resource.deviationId) {
+				handleEventDrop(args, 'single');
+			}
+			return;
+		}
+		if (!needsRecurrenceChoice(args.event)) {
+			handleEventDrop(args, 'single');
+			return;
+		}
+		setPendingDrop(args);
+		setRecurrenceChoiceAction('change');
+		setRecurrenceChoiceOpen(true);
+	};
+
 	const handleEventClick = (event: CalendarEvent) => {
 		if (!canEdit) return;
 		setSelectedEvent(event);
 		setIsModalOpen(true);
 	};
 
-	const handleCancelLesson = async () => {
+	const handleCancelLesson = async (scope: RecurrenceScope = 'single') => {
 		if (!selectedEvent || !user) return;
 
 		setIsCancelling(true);
+		const recurring = scope === 'thisAndFuture';
 
 		const agreement = agreements.find((a) => a.id === selectedEvent.resource.agreementId);
 		if (!agreement) {
@@ -319,6 +410,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 					is_cancelled: true,
 					actual_date: originalDateStr,
 					actual_start_time: originalStartTime,
+					recurring,
 					last_updated_by_user_id: user.id,
 				})
 				.eq('id', selectedEvent.resource.deviationId);
@@ -339,6 +431,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 				actual_date: originalDateStr,
 				actual_start_time: originalStartTime,
 				is_cancelled: true,
+				recurring,
 				created_by_user_id: user.id,
 				last_updated_by_user_id: user.id,
 			});
@@ -356,6 +449,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		setIsCancelling(false);
 		setIsModalOpen(false);
 		setSelectedEvent(null);
+		setCancelLessonConfirmOpen(false);
 		loadData(false);
 	};
 
@@ -384,6 +478,27 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 			return;
 		}
 		toast.success('Afspraak teruggezet naar origineel');
+		setIsReverting(false);
+		setIsModalOpen(false);
+		setSelectedEvent(null);
+		loadData(false);
+	};
+
+	const handleRevertRecurringAll = async () => {
+		if (!selectedEvent?.resource.deviationId || !user) return;
+		setIsReverting(true);
+		const { error } = await supabase
+			.from('lesson_appointment_deviations')
+			.delete()
+			.eq('id', selectedEvent.resource.deviationId);
+
+		if (error) {
+			console.error('Error reverting recurring deviation:', error);
+			toast.error('Fout bij herstellen');
+			setIsReverting(false);
+			return;
+		}
+		toast.success('Alle volgende afspraken hersteld');
 		setIsReverting(false);
 		setIsModalOpen(false);
 		setSelectedEvent(null);
@@ -477,8 +592,8 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 						date={currentDate}
 						onNavigate={setCurrentDate}
 						onSelectEvent={(event) => handleEventClick(event as CalendarEvent)}
-						onEventDrop={canEdit ? handleEventDrop : undefined}
-						onEventResize={canEdit ? handleEventDrop : undefined}
+						onEventDrop={canEdit ? onEventDropWithChoice : undefined}
+						onEventResize={canEdit ? (args) => onEventDropWithChoice(args as { event: CalendarEvent; start: Date; end: Date }) : undefined}
 						draggableAccessor={() => canEdit}
 						resizableAccessor={() => canEdit}
 						eventPropGetter={eventStyleGetter}
@@ -521,7 +636,16 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 				isReverting={isReverting}
 				onCancelLesson={handleCancelLesson}
 				onRevertToOriginal={handleRevertToOriginal}
-				onOpenCancelConfirm={() => setCancelLessonConfirmOpen(true)}
+				onRevertRecurringAll={handleRevertRecurringAll}
+				onOpenCancelConfirm={() => {
+					if (selectedEvent && !needsRecurrenceChoice(selectedEvent)) {
+						setPendingCancelScope('single');
+						setCancelLessonConfirmOpen(true);
+					} else {
+						setRecurrenceChoiceAction('cancel');
+						setRecurrenceChoiceOpen(true);
+					}
+				}}
 				onOpenStudentInfo={(student) =>
 					setStudentInfoModal({
 						open: true,
@@ -530,10 +654,28 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 				}
 			/>
 
+			<RecurrenceChoiceDialog
+				open={recurrenceChoiceOpen}
+				onOpenChange={(open) => {
+					setRecurrenceChoiceOpen(open);
+					if (!open) setPendingDrop(null);
+				}}
+				action={recurrenceChoiceAction}
+				onChoose={(scope) => {
+					if (recurrenceChoiceAction === 'change' && pendingDrop) {
+						handleEventDrop(pendingDrop, scope);
+						setPendingDrop(null);
+					} else if (recurrenceChoiceAction === 'cancel') {
+						setPendingCancelScope(scope);
+						setCancelLessonConfirmOpen(true);
+					}
+				}}
+			/>
+
 			<ConfirmCancelDialog
 				open={cancelLessonConfirmOpen}
 				onOpenChange={setCancelLessonConfirmOpen}
-				onConfirm={handleCancelLesson}
+				onConfirm={() => handleCancelLesson(pendingCancelScope)}
 				disabled={isCancelling}
 			/>
 

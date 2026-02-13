@@ -106,6 +106,7 @@ export type Database = {
 					original_date: string;
 					original_start_time: string;
 					reason: string | null;
+					recurring: boolean;
 					updated_at: string;
 				};
 				Insert: {
@@ -120,6 +121,7 @@ export type Database = {
 					original_date: string;
 					original_start_time: string;
 					reason?: string | null;
+					recurring?: boolean;
 					updated_at?: string;
 				};
 				Update: {
@@ -134,6 +136,7 @@ export type Database = {
 					original_date?: string;
 					original_start_time?: string;
 					reason?: string | null;
+					recurring?: boolean;
 					updated_at?: string;
 				};
 				Relationships: [
@@ -546,7 +549,7 @@ export type Database = {
 		};
 		Enums: {
 			app_role: 'site_admin' | 'admin' | 'staff';
-			lesson_frequency: 'weekly' | 'biweekly' | 'monthly';
+			lesson_frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
 		};
 		CompositeTypes: {
 			[_ in never]: never;
@@ -670,7 +673,7 @@ export const Constants = {
 	public: {
 		Enums: {
 			app_role: ['site_admin', 'admin', 'staff'],
-			lesson_frequency: ['weekly', 'biweekly', 'monthly'],
+			lesson_frequency: ['daily', 'weekly', 'biweekly', 'monthly'],
 		},
 	},
 } as const;

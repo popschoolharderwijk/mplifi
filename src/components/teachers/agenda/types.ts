@@ -24,6 +24,7 @@ export interface CalendarEventResource {
 	originalStartTime?: string;
 	reason?: string | null;
 	isPending?: boolean;
+	isRecurring?: boolean;
 }
 
 export interface CalendarEvent extends Event {

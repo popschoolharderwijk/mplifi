@@ -17,7 +17,7 @@
 
 DROP TYPE IF EXISTS public.lesson_frequency CASCADE;
 
-CREATE TYPE public.lesson_frequency AS ENUM ('weekly', 'biweekly', 'monthly');
+CREATE TYPE public.lesson_frequency AS ENUM ('daily', 'weekly', 'biweekly', 'monthly');
 
 -- =============================================================================
 -- SECTION 2: TABLES

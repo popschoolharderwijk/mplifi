@@ -19,8 +19,7 @@ import { resolveIconFromList } from '@/components/ui/icon-picker';
 import { MUSIC_ICONS } from '@/constants/icons';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-
-type LessonFrequency = 'weekly' | 'biweekly' | 'monthly';
+import type { LessonFrequency } from '@/types/lesson-agreements';
 
 interface LessonType {
 	id: string;
@@ -39,6 +38,7 @@ interface LessonType {
 }
 
 const frequencyLabels: Record<LessonFrequency, string> = {
+	daily: 'Dagelijks',
 	weekly: 'Wekelijks',
 	biweekly: 'Tweewekelijks',
 	monthly: 'Maandelijks',

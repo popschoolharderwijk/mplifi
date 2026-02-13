@@ -25,6 +25,7 @@ interface DetailModalProps {
 	isReverting: boolean;
 	onCancelLesson: () => void;
 	onRevertToOriginal: () => void;
+	onRevertRecurringAll?: () => void;
 	onOpenCancelConfirm: () => void;
 	onOpenStudentInfo: (student: StudentInfoModalData) => void;
 }
@@ -38,6 +39,7 @@ export function DetailModal({
 	isReverting,
 	onCancelLesson,
 	onRevertToOriginal,
+	onRevertRecurringAll,
 	onOpenCancelConfirm,
 	onOpenStudentInfo,
 }: DetailModalProps) {
@@ -181,7 +183,9 @@ export function DetailModal({
 						<div className="flex items-center gap-2 rounded-lg bg-amber-500/10 p-5 text-amber-600">
 							<LuTriangleAlert className="h-4 w-4 shrink-0" />
 							<div className="min-w-0 flex-1 space-y-0.5">
-								<span className="text-sm font-medium">Afwijkende afspraak</span>
+								<span className="text-sm font-medium">
+									{selectedEvent.resource.isRecurring ? 'Afwijkende reeks' : 'Afwijkende afspraak'}
+								</span>
 								{selectedEvent.resource.originalDate && selectedEvent.resource.originalStartTime && (
 									<p className="text-xs">
 										Origineel: {formatDate(selectedEvent.resource.originalDate)} om{' '}
@@ -192,29 +196,51 @@ export function DetailModal({
 									<p className="text-xs">Reden: {selectedEvent.resource.reason}</p>
 								)}
 							</div>
-							{canEdit &&
-								selectedEvent.resource.originalDate &&
-								selectedEvent.resource.originalStartTime && (
-									<Button
-										variant="outline"
-										size="sm"
-										className="shrink-0 border-amber-500/50 bg-amber-500/5 text-amber-700 hover:bg-amber-500/15 hover:text-amber-800"
-										onClick={onRevertToOriginal}
-										disabled={isReverting}
-									>
-										{isReverting ? (
-											<>
-												<LuLoaderCircle className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-												Bezig...
-											</>
-										) : (
-											<>
-												<LuUndo2 className="mr-1.5 h-3.5 w-3.5" />
-												Terugzetten
-											</>
+							{canEdit && selectedEvent.resource.deviationId && (
+								<div className="flex shrink-0 flex-col gap-2">
+									{selectedEvent.resource.isRecurring && onRevertRecurringAll && (
+										<Button
+											variant="outline"
+											size="sm"
+											className="border-amber-500/50 bg-amber-500/5 text-amber-700 hover:bg-amber-500/15 hover:text-amber-800"
+											onClick={onRevertRecurringAll}
+											disabled={isReverting}
+										>
+											{isReverting ? (
+												<>
+													<LuLoaderCircle className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+													Bezig...
+												</>
+											) : (
+												'Herstel alle volgende'
+											)}
+										</Button>
+									)}
+									{!selectedEvent.resource.isRecurring &&
+										selectedEvent.resource.originalDate &&
+										selectedEvent.resource.originalStartTime && (
+											<Button
+												variant="outline"
+												size="sm"
+												className="border-amber-500/50 bg-amber-500/5 text-amber-700 hover:bg-amber-500/15 hover:text-amber-800"
+												onClick={onRevertToOriginal}
+												disabled={isReverting}
+											>
+												{isReverting ? (
+													<>
+														<LuLoaderCircle className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+														Bezig...
+													</>
+												) : (
+													<>
+														<LuUndo2 className="mr-1.5 h-3.5 w-3.5" />
+														Terugzetten
+													</>
+												)}
+											</Button>
 										)}
-									</Button>
-								)}
+								</div>
+							)}
 						</div>
 					)}
 				</div>

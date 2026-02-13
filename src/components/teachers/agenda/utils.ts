@@ -2,7 +2,11 @@ import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import type { Formats } from 'react-big-calendar';
 import { formatDate, formatTimeString } from '@/lib/dateHelpers';
-import type { LessonAgreementWithStudent, LessonAppointmentDeviationWithAgreement } from '@/types/lesson-agreements';
+import type {
+	LessonAgreementWithStudent,
+	LessonAppointmentDeviationWithAgreement,
+	LessonFrequency,
+} from '@/types/lesson-agreements';
 import type { CalendarEvent } from './types';
 
 export const dutchFormats: Formats = {
@@ -33,17 +37,122 @@ export function getDateForDayOfWeek(dayOfWeek: number, referenceDate: Date): Dat
 	return date;
 }
 
+/**
+ * Returns a date string in the same week as originalDateStr but with the same weekday and time as droppedStart.
+ * Used for deviations so that actual_date satisfies deviation_date_check (original_date ± 7 days).
+ */
+export function getActualDateInOriginalWeek(originalDateStr: string, droppedStart: Date): string {
+	const originalDate = new Date(originalDateStr + 'T12:00:00');
+	const targetDayOfWeek = droppedStart.getDay();
+	const actualDate = getDateForDayOfWeek(targetDayOfWeek, originalDate);
+	return actualDate.toISOString().split('T')[0];
+}
+
+function getFrequency(agreement: LessonAgreementWithStudent): LessonFrequency {
+	const freq = agreement.lesson_types?.frequency;
+	return freq === 'daily' || freq === 'biweekly' || freq === 'monthly' ? freq : 'weekly';
+}
+
+/** First occurrence date in range for the given agreement and frequency. */
+function getFirstOccurrenceInRange(
+	agreement: LessonAgreementWithStudent,
+	rangeStart: Date,
+	frequency: LessonFrequency,
+): Date {
+	const startDate = new Date(agreement.start_date);
+	if (frequency === 'daily') {
+		const first = new Date(rangeStart);
+		return startDate > first ? startDate : first;
+	}
+	if (frequency === 'weekly') {
+		const first = getDateForDayOfWeek(agreement.day_of_week, rangeStart);
+		if (first < startDate) {
+			first.setDate(first.getDate() + 7);
+		}
+		return first;
+	}
+	if (frequency === 'biweekly') {
+		const first = new Date(startDate);
+		while (first < rangeStart) {
+			first.setDate(first.getDate() + 14);
+		}
+		return first;
+	}
+	// monthly: same day-of-month as start_date
+	const dayOfMonth = startDate.getDate();
+	const first = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
+	const lastDay = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+	first.setDate(Math.min(dayOfMonth, lastDay));
+	if (first < rangeStart) {
+		first.setMonth(first.getMonth() + 1);
+		const lastDayNext = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+		first.setDate(Math.min(dayOfMonth, lastDayNext));
+	}
+	if (first < startDate) {
+		first.setFullYear(startDate.getFullYear());
+		first.setMonth(startDate.getMonth());
+		first.setDate(Math.min(dayOfMonth, new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate()));
+	}
+	return first;
+}
+
+/** Advance currentLessonDate by one interval; mutates the date. */
+function addInterval(date: Date, frequency: LessonFrequency): void {
+	if (frequency === 'daily') {
+		date.setDate(date.getDate() + 1);
+		return;
+	}
+	if (frequency === 'weekly') {
+		date.setDate(date.getDate() + 7);
+		return;
+	}
+	if (frequency === 'biweekly') {
+		date.setDate(date.getDate() + 14);
+		return;
+	}
+	// monthly: add one month, keep day-of-month (cap at last day of month)
+	const dayOfMonth = date.getDate();
+	date.setMonth(date.getMonth() + 1);
+	const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+	date.setDate(Math.min(dayOfMonth, lastDay));
+}
+
+function getGroupingKey(agreement: LessonAgreementWithStudent, frequency: LessonFrequency): string {
+	const base = `${agreement.start_time}-${agreement.lesson_type_id}-${frequency}`;
+	if (frequency === 'weekly') {
+		return `${agreement.day_of_week}-${base}`;
+	}
+	if (frequency === 'daily') {
+		return base;
+	}
+	// biweekly / monthly: include start_date so different phases don't merge
+	return `${agreement.start_date}-${base}`;
+}
+
+/** Find recurring deviation for this agreement that applies to occurrenceDate (original_date <= occurrenceDate), if any. Prefer latest original_date. List must be sorted by original_date desc. */
+function getRecurringDeviationForDate(
+	recurringByAgreement: Map<string, LessonAppointmentDeviationWithAgreement[]>,
+	agreementId: string,
+	occurrenceDateStr: string,
+): LessonAppointmentDeviationWithAgreement | undefined {
+	const list = recurringByAgreement.get(agreementId);
+	if (!list?.length) return undefined;
+	return list.find((d) => d.original_date <= occurrenceDateStr);
+}
+
 export function generateRecurringEvents(
 	agreements: LessonAgreementWithStudent[],
 	rangeStart: Date,
 	rangeEnd: Date,
 	deviations: Map<string, LessonAppointmentDeviationWithAgreement>,
+	recurringByAgreement?: Map<string, LessonAppointmentDeviationWithAgreement[]>,
 ): CalendarEvent[] {
 	const events: CalendarEvent[] = [];
 
 	const groupedAgreements = new Map<string, LessonAgreementWithStudent[]>();
 	for (const agreement of agreements) {
-		const key = `${agreement.day_of_week}-${agreement.start_time}-${agreement.lesson_type_id}`;
+		const frequency = getFrequency(agreement);
+		const key = getGroupingKey(agreement, frequency);
 		const existing = groupedAgreements.get(key) || [];
 		existing.push(agreement);
 		groupedAgreements.set(key, existing);
@@ -51,6 +160,7 @@ export function generateRecurringEvents(
 
 	for (const [, group] of groupedAgreements) {
 		const firstAgreement = group[0];
+		const frequency = getFrequency(firstAgreement);
 		const isGroupLesson = firstAgreement.lesson_types.is_group_lesson;
 		const durationMinutes = firstAgreement.lesson_types.duration_minutes || 30;
 
@@ -60,10 +170,6 @@ export function generateRecurringEvents(
 				: a.profiles?.first_name || a.profiles?.email || 'Onbekend',
 		);
 
-		const firstLessonDate = new Date(rangeStart);
-		const daysUntilLesson = (firstAgreement.day_of_week - firstLessonDate.getDay() + 7) % 7;
-		firstLessonDate.setDate(firstLessonDate.getDate() + daysUntilLesson);
-
 		const earliestStartDate = new Date(Math.min(...group.map((a) => new Date(a.start_date).getTime())));
 		const latestEndDate = group.some((a) => !a.end_date)
 			? null
@@ -71,7 +177,7 @@ export function generateRecurringEvents(
 					Math.max(...group.filter((a) => a.end_date).map((a) => new Date(a.end_date as string).getTime())),
 				);
 
-		const currentLessonDate = new Date(firstLessonDate);
+		const currentLessonDate = getFirstOccurrenceInRange(firstAgreement, rangeStart, frequency);
 
 		while (currentLessonDate <= rangeEnd) {
 			if (currentLessonDate >= earliestStartDate && (!latestEndDate || currentLessonDate <= latestEndDate)) {
@@ -123,9 +229,63 @@ export function generateRecurringEvents(
 								originalDate: deviation.original_date,
 								originalStartTime: deviation.original_start_time,
 								reason: deviation.reason,
+								isRecurring: !!deviation.recurring,
 							},
 						});
-						currentLessonDate.setDate(currentLessonDate.getDate() + 7);
+						addInterval(currentLessonDate, frequency);
+						continue;
+					}
+
+					// No exact deviation: check recurring deviation for this occurrence
+					const recurringDeviation = recurringByAgreement
+						? getRecurringDeviationForDate(recurringByAgreement, firstAgreement.id, lessonDateStr)
+						: undefined;
+					if (recurringDeviation) {
+						const isCancelled = recurringDeviation.is_cancelled;
+						const [hours, minutes] = recurringDeviation.actual_start_time.split(':');
+						const actualDayOfWeek = new Date(recurringDeviation.actual_date).getDay();
+						const eventDate = getDateForDayOfWeek(actualDayOfWeek, currentLessonDate);
+						eventDate.setHours(Number.parseInt(hours, 10), Number.parseInt(minutes, 10), 0, 0);
+
+						const deviationProfile = recurringDeviation.lesson_agreements.profiles;
+						const deviationStudentName =
+							deviationProfile?.first_name && deviationProfile?.last_name
+								? `${deviationProfile.first_name} ${deviationProfile.last_name}`
+								: deviationProfile?.first_name || deviationProfile?.email || 'Onbekend';
+
+						const deviationStudentInfo = deviationProfile
+							? {
+									user_id: recurringDeviation.lesson_agreements.student_user_id,
+									first_name: deviationProfile.first_name,
+									last_name: deviationProfile.last_name,
+									email: deviationProfile.email,
+									avatar_url: (deviationProfile as { avatar_url?: string | null }).avatar_url ?? null,
+								}
+							: undefined;
+
+						events.push({
+							title: `${recurringDeviation.lesson_agreements.lesson_types.name} - ${deviationStudentName}`,
+							start: eventDate,
+							end: new Date(eventDate.getTime() + durationMinutes * 60 * 1000),
+							resource: {
+								type: 'deviation',
+								agreementId: firstAgreement.id,
+								deviationId: recurringDeviation.id,
+								studentName: deviationStudentName,
+								studentInfo: deviationStudentInfo,
+								lessonTypeName: recurringDeviation.lesson_agreements.lesson_types.name,
+								lessonTypeColor: recurringDeviation.lesson_agreements.lesson_types.color,
+								lessonTypeIcon: recurringDeviation.lesson_agreements.lesson_types.icon,
+								isDeviation: !isCancelled,
+								isCancelled,
+								isGroupLesson: false,
+								originalDate: recurringDeviation.original_date,
+								originalStartTime: recurringDeviation.original_start_time,
+								reason: recurringDeviation.reason,
+								isRecurring: true,
+							},
+						});
+						addInterval(currentLessonDate, frequency);
 						continue;
 					}
 				}
@@ -175,7 +335,7 @@ export function generateRecurringEvents(
 				});
 			}
 
-			currentLessonDate.setDate(currentLessonDate.getDate() + 7);
+			addInterval(currentLessonDate, frequency);
 		}
 	}
 
