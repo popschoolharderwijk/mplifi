@@ -2,6 +2,7 @@
 alwaysApply: true
 ---
 
+* **Use English for test names**: All `describe()` and `it()` strings must be in English. Do not use Dutch or other languages for suite and test names.
 * When writing tests, never start a test by deleting data to get rid of potential dirty database states. A dirty database state means some other test didn't properly clean up. THAT needs to be fixed instead.
 * **When tests fail due to dirty database state**: If a test fails because of leftover data from a previous test run (e.g., duplicate key violations, unexpected data), ALWAYS suggest running `supabase db reset --linked` to restore the database to a clean state. NEVER try to work around dirty state by adding cleanup code at the start of tests or checking for existing data before creating test data.
 * **Seed data is authoritative**: All tests must rely on data from `supabase/seed.sql`. Every test can assume that seed data is available and consistent. If test data is needed, add it to `supabase/seed.sql` instead of creating it in tests.

@@ -96,6 +96,7 @@ function mockDeviation(
 		actual_start_time: string;
 		is_cancelled: boolean;
 		recurring: boolean;
+		recurring_end_date: string | null;
 	}> = {},
 ): LessonAppointmentDeviationWithAgreement {
 	const agreementId = overrides.lesson_agreement_id ?? 'agreement-1';
@@ -109,6 +110,7 @@ function mockDeviation(
 		actual_start_time: '15:00',
 		is_cancelled: false,
 		recurring: false,
+		recurring_end_date: null,
 		reason: null,
 		...overrides,
 		lesson_agreements: agreement,
@@ -197,5 +199,95 @@ describe('agenda utils: generateRecurringEvents', () => {
 		const recurringEvents = events.filter((e) => e.resource.isRecurring === true);
 		expect(recurringEvents.length).toBeGreaterThan(0);
 		expect(recurringEvents.every((e) => e.resource.deviationId === 'dev-recurring')).toBe(true);
+	});
+
+	it('recurring deviation with recurring_end_date does not apply after that date', () => {
+		const agreement = mockAgreement({
+			id: 'ag-1',
+			start_date: '2025-02-01',
+			end_date: '2025-03-31',
+			day_of_week: 1,
+			start_time: '14:00',
+		});
+		const recurringDeviation = mockDeviation({
+			id: 'dev-recurring',
+			lesson_agreement_id: 'ag-1',
+			original_date: '2025-02-17',
+			actual_date: '2025-02-20',
+			actual_start_time: '15:00',
+			recurring: true,
+			recurring_end_date: '2025-03-02',
+		});
+		const recurringByAgreement = new Map<string, LessonAppointmentDeviationWithAgreement[]>();
+		recurringByAgreement.set('ag-1', [recurringDeviation]);
+		const rangeStart = new Date('2025-02-01');
+		const rangeEnd = new Date('2025-03-31');
+		const events = generateRecurringEvents([agreement], rangeStart, rangeEnd, new Map(), recurringByAgreement);
+		const weekAfterEnd = events.find(
+			(e) => e.start && new Date(e.start).toISOString().split('T')[0] === '2025-03-10',
+		);
+		expect(weekAfterEnd).toBeDefined();
+		expect(weekAfterEnd?.resource.type).toBe('agreement');
+		expect(weekAfterEnd?.resource.isDeviation).toBe(false);
+	});
+
+	it('recurring deviation with recurring_end_date still applies up to and including that date', () => {
+		const agreement = mockAgreement({
+			id: 'ag-1',
+			start_date: '2025-02-01',
+			end_date: '2025-03-31',
+			day_of_week: 1,
+			start_time: '14:00',
+		});
+		const recurringDeviation = mockDeviation({
+			id: 'dev-recurring',
+			lesson_agreement_id: 'ag-1',
+			original_date: '2025-02-17',
+			actual_date: '2025-02-20',
+			actual_start_time: '15:00',
+			recurring: true,
+			recurring_end_date: '2025-03-02',
+		});
+		const recurringByAgreement = new Map<string, LessonAppointmentDeviationWithAgreement[]>();
+		recurringByAgreement.set('ag-1', [recurringDeviation]);
+		const rangeStart = new Date('2025-02-01');
+		const rangeEnd = new Date('2025-03-31');
+		const events = generateRecurringEvents([agreement], rangeStart, rangeEnd, new Map(), recurringByAgreement);
+		const deviationEvents = events.filter(
+			(e) => e.resource.deviationId === 'dev-recurring' && e.resource.isRecurring === true,
+		);
+		expect(deviationEvents.length).toBeGreaterThan(0);
+		const lastDeviationEvent = deviationEvents[deviationEvents.length - 1];
+		const lastDateStr = lastDeviationEvent.start
+			? new Date(lastDeviationEvent.start).toISOString().split('T')[0]
+			: '';
+		expect(lastDateStr >= '2025-02-17' && lastDateStr <= '2025-03-02').toBe(true);
+		expect(lastDeviationEvent.resource.type).toBe('deviation');
+	});
+
+	it('deviation that restores to agreement slot is shown as agreement (green, not deviation)', () => {
+		const agreement = mockAgreement({
+			id: 'ag-1',
+			day_of_week: 1,
+			start_time: '14:00',
+		});
+		const deviation = mockDeviation({
+			lesson_agreement_id: 'ag-1',
+			original_date: '2025-02-17',
+			original_start_time: '14:00:01',
+			actual_date: '2025-02-17',
+			actual_start_time: '14:00:00',
+		});
+		const deviationsMap = new Map<string, LessonAppointmentDeviationWithAgreement>();
+		deviationsMap.set('ag-1-2025-02-17', deviation);
+		const rangeStart = new Date('2025-02-01');
+		const rangeEnd = new Date('2025-02-28');
+		const events = generateRecurringEvents([agreement], rangeStart, rangeEnd, deviationsMap);
+		const event = events.find(
+			(e) => e.resource.type !== undefined && new Date(e.start as Date).toISOString().split('T')[0] === '2025-02-17',
+		);
+		expect(event).toBeDefined();
+		expect(event?.resource.type).toBe('agreement');
+		expect(event?.resource.isDeviation).toBe(false);
 	});
 });
