@@ -10,6 +10,7 @@ import { AVAILABILITY_SETTINGS, calendarLocalizer, normalizeTime, normalizeTimeF
 import type { LessonAgreementWithStudent, LessonAppointmentDeviationWithAgreement } from '@/types/lesson-agreements';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
+import { CalendarViewProvider } from './agenda/CalendarViewContext';
 import { ConfirmCancelDialog } from './agenda/ConfirmCancelDialog';
 import { DetailModal } from './agenda/DetailModal';
 import { AgendaEvent } from './agenda/Event';
@@ -694,48 +695,51 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 	return (
 		<div className="space-y-4">
 			<div className="popschool-calendar rounded-lg border border-border bg-card overflow-hidden">
-				<div className="h-[600px]">
-					<DragAndDropCalendar
-						localizer={calendarLocalizer}
-						formats={dutchFormats}
-						culture="nl-NL"
-						events={events}
-						startAccessor={(event) => (event as CalendarEvent).start}
-						endAccessor={(event) => (event as CalendarEvent).end}
-						view={currentView}
-						onView={setCurrentView}
-						date={currentDate}
-						onNavigate={setCurrentDate}
-						onSelectEvent={(event) => handleEventClick(event as CalendarEvent)}
-						onEventDrop={canEdit ? onEventDropWithChoice : undefined}
-						draggableAccessor={() => canEdit}
-						resizableAccessor={() => false}
-						eventPropGetter={eventStyleGetter}
-						tooltipAccessor={(event) => buildTooltipText(event as CalendarEvent)}
-						components={{
-							// biome-ignore lint/suspicious/noExplicitAny: react-big-calendar event component typing is complex
-							event: AgendaEvent as unknown as React.ComponentType<any>,
-						}}
-						min={new Date(0, 0, 0, 9, 0, 0)}
-						max={new Date(0, 0, 0, 21, 0, 0)}
-						scrollToTime={scrollToTime}
-						step={30}
-						timeslots={1}
-						messages={{
-							next: 'Volgende',
-							previous: 'Vorige',
-							today: 'Vandaag',
-							month: 'Maand',
-							week: 'Week',
-							day: 'Dag',
-							agenda: 'Agenda',
-							date: 'Datum',
-							time: 'Tijd',
-							event: 'Afspraak',
-							noEventsInRange: 'Geen afspraken in dit bereik',
-							showMore: (total) => `+${total} meer`,
-						}}
-					/>
+				<div className="h-[600px] min-h-0 overflow-y-auto overflow-x-hidden">
+					<CalendarViewProvider value={currentView}>
+						<DragAndDropCalendar
+							localizer={calendarLocalizer}
+							formats={dutchFormats}
+							culture="nl-NL"
+							events={events}
+							showAllEvents
+							startAccessor={(event) => (event as CalendarEvent).start}
+							endAccessor={(event) => (event as CalendarEvent).end}
+							view={currentView}
+							onView={setCurrentView}
+							date={currentDate}
+							onNavigate={setCurrentDate}
+							onSelectEvent={(event) => handleEventClick(event as CalendarEvent)}
+							onEventDrop={canEdit ? onEventDropWithChoice : undefined}
+							draggableAccessor={() => canEdit}
+							resizableAccessor={() => false}
+							eventPropGetter={eventStyleGetter}
+							tooltipAccessor={(event) => buildTooltipText(event as CalendarEvent)}
+							components={{
+								// biome-ignore lint/suspicious/noExplicitAny: react-big-calendar event component typing is complex
+								event: AgendaEvent as unknown as React.ComponentType<any>,
+							}}
+							min={new Date(0, 0, 0, 9, 0, 0)}
+							max={new Date(0, 0, 0, 21, 0, 0)}
+							scrollToTime={scrollToTime}
+							step={30}
+							timeslots={1}
+							messages={{
+								next: 'Volgende',
+								previous: 'Vorige',
+								today: 'Vandaag',
+								month: 'Maand',
+								week: 'Week',
+								day: 'Dag',
+								agenda: 'Agenda',
+								date: 'Datum',
+								time: 'Tijd',
+								event: 'Afspraak',
+								noEventsInRange: 'Geen afspraken in dit bereik',
+								showMore: (total) => `+${total} meer`,
+							}}
+						/>
+					</CalendarViewProvider>
 				</div>
 			</div>
 

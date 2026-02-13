@@ -1,4 +1,6 @@
 import { LuBan, LuRepeat, LuTriangleAlert } from 'react-icons/lu';
+import { displayTimeFromDate } from '@/lib/dateHelpers';
+import { useCalendarView } from './CalendarViewContext';
 import type { CalendarEvent } from './types';
 
 interface AgendaEventProps {
@@ -7,7 +9,13 @@ interface AgendaEventProps {
 }
 
 export function AgendaEvent({ event, title }: AgendaEventProps) {
+	const view = useCalendarView();
 	const { isDeviation, isCancelled, isRecurring } = event.resource;
+
+	const displayTitle =
+		view === 'month' && event.start
+			? `${displayTimeFromDate(event.start)} ${title}`
+			: title;
 
 	return (
 		<div className="h-full w-full overflow-hidden">
@@ -30,7 +38,7 @@ export function AgendaEvent({ event, title }: AgendaEventProps) {
 			<span
 				className={`block text-xs leading-tight overflow-hidden text-ellipsis pr-4 ${isCancelled ? 'line-through' : ''}`}
 			>
-				{title}
+				{displayTitle}
 			</span>
 		</div>
 	);
