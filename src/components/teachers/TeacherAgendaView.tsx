@@ -693,14 +693,8 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 						onNavigate={setCurrentDate}
 						onSelectEvent={(event) => handleEventClick(event as CalendarEvent)}
 						onEventDrop={canEdit ? onEventDropWithChoice : undefined}
-						onEventResize={
-							canEdit
-								? (args) =>
-										onEventDropWithChoice(args as { event: CalendarEvent; start: Date; end: Date })
-								: undefined
-						}
 						draggableAccessor={() => canEdit}
-						resizableAccessor={() => canEdit}
+						resizableAccessor={() => false}
 						eventPropGetter={eventStyleGetter}
 						tooltipAccessor={(event) => buildTooltipText(event as CalendarEvent)}
 						components={{
