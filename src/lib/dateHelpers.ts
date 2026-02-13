@@ -117,27 +117,48 @@ export function formatDate(dateStr: string): string {
 	return format(date, 'EEEE d MMMM', { locale: nl });
 }
 
-/** Regex: HH:mm or HH:mm:ss (hour 0-23, minutes/seconds 00-59) */
-const TIME_STRING_REGEX = /^\d{1,2}:\d{2}(:\d{2})?$/;
+/** Regex: HH:mm or HH:mm:ss (hour 00-23, minutes/seconds 00-59, strict two-digit format) */
+const TIME_STRING_REGEX = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 
 /**
- * Format a time-only string for display: HH:mm or HH:mm:ss → HH:mm.
+ * Display a time string for UI: HH:mm or HH:mm:ss → HH:mm.
  * Use for values from the DB (e.g. teacher_availability.start_time).
  * @param timeStr - Time string (HH:mm or HH:mm:ss, e.g. from PostgreSQL TIME)
  * @returns Time string in HH:mm format, or empty string if format invalid
  */
-export function formatTimeString(timeStr: string): string {
+export function displayTime(timeStr: string): string {
 	if (!timeStr || typeof timeStr !== 'string') return '';
 	const trimmed = timeStr.trim();
 	return TIME_STRING_REGEX.test(trimmed) ? trimmed.substring(0, 5) : '';
 }
 
 /**
- * Format a Date's time part for display: always HH:mm.
+ * Display a Date's time part for UI: always HH:mm.
  * Use when you have a Date object (e.g. from a date picker or new Date()).
  * @param date - Date instance
  * @returns Time string in HH:mm format
  */
-export function formatTimeFromDate(date: Date): string {
+export function displayTimeFromDate(date: Date): string {
 	return format(date, 'HH:mm');
+}
+
+/**
+ * Normalise a time string to database TIME format HH:mm:ss.
+ * Use for storage, API payloads and comparisons (so "14:00" and "14:00:00" compare equal).
+ * @param timeStr - Time string (HH:mm or HH:mm:ss)
+ * @returns Time string in HH:mm:ss format, or empty string if invalid
+ */
+export function normalizeTime(timeStr: string): string {
+	if (!timeStr || typeof timeStr !== 'string') return '';
+	const trimmed = timeStr.trim();
+	if (!TIME_STRING_REGEX.test(trimmed)) return '';
+	return trimmed.length === 5 ? `${trimmed}:00` : trimmed;
+}
+
+/**
+ * Time part of a Date as database format HH:mm:ss.
+ * Use when sending a Date's time to the API (e.g. from a drop event).
+ */
+export function normalizeTimeFromDate(date: Date): string {
+	return format(date, 'HH:mm:ss');
 }

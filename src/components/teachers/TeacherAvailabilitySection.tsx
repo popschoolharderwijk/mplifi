@@ -21,7 +21,7 @@ import {
 	DEFAULT_END_TIME,
 	DEFAULT_START_TIME,
 	displayDayToDbDay,
-	formatTimeString,
+	displayTime,
 	generateAvailabilityTimeSlots,
 } from '@/lib/dateHelpers';
 
@@ -351,31 +351,29 @@ export function TeacherAvailabilitySection({ teacherId, canEdit }: TeacherAvaila
 													setEditingBlock(block);
 													setSelectedSlot({ day: block.displayDay, time: block.startTime });
 													setForm({
-														start_time: formatTimeString(block.startTime),
-														end_time: formatTimeString(block.endTime),
+														start_time: displayTime(block.startTime),
+														end_time: displayTime(block.endTime),
 													});
 													setAddDialogOpen(true);
 												}
 											}}
-											title={`${dayName} ${formatTimeString(block.startTime)} - ${formatTimeString(block.endTime)}`}
+											title={`${dayName} ${displayTime(block.startTime)} - ${displayTime(block.endTime)}`}
 										>
 											{/* Single line: smaller font; two lines: normal font (container query) */}
 											<div
 												className="block-content-single absolute inset-0 flex items-center justify-center p-0.5 overflow-hidden min-w-0"
-												title={`${formatTimeString(block.startTime)} - ${formatTimeString(block.endTime)}`}
+												title={`${displayTime(block.startTime)} - ${displayTime(block.endTime)}`}
 											>
 												<span className="text-[10px] font-medium leading-tight text-white truncate max-w-full">
-													{formatTimeString(block.startTime)} –{' '}
-													{formatTimeString(block.endTime)}
+													{displayTime(block.startTime)} – {displayTime(block.endTime)}
 												</span>
 											</div>
 											<div
 												className="block-content-double absolute inset-0 flex flex-col items-center justify-center gap-0 p-0.5 overflow-hidden text-center min-w-0"
-												title={`${formatTimeString(block.startTime)} - ${formatTimeString(block.endTime)}`}
+												title={`${displayTime(block.startTime)} - ${displayTime(block.endTime)}`}
 											>
 												<span className="text-[12px] font-medium leading-tight text-white truncate max-w-full">
-													{formatTimeString(block.startTime)} –{' '}
-													{formatTimeString(block.endTime)}
+													{displayTime(block.startTime)} – {displayTime(block.endTime)}
 												</span>
 											</div>
 
@@ -431,7 +429,7 @@ export function TeacherAvailabilitySection({ teacherId, canEdit }: TeacherAvaila
 									) : (
 										<>
 											Voeg beschikbaarheid toe voor <strong>{dayNames[selectedSlot.day]}</strong>{' '}
-											vanaf <strong>{formatTimeString(selectedSlot.time)}</strong>
+											vanaf <strong>{displayTime(selectedSlot.time)}</strong>
 										</>
 									))}
 							</DialogDescription>

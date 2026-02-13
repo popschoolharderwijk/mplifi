@@ -4,7 +4,7 @@ import { ColorIcon } from '@/components/ui/color-icon';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { resolveIconFromList } from '@/components/ui/icon-picker';
 import { MUSIC_ICONS } from '@/constants/icons';
-import { DAY_NAMES, formatTimeString } from '@/lib/dateHelpers';
+import { DAY_NAMES, displayTime } from '@/lib/dateHelpers';
 import type { LessonAgreementWithTeacher } from '@/types/lesson-agreements';
 
 export type { LessonAgreementWithTeacher as LessonAgreement };
@@ -94,7 +94,7 @@ export function LessonAgreementDialog({ open, onOpenChange, agreement }: LessonA
 						</div>
 						<div>
 							<p className="text-sm font-medium text-muted-foreground">Tijd</p>
-							<p className="font-medium">{formatTimeString(agreement.start_time)}</p>
+							<p className="font-medium">{displayTime(agreement.start_time)}</p>
 						</div>
 						<div>
 							<p className="text-sm font-medium text-muted-foreground">Startdatum</p>

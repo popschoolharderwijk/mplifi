@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { StudentInfoModal, type StudentInfoModalData } from '@/components/students/StudentInfoModal';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { AVAILABILITY_SETTINGS, calendarLocalizer } from '@/lib/dateHelpers';
+import { AVAILABILITY_SETTINGS, calendarLocalizer, normalizeTime, normalizeTimeFromDate } from '@/lib/dateHelpers';
 import type { LessonAgreementWithStudent, LessonAppointmentDeviationWithAgreement } from '@/types/lesson-agreements';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
@@ -14,10 +14,7 @@ import { ConfirmCancelDialog } from './agenda/ConfirmCancelDialog';
 import { DetailModal } from './agenda/DetailModal';
 import { AgendaEvent } from './agenda/Event';
 import { Legend } from './agenda/Legend';
-import {
-	RecurrenceChoiceDialog,
-	type RecurrenceScope,
-} from './agenda/RecurrenceChoiceDialog';
+import { RecurrenceChoiceDialog, type RecurrenceScope } from './agenda/RecurrenceChoiceDialog';
 import type { CalendarEvent, TeacherAgendaViewProps } from './agenda/types';
 import {
 	buildTooltipText,
@@ -187,13 +184,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		const endDate = new Date(currentDate);
 		endDate.setMonth(endDate.getMonth() + 2);
 
-		const baseEvents = generateRecurringEvents(
-			agreements,
-			startDate,
-			endDate,
-			deviationsMap,
-			recurringByAgreement,
-		);
+		const baseEvents = generateRecurringEvents(agreements, startDate, endDate, deviationsMap, recurringByAgreement);
 
 		if (pendingEvent) {
 			const filteredEvents = baseEvents.filter((e) => {
@@ -224,6 +215,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		if (!agreement) return;
 
 		const isExistingDeviation = event.resource.isDeviation && event.resource.deviationId;
+		const isRecurringDeviation = isExistingDeviation && event.resource.isRecurring;
 		const recurring = scope === 'thisAndFuture';
 
 		let originalDateStr: string;
@@ -238,9 +230,35 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 			originalStartTime = agreement.start_time;
 		}
 
+		// For recurring deviations: compute the agreement's original slot for the occurrence's week
+		// This tells us if we're on a LATER week than the deviation's original_date
+		const occurrenceWeekOriginalDate = event.start
+			? getDateForDayOfWeek(agreement.day_of_week, new Date(event.start))
+			: null;
+		const occurrenceWeekOriginalDateStr = occurrenceWeekOriginalDate?.toISOString().split('T')[0] ?? '';
+
+		// Are we editing a later occurrence of a recurring deviation? (e.g., week 4 when deviation is from week 1)
+		const isLaterRecurringOccurrence =
+			isRecurringDeviation && occurrenceWeekOriginalDateStr && occurrenceWeekOriginalDateStr !== originalDateStr;
+
+		if (isLaterRecurringOccurrence) {
+			// For "only this" on a later occurrence: create a NEW deviation for this week.
+			// The original_date must be the AGREEMENT's original day for this week
+			// because the deviations Map is keyed by agreement_id + agreement's original date.
+			// 
+			// To satisfy the DB constraint (actual must differ from original), we use
+			// original_start_time with :01 seconds. This ensures that even if the user
+			// drags back to the agreement's original day+time, the constraint is satisfied
+			// because 10:00:01 != 10:00:00.
+			originalDateStr = occurrenceWeekOriginalDateStr;
+			// Add :01 second to differentiate from actual_start_time when on same day
+			const baseTime = normalizeTime(agreement.start_time);
+			originalStartTime = baseTime.replace(/:00$/, ':01');
+		}
+
 		// Keep actual_date within original_date ± 7 days (deviation_date_check); use same weekday as dropped date
 		const actualDateStr = getActualDateInOriginalWeek(originalDateStr, start);
-		const actualStartTime = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
+		const actualStartTime = normalizeTimeFromDate(start);
 
 		const pendingEventData: CalendarEvent = {
 			...event,
@@ -255,40 +273,98 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		};
 		setPendingEvent(pendingEventData);
 
-		const existingDeviation = deviations.find(
-			(d) => d.lesson_agreement_id === agreement.id && d.original_date === originalDateStr,
-		);
+		// For later occurrences of a recurring deviation, look up by (agreement_id, originalDateStr)
+		// to find/create a deviation for THIS specific week, not the recurring row.
+		// For non-recurring or the original occurrence, use deviationId to find the existing row.
+		const existingDeviation = isLaterRecurringOccurrence
+			? deviations.find((d) => d.lesson_agreement_id === agreement.id && d.original_date === originalDateStr)
+			: event.resource.deviationId
+				? deviations.find((d) => d.id === event.resource.deviationId)
+				: deviations.find((d) => d.lesson_agreement_id === agreement.id && d.original_date === originalDateStr);
 
-		const isRestoringToOriginal = originalDateStr === actualDateStr && originalStartTime === actualStartTime;
+		const isRestoringToOriginal =
+			originalDateStr === actualDateStr && normalizeTime(originalStartTime) === normalizeTime(actualStartTime);
 
+		// No-op: dropped on same slot as current (no change)
+		const droppedOnSameSlot = existingDeviation
+			? actualDateStr === existingDeviation.actual_date &&
+				normalizeTime(actualStartTime) === normalizeTime(existingDeviation.actual_start_time)
+			: event.start &&
+				actualDateStr === event.start.toISOString().split('T')[0] &&
+				normalizeTime(actualStartTime) === normalizeTimeFromDate(event.start);
+		
+		console.log('handleEventDrop debug:', {
+			isLaterRecurringOccurrence,
+			originalDateStr,
+			originalStartTime,
+			actualDateStr,
+			actualStartTime,
+			eventStart: event.start?.toISOString(),
+			eventStartDate: event.start?.toISOString().split('T')[0],
+			droppedOnSameSlot,
+			existingDeviationId: existingDeviation?.id,
+			isRestoringToOriginal,
+			scope,
+			recurring,
+		});
+		
+		if (droppedOnSameSlot) {
+			console.log('Early return: droppedOnSameSlot');
+			setPendingEvent(null);
+			return;
+		}
+
+		console.log('Proceeding to DB operation, existingDeviation:', existingDeviation ? 'exists' : 'null');
+
+		// Update if a row already exists (unique on agreement_id + original_date); otherwise insert
 		if (existingDeviation) {
-			const { error } = await supabase
-				.from('lesson_appointment_deviations')
-				.update({
-					actual_date: actualDateStr,
-					actual_start_time: actualStartTime,
-					recurring,
-					last_updated_by_user_id: user.id,
-				})
-				.eq('id', existingDeviation.id);
-
-			if (error) {
-				console.error('Error updating deviation:', error);
-				toast.error('Fout bij bijwerken afwijking');
-				setPendingEvent(null);
-				return;
-			}
-
+			console.log('UPDATE branch, isRestoringToOriginal:', isRestoringToOriginal);
 			if (isRestoringToOriginal) {
+				// Explicit DELETE so deviation is removed; no reliance on DB trigger
+				const { error } = await supabase
+					.from('lesson_appointment_deviations')
+					.delete()
+					.eq('id', existingDeviation.id);
+
+				if (error) {
+					console.error('Error removing deviation:', error);
+					toast.error('Fout bij terugzetten');
+					setPendingEvent(null);
+					return;
+				}
 				toast.success('Les teruggezet naar originele planning');
 			} else {
+				const { error } = await supabase
+					.from('lesson_appointment_deviations')
+					.update({
+						actual_date: actualDateStr,
+						actual_start_time: actualStartTime,
+						recurring,
+						last_updated_by_user_id: user.id,
+					})
+					.eq('id', existingDeviation.id);
+
+				if (error) {
+					console.error('Error updating deviation:', error);
+					toast.error('Fout bij bijwerken afwijking');
+					setPendingEvent(null);
+					return;
+				}
 				toast.success('Afspraak bijgewerkt');
 			}
 		} else {
+			console.log('INSERT branch, inserting:', {
+				lesson_agreement_id: agreement.id,
+				original_date: originalDateStr,
+				original_start_time: normalizeTime(originalStartTime),
+				actual_date: actualDateStr,
+				actual_start_time: actualStartTime,
+				recurring,
+			});
 			const { error } = await supabase.from('lesson_appointment_deviations').insert({
 				lesson_agreement_id: agreement.id,
 				original_date: originalDateStr,
-				original_start_time: originalStartTime,
+				original_start_time: normalizeTime(originalStartTime),
 				actual_date: actualDateStr,
 				actual_start_time: actualStartTime,
 				recurring,
@@ -303,6 +379,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 				return;
 			}
 
+			console.log('INSERT success');
 			toast.success('Afspraak verplaatst');
 		}
 
@@ -319,28 +396,58 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		return true;
 	};
 
-	const normalizeTime = (t: string) => t.slice(0, 5);
 	const isDropBackToOriginalSlot = (args: { event: CalendarEvent; start: Date }) => {
 		const { event, start } = args;
 		const agreement = agreements.find((a) => a.id === event.resource.agreementId);
 		if (!agreement) return false;
+
+		// For deviations: "original slot" is the agreement's original position
+		// For later occurrences of recurring deviations: we need to check against the
+		// agreement's original slot for THIS SPECIFIC WEEK, not the deviation's stored original_date
+		const isRecurringDeviation = event.resource.isDeviation && event.resource.deviationId && event.resource.isRecurring;
+		
+		// Get the agreement's original slot for the week of the current event
+		const eventWeekOriginalDate = event.start
+			? getDateForDayOfWeek(agreement.day_of_week, new Date(event.start))
+			: null;
+		const eventWeekOriginalDateStr = eventWeekOriginalDate?.toISOString().split('T')[0] ?? '';
+		
+		// For recurring deviations, the "original slot" to restore to is the agreement's slot for this week
+		// For regular deviations, use the stored original_date
 		let originalDateStr: string;
 		let originalStartTime: string;
-		if (event.resource.isDeviation && event.resource.originalDate && event.resource.originalStartTime) {
+		
+		if (isRecurringDeviation) {
+			// For later occurrences of recurring deviations: compare against agreement's original slot
+			originalDateStr = eventWeekOriginalDateStr;
+			originalStartTime = agreement.start_time;
+		} else if (event.resource.isDeviation && event.resource.originalDate && event.resource.originalStartTime) {
 			originalDateStr = event.resource.originalDate;
 			originalStartTime = event.resource.originalStartTime;
 		} else {
 			originalDateStr = event.start ? new Date(event.start).toISOString().split('T')[0] : '';
 			originalStartTime = agreement.start_time;
 		}
+		
 		const actualDateStr = getActualDateInOriginalWeek(originalDateStr, start);
-		const actualStartTime = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
+		const actualStartTime = normalizeTimeFromDate(start);
 		return actualDateStr === originalDateStr && normalizeTime(actualStartTime) === normalizeTime(originalStartTime);
 	};
 
 	const onEventDropWithChoice = (args: { event: CalendarEvent; start: Date; end: Date }) => {
+		const isRecurringDeviation =
+			args.event.resource.isDeviation && args.event.resource.deviationId && args.event.resource.isRecurring;
+
 		if (isDropBackToOriginalSlot(args)) {
-			// No change: only call API when restoring an existing deviation
+			// For recurring deviations: show choice dialog even when restoring to original
+			// User may want to restore "only this week" or "this and future"
+			if (isRecurringDeviation) {
+				setPendingDrop(args);
+				setRecurrenceChoiceAction('change');
+				setRecurrenceChoiceOpen(true);
+				return;
+			}
+			// For non-recurring deviations: restore directly
 			if (args.event.resource.isDeviation && args.event.resource.deviationId) {
 				handleEventDrop(args, 'single');
 			}
@@ -593,7 +700,12 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 						onNavigate={setCurrentDate}
 						onSelectEvent={(event) => handleEventClick(event as CalendarEvent)}
 						onEventDrop={canEdit ? onEventDropWithChoice : undefined}
-						onEventResize={canEdit ? (args) => onEventDropWithChoice(args as { event: CalendarEvent; start: Date; end: Date }) : undefined}
+						onEventResize={
+							canEdit
+								? (args) =>
+										onEventDropWithChoice(args as { event: CalendarEvent; start: Date; end: Date })
+								: undefined
+						}
 						draggableAccessor={() => canEdit}
 						resizableAccessor={() => canEdit}
 						eventPropGetter={eventStyleGetter}

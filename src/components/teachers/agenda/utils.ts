@@ -1,7 +1,7 @@
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import type { Formats } from 'react-big-calendar';
-import { formatDate, formatTimeString } from '@/lib/dateHelpers';
+import { displayTime, formatDate } from '@/lib/dateHelpers';
 import type {
 	LessonAgreementWithStudent,
 	LessonAppointmentDeviationWithAgreement,
@@ -377,7 +377,7 @@ export function buildTooltipText(event: CalendarEvent): string {
 		lines.push('');
 		lines.push('⚠ Gewijzigde afspraak');
 		if (originalDate && originalStartTime) {
-			lines.push(`Origineel: ${formatDate(originalDate)} om ${formatTimeString(originalStartTime)}`);
+			lines.push(`Origineel: ${formatDate(originalDate)} om ${displayTime(originalStartTime)}`);
 		}
 		if (reason) {
 			lines.push(`Reden: ${reason}`);

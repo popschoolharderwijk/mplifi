@@ -3,12 +3,15 @@
  * No database required; tests pure logic.
  */
 import { describe, expect, it } from 'bun:test';
-import type { LessonAgreementWithStudent, LessonAppointmentDeviationWithAgreement } from '../../src/types/lesson-agreements';
 import {
 	generateRecurringEvents,
 	getActualDateInOriginalWeek,
 	getDateForDayOfWeek,
 } from '../../src/components/teachers/agenda/utils';
+import type {
+	LessonAgreementWithStudent,
+	LessonAppointmentDeviationWithAgreement,
+} from '../../src/types/lesson-agreements';
 
 describe('agenda utils: getDateForDayOfWeek', () => {
 	it('returns same day when reference is already that weekday', () => {
@@ -66,9 +69,7 @@ const defaultLessonTypes = {
 	frequency: 'weekly' as const,
 };
 
-function mockAgreement(
-	overrides: Partial<LessonAgreementWithStudent> = {},
-): LessonAgreementWithStudent {
+function mockAgreement(overrides: Partial<LessonAgreementWithStudent> = {}): LessonAgreementWithStudent {
 	const { lesson_types: lt, ...rest } = overrides;
 	return {
 		id: 'agreement-1',
@@ -85,16 +86,18 @@ function mockAgreement(
 	};
 }
 
-function mockDeviation(overrides: Partial<{
-	id: string;
-	lesson_agreement_id: string;
-	original_date: string;
-	original_start_time: string;
-	actual_date: string;
-	actual_start_time: string;
-	is_cancelled: boolean;
-	recurring: boolean;
-}> = {}): LessonAppointmentDeviationWithAgreement {
+function mockDeviation(
+	overrides: Partial<{
+		id: string;
+		lesson_agreement_id: string;
+		original_date: string;
+		original_start_time: string;
+		actual_date: string;
+		actual_start_time: string;
+		is_cancelled: boolean;
+		recurring: boolean;
+	}> = {},
+): LessonAppointmentDeviationWithAgreement {
 	const agreementId = overrides.lesson_agreement_id ?? 'agreement-1';
 	const agreement = mockAgreement({ id: agreementId });
 	return {
@@ -190,13 +193,7 @@ describe('agenda utils: generateRecurringEvents', () => {
 		recurringByAgreement.set('ag-1', [recurringDeviation]);
 		const rangeStart = new Date('2025-02-01');
 		const rangeEnd = new Date('2025-03-31');
-		const events = generateRecurringEvents(
-			[agreement],
-			rangeStart,
-			rangeEnd,
-			new Map(),
-			recurringByAgreement,
-		);
+		const events = generateRecurringEvents([agreement], rangeStart, rangeEnd, new Map(), recurringByAgreement);
 		const recurringEvents = events.filter((e) => e.resource.isRecurring === true);
 		expect(recurringEvents.length).toBeGreaterThan(0);
 		expect(recurringEvents.every((e) => e.resource.deviationId === 'dev-recurring')).toBe(true);

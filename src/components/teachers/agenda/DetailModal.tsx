@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { resolveIconFromList } from '@/components/ui/icon-picker';
 import { MUSIC_ICONS } from '@/constants/icons';
-import { formatDate, formatTimeString } from '@/lib/dateHelpers';
+import { displayTime, formatDate } from '@/lib/dateHelpers';
 import type { StudentInfoModalData } from '@/types/students';
 import type { CalendarEvent } from './types';
 
@@ -189,7 +189,7 @@ export function DetailModal({
 								{selectedEvent.resource.originalDate && selectedEvent.resource.originalStartTime && (
 									<p className="text-xs">
 										Origineel: {formatDate(selectedEvent.resource.originalDate)} om{' '}
-										{formatTimeString(selectedEvent.resource.originalStartTime)}
+										{displayTime(selectedEvent.resource.originalStartTime)}
 									</p>
 								)}
 								{selectedEvent.resource.reason && (

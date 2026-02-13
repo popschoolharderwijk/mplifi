@@ -18,12 +18,7 @@ interface RecurrenceChoiceDialogProps {
 	onChoose: (scope: RecurrenceScope) => void;
 }
 
-export function RecurrenceChoiceDialog({
-	open,
-	onOpenChange,
-	action,
-	onChoose,
-}: RecurrenceChoiceDialogProps) {
+export function RecurrenceChoiceDialog({ open, onOpenChange, action, onChoose }: RecurrenceChoiceDialogProps) {
 	const isCancel = action === 'cancel';
 	const verb = isCancel ? 'annuleren' : 'wijzigen';
 
