@@ -21,7 +21,7 @@ import { resolveIconFromList } from '@/components/ui/icon-picker';
 import { MUSIC_ICONS } from '@/constants/icons';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { AVAILABILITY_SETTINGS, calendarLocalizer, formatDate, formatTime } from '@/lib/dateHelpers';
+import { AVAILABILITY_SETTINGS, calendarLocalizer, formatDate, formatTimeString } from '@/lib/dateHelpers';
 import type { LessonAgreementWithStudent, LessonAppointmentDeviationWithAgreement } from '@/types/lesson-agreements';
 import type { StudentEventInfo } from '@/types/students';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -137,7 +137,7 @@ function buildTooltipText(event: CalendarEvent): string {
 		lines.push('');
 		lines.push('⚠ Gewijzigde afspraak');
 		if (originalDate && originalStartTime) {
-			lines.push(`Origineel: ${formatDate(originalDate)} om ${formatTime(originalStartTime)}`);
+			lines.push(`Origineel: ${formatDate(originalDate)} om ${formatTimeString(originalStartTime)}`);
 		}
 		if (reason) {
 			lines.push(`Reden: ${reason}`);
@@ -1031,7 +1031,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 										selectedEvent.resource.originalStartTime && (
 											<p className="text-xs">
 												Origineel: {formatDate(selectedEvent.resource.originalDate)} om{' '}
-												{formatTime(selectedEvent.resource.originalStartTime)}
+												{formatTimeString(selectedEvent.resource.originalStartTime)}
 											</p>
 										)}
 									{selectedEvent.resource.reason && (

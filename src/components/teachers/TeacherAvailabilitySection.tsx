@@ -21,6 +21,7 @@ import {
 	DEFAULT_END_TIME,
 	DEFAULT_START_TIME,
 	displayDayToDbDay,
+	formatTimeString,
 	generateAvailabilityTimeSlots,
 } from '@/lib/dateHelpers';
 
@@ -221,6 +222,21 @@ export function TeacherAvailabilitySection({ teacherId, canEdit }: TeacherAvaila
 
 	return (
 		<>
+			<style>{`
+				.availability-block { container-type: size; container-name: ab; }
+				.availability-block .block-content-single { display: flex; }
+				.availability-block .block-content-double { display: none; }
+				.availability-block .block-edit-icon { display: none; }
+				.availability-block .block-edit-icon-small { display: block; }
+				@container ab (min-height: 2.5rem) {
+					.availability-block .block-content-single { display: none; }
+					.availability-block .block-content-double { display: flex; }
+				}
+				@container ab (min-height: 1.5rem) {
+					.availability-block .block-edit-icon { display: block; }
+					.availability-block .block-edit-icon-small { display: none; }
+				}
+			`}</style>
 			<Card>
 				<CardHeader className="pb-3">
 					<CardTitle>Beschikbaarheid</CardTitle>
@@ -241,8 +257,8 @@ export function TeacherAvailabilitySection({ teacherId, canEdit }: TeacherAvaila
 						))}
 					</div>
 
-					{/* Grid container */}
-					<div className="flex" style={{ height: '360px' }}>
+					{/* Grid container – responsive height so availability block does not stay too large */}
+					<div className="flex h-64 sm:h-72 lg:h-80">
 						{/* Time labels column */}
 						<div className="w-12 shrink-0 relative">
 							{HOURS.map((hour) => (
@@ -327,36 +343,51 @@ export function TeacherAvailabilitySection({ teacherId, canEdit }: TeacherAvaila
 											style={{
 												top: `${block.topPercent}%`,
 												height: `${block.heightPercent}%`,
-												minHeight: '20px',
+												minHeight: '10px',
 											}}
 											onClick={(e) => {
 												e.stopPropagation();
 												if (canEdit) {
 													setEditingBlock(block);
 													setSelectedSlot({ day: block.displayDay, time: block.startTime });
-													// Normalize to HH:MM so Select options match (DB may return HH:MM:SS)
-													const start = block.startTime.slice(0, 5);
-													const end = block.endTime.slice(0, 5);
 													setForm({
-														start_time: start,
-														end_time: end,
+														start_time: formatTimeString(block.startTime),
+														end_time: formatTimeString(block.endTime),
 													});
 													setAddDialogOpen(true);
 												}
 											}}
-											title={`${dayName} ${block.startTime} - ${block.endTime}${canEdit ? ' (klik om te wijzigen)' : ''}`}
+											title={`${dayName} ${formatTimeString(block.startTime)} - ${formatTimeString(block.endTime)}`}
 										>
-											{/* Block content */}
-											<div className="absolute inset-0 flex items-center justify-center p-0.5 overflow-hidden">
-												<span className="text-[10px] font-medium text-white whitespace-nowrap">
-													{block.startTime.substring(0, 5)} - {block.endTime.substring(0, 5)}
+											{/* Single line: smaller font; two lines: normal font (container query) */}
+											<div
+												className="block-content-single absolute inset-0 flex items-center justify-center p-0.5 overflow-hidden min-w-0"
+												title={`${formatTimeString(block.startTime)} - ${formatTimeString(block.endTime)}`}
+											>
+												<span className="text-[10px] font-medium leading-tight text-white truncate max-w-full">
+													{formatTimeString(block.startTime)} –{' '}
+													{formatTimeString(block.endTime)}
+												</span>
+											</div>
+											<div
+												className="block-content-double absolute inset-0 flex flex-col items-center justify-center gap-0 p-0.5 overflow-hidden text-center min-w-0"
+												title={`${formatTimeString(block.startTime)} - ${formatTimeString(block.endTime)}`}
+											>
+												<span className="text-[12px] font-medium leading-tight text-white truncate max-w-full">
+													{formatTimeString(block.startTime)} –{' '}
+													{formatTimeString(block.endTime)}
 												</span>
 											</div>
 
-											{/* Edit overlay on hover */}
+											{/* Orange overlay on hover; small icon for single-line blocks, normal icon for taller blocks */}
 											{canEdit && (
 												<div className="absolute inset-0 flex items-center justify-center bg-primary/90 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
-													<LuPencil className="h-4 w-4 text-white" />
+													<span className="block-edit-icon-small">
+														<LuPencil className="h-2.5 w-2.5 text-white" />
+													</span>
+													<span className="block-edit-icon">
+														<LuPencil className="h-4 w-4 text-white" />
+													</span>
 												</div>
 											)}
 										</button>
@@ -400,7 +431,7 @@ export function TeacherAvailabilitySection({ teacherId, canEdit }: TeacherAvaila
 									) : (
 										<>
 											Voeg beschikbaarheid toe voor <strong>{dayNames[selectedSlot.day]}</strong>{' '}
-											vanaf <strong>{selectedSlot.time}</strong>
+											vanaf <strong>{formatTimeString(selectedSlot.time)}</strong>
 										</>
 									))}
 							</DialogDescription>

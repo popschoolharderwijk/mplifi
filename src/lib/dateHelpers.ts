@@ -117,11 +117,27 @@ export function formatDate(dateStr: string): string {
 	return format(date, 'EEEE d MMMM', { locale: nl });
 }
 
+/** Regex: HH:mm or HH:mm:ss (hour 0-23, minutes/seconds 00-59) */
+const TIME_STRING_REGEX = /^\d{1,2}:\d{2}(:\d{2})?$/;
+
 /**
- * Format a time string by removing seconds if present (HH:MM:SS -> HH:MM)
- * @param timeStr - Time string, possibly with seconds
- * @returns Time string in HH:MM format
+ * Format a time-only string for display: HH:mm or HH:mm:ss → HH:mm.
+ * Use for values from the DB (e.g. teacher_availability.start_time).
+ * @param timeStr - Time string (HH:mm or HH:mm:ss, e.g. from PostgreSQL TIME)
+ * @returns Time string in HH:mm format, or empty string if format invalid
  */
-export function formatTime(timeStr: string): string {
-	return timeStr.substring(0, 5);
+export function formatTimeString(timeStr: string): string {
+	if (!timeStr || typeof timeStr !== 'string') return '';
+	const trimmed = timeStr.trim();
+	return TIME_STRING_REGEX.test(trimmed) ? trimmed.substring(0, 5) : '';
+}
+
+/**
+ * Format a Date's time part for display: always HH:mm.
+ * Use when you have a Date object (e.g. from a date picker or new Date()).
+ * @param date - Date instance
+ * @returns Time string in HH:mm format
+ */
+export function formatTimeFromDate(date: Date): string {
+	return format(date, 'HH:mm');
 }

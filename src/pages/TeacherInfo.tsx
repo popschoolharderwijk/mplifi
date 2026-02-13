@@ -169,10 +169,10 @@ export default function TeacherInfo() {
 				</TabsList>
 
 				<TabsContent value="profile">
-					{/* Two-column layout: Left = Profile + Lesson Types, Right = Availability */}
-					<div className="grid gap-6 lg:grid-cols-[1fr,auto]">
-						{/* Left column: Profile info & Lesson Types */}
-						<div className="space-y-6">
+					{/* Two-column grid: both columns scale with viewport */}
+					<div className="grid gap-6 lg:grid-cols-2">
+						{/* Left column: Profile + Lesson types */}
+						<div className="space-y-6 min-w-0">
 							<TeacherProfileSection
 								teacherId={targetTeacherId}
 								user_id={teacherProfile.user_id}
@@ -190,8 +190,8 @@ export default function TeacherInfo() {
 							</div>
 						</div>
 
-						{/* Right column: Availability */}
-						<div className="lg:w-[680px]">
+						{/* Right column: Availability (scales with viewport) */}
+						<div className="min-w-0">
 							<TeacherAvailabilitySection teacherId={targetTeacherId} canEdit={canEdit()} />
 						</div>
 					</div>
