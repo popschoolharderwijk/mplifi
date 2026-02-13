@@ -6,6 +6,17 @@ alwaysApply: false
 
 # Supabase Types Guidelines
 
+## NEVER Manually Edit Generated Types
+
+**NEVER manually edit `src/integrations/supabase/types.ts`**. This file is auto-generated from the database schema.
+
+Instead, run:
+```bash
+bun run reset:dev
+```
+
+This command resets the local database and regenerates all types from the migrations.
+
 ## Always Use Generated Types First
 
 Before creating custom interfaces or types for database entities, **always check `src/integrations/supabase/types.ts`** for existing generated types.

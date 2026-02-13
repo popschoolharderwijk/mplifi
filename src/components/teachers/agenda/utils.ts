@@ -129,7 +129,7 @@ function getGroupingKey(agreement: LessonAgreementWithStudent, frequency: Lesson
 	return `${agreement.start_date}-${base}`;
 }
 
-/** Find recurring deviation for this agreement that applies to occurrenceDate (original_date <= occurrenceDate), if any. Prefer latest original_date. List must be sorted by original_date desc. */
+/** Find recurring deviation for this agreement that applies to occurrenceDate (original_date <= occurrenceDate AND (no end_date OR end_date >= occurrenceDate)), if any. Prefer latest original_date. List must be sorted by original_date desc. */
 function getRecurringDeviationForDate(
 	recurringByAgreement: Map<string, LessonAppointmentDeviationWithAgreement[]>,
 	agreementId: string,
@@ -137,7 +137,16 @@ function getRecurringDeviationForDate(
 ): LessonAppointmentDeviationWithAgreement | undefined {
 	const list = recurringByAgreement.get(agreementId);
 	if (!list?.length) return undefined;
-	return list.find((d) => d.original_date <= occurrenceDateStr);
+	// Find a recurring deviation where:
+	// - original_date <= occurrenceDateStr (deviation started on or before this occurrence)
+	// - AND (no recurring_end_date OR recurring_end_date >= occurrenceDateStr) (deviation hasn't ended yet)
+	return list.find(
+		(d) =>
+			d.original_date <= occurrenceDateStr &&
+			(d.recurring_end_date === null ||
+				d.recurring_end_date === undefined ||
+				d.recurring_end_date >= occurrenceDateStr),
+	);
 }
 
 export function generateRecurringEvents(
@@ -194,6 +203,17 @@ export function generateRecurringEvents(
 						const eventDate = new Date(isCancelled ? deviation.original_date : deviation.actual_date);
 						eventDate.setHours(Number.parseInt(hours, 10), Number.parseInt(minutes, 10), 0, 0);
 
+						// Check if this deviation effectively restores to the agreement's original schedule.
+						// If actual_date is the same weekday as the agreement AND actual_start_time matches,
+						// it's visually not a deviation (e.g., an override that returns to Monday when agreement is Monday).
+						const actualDayOfWeek = new Date(deviation.actual_date).getDay();
+						const actualTimeNormalized = deviation.actual_start_time.substring(0, 5); // HH:mm
+						const agreementTimeNormalized = firstAgreement.start_time.substring(0, 5);
+						const isEffectivelyOriginal =
+							!isCancelled &&
+							actualDayOfWeek === firstAgreement.day_of_week &&
+							actualTimeNormalized === agreementTimeNormalized;
+
 						const deviationProfile = deviation.lesson_agreements.profiles;
 						const deviationStudentName =
 							deviationProfile?.first_name && deviationProfile?.last_name
@@ -215,7 +235,7 @@ export function generateRecurringEvents(
 							start: eventDate,
 							end: new Date(eventDate.getTime() + durationMinutes * 60 * 1000),
 							resource: {
-								type: 'deviation',
+								type: isEffectivelyOriginal ? 'agreement' : 'deviation',
 								agreementId: firstAgreement.id,
 								deviationId: deviation.id,
 								studentName: deviationStudentName,
@@ -223,7 +243,7 @@ export function generateRecurringEvents(
 								lessonTypeName: deviation.lesson_agreements.lesson_types.name,
 								lessonTypeColor: deviation.lesson_agreements.lesson_types.color,
 								lessonTypeIcon: deviation.lesson_agreements.lesson_types.icon,
-								isDeviation: !isCancelled,
+								isDeviation: !isCancelled && !isEffectivelyOriginal,
 								isCancelled,
 								isGroupLesson: false,
 								originalDate: deviation.original_date,

@@ -107,6 +107,7 @@ export type Database = {
 					original_start_time: string;
 					reason: string | null;
 					recurring: boolean;
+					recurring_end_date: string | null;
 					updated_at: string;
 				};
 				Insert: {
@@ -122,6 +123,7 @@ export type Database = {
 					original_start_time: string;
 					reason?: string | null;
 					recurring?: boolean;
+					recurring_end_date?: string | null;
 					updated_at?: string;
 				};
 				Update: {
@@ -137,6 +139,7 @@ export type Database = {
 					original_start_time?: string;
 					reason?: string | null;
 					recurring?: boolean;
+					recurring_end_date?: string | null;
 					updated_at?: string;
 				};
 				Relationships: [

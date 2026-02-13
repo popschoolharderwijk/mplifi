@@ -94,7 +94,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 			const { data: deviationsData, error: deviationsError } = await supabase
 				.from('lesson_appointment_deviations')
 				.select(
-					'id, lesson_agreement_id, original_date, original_start_time, actual_date, actual_start_time, reason, is_cancelled, recurring, lesson_agreements(id, day_of_week, start_time, start_date, end_date, is_active, student_user_id, lesson_type_id, lesson_types(id, name, icon, color, frequency))',
+					'id, lesson_agreement_id, original_date, original_start_time, actual_date, actual_start_time, reason, is_cancelled, recurring, recurring_end_date, lesson_agreements(id, day_of_week, start_time, start_date, end_date, is_active, student_user_id, lesson_type_id, lesson_types(id, name, icon, color, frequency))',
 				)
 				.eq('lesson_agreements.teacher_id', teacherId);
 
@@ -245,7 +245,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 			// For "only this" on a later occurrence: create a NEW deviation for this week.
 			// The original_date must be the AGREEMENT's original day for this week
 			// because the deviations Map is keyed by agreement_id + agreement's original date.
-			// 
+			//
 			// To satisfy the DB constraint (actual must differ from original), we use
 			// original_start_time with :01 seconds. This ensures that even if the user
 			// drags back to the agreement's original day+time, the constraint is satisfied
@@ -285,6 +285,13 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		const isRestoringToOriginal =
 			originalDateStr === actualDateStr && normalizeTime(originalStartTime) === normalizeTime(actualStartTime);
 
+		// For recurring deviation "this and future" restore: user dropped on agreement's original slot.
+		// We cannot use isRestoringToOriginal for later occurrences because originalStartTime is set to :01 there.
+		const isRestoringRecurringToOriginalSlot =
+			isRecurringDeviation &&
+			actualDateStr === occurrenceWeekOriginalDateStr &&
+			normalizeTime(actualStartTime) === normalizeTime(agreement.start_time);
+
 		// No-op: dropped on same slot as current (no change)
 		const droppedOnSameSlot = existingDeviation
 			? actualDateStr === existingDeviation.actual_date &&
@@ -292,33 +299,69 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 			: event.start &&
 				actualDateStr === event.start.toISOString().split('T')[0] &&
 				normalizeTime(actualStartTime) === normalizeTimeFromDate(event.start);
-		
-		console.log('handleEventDrop debug:', {
-			isLaterRecurringOccurrence,
-			originalDateStr,
-			originalStartTime,
-			actualDateStr,
-			actualStartTime,
-			eventStart: event.start?.toISOString(),
-			eventStartDate: event.start?.toISOString().split('T')[0],
-			droppedOnSameSlot,
-			existingDeviationId: existingDeviation?.id,
-			isRestoringToOriginal,
-			scope,
-			recurring,
-		});
-		
+
 		if (droppedOnSameSlot) {
-			console.log('Early return: droppedOnSameSlot');
 			setPendingEvent(null);
 			return;
 		}
 
-		console.log('Proceeding to DB operation, existingDeviation:', existingDeviation ? 'exists' : 'null');
+		// Check if we're restoring a recurring deviation to original for "this and future"
+		// In that case, we set recurring_end_date instead of deleting.
+		// Use isRestoringRecurringToOriginalSlot so we also catch later occurrences (where originalStartTime is :01).
+		const recurringDeviationToEnd =
+			recurring &&
+			event.resource.isRecurring &&
+			event.resource.deviationId &&
+			(isRestoringToOriginal || isRestoringRecurringToOriginalSlot)
+				? deviations.find((d) => d.id === event.resource.deviationId)
+				: null;
+
+		if (recurringDeviationToEnd) {
+			const weekWhereUserDropped = occurrenceWeekOriginalDateStr ?? originalDateStr;
+
+			// Restoring in the first week (same week as deviation's original_date) => remove deviation entirely
+			if (weekWhereUserDropped === recurringDeviationToEnd.original_date) {
+				const { error } = await supabase
+					.from('lesson_appointment_deviations')
+					.delete()
+					.eq('id', recurringDeviationToEnd.id);
+
+				if (error) {
+					console.error('Error removing recurring deviation:', error);
+					toast.error('Fout bij verwijderen terugkerende wijziging');
+					setPendingEvent(null);
+					return;
+				}
+				toast.success('Terugkerende wijziging verwijderd');
+			} else {
+				// Set recurring_end_date to the last week the deviation still applies (week before this occurrence)
+				const endDate = new Date(weekWhereUserDropped + 'T12:00:00');
+				endDate.setDate(endDate.getDate() - 7);
+				const recurringEndDateStr = endDate.toISOString().split('T')[0];
+
+				const { error } = await supabase
+					.from('lesson_appointment_deviations')
+					.update({
+						recurring_end_date: recurringEndDateStr,
+						last_updated_by_user_id: user.id,
+					})
+					.eq('id', recurringDeviationToEnd.id);
+
+				if (error) {
+					console.error('Error setting recurring end date:', error);
+					toast.error('Fout bij beëindigen terugkerende wijziging');
+					setPendingEvent(null);
+					return;
+				}
+				toast.success('Terugkerende wijziging beëindigd vanaf deze week');
+			}
+			await loadData(false);
+			setPendingEvent(null);
+			return;
+		}
 
 		// Update if a row already exists (unique on agreement_id + original_date); otherwise insert
 		if (existingDeviation) {
-			console.log('UPDATE branch, isRestoringToOriginal:', isRestoringToOriginal);
 			if (isRestoringToOriginal) {
 				// Explicit DELETE so deviation is removed; no reliance on DB trigger
 				const { error } = await supabase
@@ -353,14 +396,6 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 				toast.success('Afspraak bijgewerkt');
 			}
 		} else {
-			console.log('INSERT branch, inserting:', {
-				lesson_agreement_id: agreement.id,
-				original_date: originalDateStr,
-				original_start_time: normalizeTime(originalStartTime),
-				actual_date: actualDateStr,
-				actual_start_time: actualStartTime,
-				recurring,
-			});
 			const { error } = await supabase.from('lesson_appointment_deviations').insert({
 				lesson_agreement_id: agreement.id,
 				original_date: originalDateStr,
@@ -379,7 +414,6 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 				return;
 			}
 
-			console.log('INSERT success');
 			toast.success('Afspraak verplaatst');
 		}
 
@@ -404,19 +438,20 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		// For deviations: "original slot" is the agreement's original position
 		// For later occurrences of recurring deviations: we need to check against the
 		// agreement's original slot for THIS SPECIFIC WEEK, not the deviation's stored original_date
-		const isRecurringDeviation = event.resource.isDeviation && event.resource.deviationId && event.resource.isRecurring;
-		
+		const isRecurringDeviation =
+			event.resource.isDeviation && event.resource.deviationId && event.resource.isRecurring;
+
 		// Get the agreement's original slot for the week of the current event
 		const eventWeekOriginalDate = event.start
 			? getDateForDayOfWeek(agreement.day_of_week, new Date(event.start))
 			: null;
 		const eventWeekOriginalDateStr = eventWeekOriginalDate?.toISOString().split('T')[0] ?? '';
-		
+
 		// For recurring deviations, the "original slot" to restore to is the agreement's slot for this week
 		// For regular deviations, use the stored original_date
 		let originalDateStr: string;
 		let originalStartTime: string;
-		
+
 		if (isRecurringDeviation) {
 			// For later occurrences of recurring deviations: compare against agreement's original slot
 			originalDateStr = eventWeekOriginalDateStr;
@@ -428,7 +463,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 			originalDateStr = event.start ? new Date(event.start).toISOString().split('T')[0] : '';
 			originalStartTime = agreement.start_time;
 		}
-		
+
 		const actualDateStr = getActualDateInOriginalWeek(originalDateStr, start);
 		const actualStartTime = normalizeTimeFromDate(start);
 		return actualDateStr === originalDateStr && normalizeTime(actualStartTime) === normalizeTime(originalStartTime);

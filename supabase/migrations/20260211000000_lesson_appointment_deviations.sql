@@ -44,6 +44,10 @@ CREATE TABLE IF NOT EXISTS public.lesson_appointment_deviations (
   -- Recurring: when true, this deviation applies to all occurrences from original_date onward (same weekday/time as actual_date and actual_start_time, or cancelled)
   recurring BOOLEAN NOT NULL DEFAULT false,
 
+  -- End date for recurring deviations: when set, the recurring deviation only applies until this date (inclusive)
+  -- Used when a user "restores to original" for a specific week and all future weeks
+  recurring_end_date DATE,
+
   -- Optional reason for the deviation
   reason TEXT,
 
@@ -80,6 +84,11 @@ CREATE INDEX IF NOT EXISTS idx_lesson_appointment_deviations_is_cancelled
 ON public.lesson_appointment_deviations(is_cancelled)
 WHERE is_cancelled = true;
 
+-- Partial index for efficient filtering of recurring deviations with end date
+CREATE INDEX IF NOT EXISTS idx_lesson_appointment_deviations_recurring_end_date
+ON public.lesson_appointment_deviations(recurring_end_date)
+WHERE recurring_end_date IS NOT NULL;
+
 -- Table and column documentation
 COMMENT ON TABLE public.lesson_appointment_deviations IS 'Tracks temporary changes to lesson schedules. Allows teachers/admins to move lessons from their regular schedule (defined in lesson_agreements) to different dates/times for specific weeks, or cancel them entirely.';
 
@@ -91,6 +100,7 @@ COMMENT ON COLUMN public.lesson_appointment_deviations.actual_date IS 'The actua
 COMMENT ON COLUMN public.lesson_appointment_deviations.actual_start_time IS 'The actual start time (actual_date contains only date, no time)';
 COMMENT ON COLUMN public.lesson_appointment_deviations.is_cancelled IS 'When true, the lesson for this specific date is cancelled/deleted. The actual_date/actual_start_time fields will equal the original values in this case.';
 COMMENT ON COLUMN public.lesson_appointment_deviations.recurring IS 'When true, this deviation applies to all occurrences from original_date onward (same weekday/time as actual_date and actual_start_time, or cancelled).';
+COMMENT ON COLUMN public.lesson_appointment_deviations.recurring_end_date IS 'When set, the recurring deviation only applies until this date (inclusive). Used when a user "restores to original" for a specific week and all future weeks - the recurring deviation remains but stops applying after this date.';
 COMMENT ON COLUMN public.lesson_appointment_deviations.reason IS 'Optional reason for the deviation (e.g., "Teacher unavailable", "Student request")';
 COMMENT ON COLUMN public.lesson_appointment_deviations.created_by_user_id IS 'Who created this deviation (for audit trail and accountability)';
 COMMENT ON COLUMN public.lesson_appointment_deviations.last_updated_by_user_id IS 'Who last updated this deviation (updated on every UPDATE)';
