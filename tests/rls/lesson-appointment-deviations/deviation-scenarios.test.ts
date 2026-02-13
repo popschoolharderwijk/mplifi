@@ -291,23 +291,85 @@ describe('deviation scenarios: restore to original in a later week (recurring_en
 		const agreement = getAgreement();
 		const userId = fixtures.requireUserId(TestUsers.TEACHER_ALICE);
 		const weekWhereUserDropped = originalDateForWeek(agreement.day_of_week, new Date('2025-12-22'));
-		const endDate = new Date(weekWhereUserDropped + 'T12:00:00');
-		endDate.setDate(endDate.getDate() - 7);
-		const recurringEndDateStr = endDate.toISOString().split('T')[0];
+		const expectedEndDate = new Date(weekWhereUserDropped + 'T12:00:00');
+		expectedEndDate.setDate(expectedEndDate.getDate() - 7);
+		const recurringEndDateStr = expectedEndDate.toISOString().split('T')[0];
 
 		const db = await createClientAs(TestUsers.TEACHER_ALICE);
-		const { data: updated, error } = await db
-			.from('lesson_appointment_deviations')
-			.update({
-				recurring_end_date: recurringEndDateStr,
-				last_updated_by_user_id: userId,
-			})
-			.eq('id', recurringDeviationId)
-			.select()
-			.single();
+		const { data: result, error } = await db.rpc('end_recurring_deviation_from_week', {
+			p_deviation_id: recurringDeviationId,
+			p_week_date: weekWhereUserDropped,
+			p_user_id: userId,
+		});
 
 		expect(error).toBeNull();
-		expect(updated?.recurring_end_date).toBe(recurringEndDateStr);
+		expect(result).toBe('updated');
+		const { data: row } = await dbNoRLS
+			.from('lesson_appointment_deviations')
+			.select('recurring_end_date')
+			.eq('id', recurringDeviationId)
+			.single();
+		expect(row?.recurring_end_date).toBe(recurringEndDateStr);
+	});
+});
+
+describe('deviation scenarios: end_recurring_deviation_from_week RPC', () => {
+	let initialState: DatabaseState;
+	const { setupState, verifyState } = setupDatabaseStateVerification();
+	let recurringDeviationId: string | null = null;
+
+	beforeAll(async () => {
+		initialState = await setupState();
+		const agreement = getAgreement();
+		const userId = fixtures.requireUserId(TestUsers.TEACHER_ALICE);
+		const week1Monday = originalDateForWeek(agreement.day_of_week, new Date('2026-04-06'));
+		const actualDate = getActualDateInOriginalWeek(week1Monday, new Date('2026-04-09T14:00:00'));
+
+		const { data } = await dbNoRLS
+			.from('lesson_appointment_deviations')
+			.insert({
+				lesson_agreement_id: agreementId,
+				original_date: week1Monday,
+				original_start_time: agreement.start_time,
+				actual_date: actualDate,
+				actual_start_time: '14:00',
+				recurring: true,
+				created_by_user_id: userId,
+				last_updated_by_user_id: userId,
+			})
+			.select()
+			.single();
+		if (data?.id) recurringDeviationId = data.id;
+	});
+
+	afterAll(async () => {
+		if (recurringDeviationId)
+			await dbNoRLS.from('lesson_appointment_deviations').delete().eq('id', recurringDeviationId);
+		await verifyState(initialState);
+	});
+
+	it('first week: returns deleted and removes row', async () => {
+		if (!recurringDeviationId) throw new Error('Recurring deviation not created');
+		const agreement = getAgreement();
+		const userId = fixtures.requireUserId(TestUsers.TEACHER_ALICE);
+		const week1Monday = originalDateForWeek(agreement.day_of_week, new Date('2026-04-06'));
+
+		const db = await createClientAs(TestUsers.TEACHER_ALICE);
+		const { data: result, error } = await db.rpc('end_recurring_deviation_from_week', {
+			p_deviation_id: recurringDeviationId,
+			p_week_date: week1Monday,
+			p_user_id: userId,
+		});
+
+		expect(error).toBeNull();
+		expect(result).toBe('deleted');
+		const { data: after } = await dbNoRLS
+			.from('lesson_appointment_deviations')
+			.select('id')
+			.eq('id', recurringDeviationId)
+			.maybeSingle();
+		expect(after).toBeNull();
+		recurringDeviationId = null;
 	});
 });
 

@@ -482,6 +482,64 @@ ALTER FUNCTION public.shift_recurring_deviation_to_next_week(UUID, UUID) OWNER T
 -- RLS on the underlying table still controls which deviations can be modified
 GRANT EXECUTE ON FUNCTION public.shift_recurring_deviation_to_next_week(UUID, UUID) TO authenticated;
 
+-- Function to end a recurring deviation from a given week
+-- Used when a user selects "this and future" to restore a recurring deviation to original.
+-- If the week is the deviation's first week (original_date), the row is deleted.
+-- Otherwise recurring_end_date is set to (p_week_date - 7 days).
+--
+-- Parameters:
+--   p_deviation_id: The ID of the recurring deviation to end
+--   p_week_date: The week date (agreement's original date for that week) where the user dropped
+--   p_user_id: The user performing this action (for audit trail)
+--
+-- Returns: 'deleted' if the row was removed, 'updated' if recurring_end_date was set
+CREATE OR REPLACE FUNCTION public.end_recurring_deviation_from_week(
+  p_deviation_id UUID,
+  p_week_date DATE,
+  p_user_id UUID
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_dev RECORD;
+  v_recurring_end_date DATE;
+BEGIN
+  SELECT * INTO v_dev
+  FROM public.lesson_appointment_deviations
+  WHERE id = p_deviation_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Deviation not found: %', p_deviation_id;
+  END IF;
+
+  IF NOT v_dev.recurring THEN
+    RAISE EXCEPTION 'Deviation is not recurring: %', p_deviation_id;
+  END IF;
+
+  IF p_week_date = v_dev.original_date THEN
+    DELETE FROM public.lesson_appointment_deviations WHERE id = p_deviation_id;
+    RETURN 'deleted';
+  END IF;
+
+  v_recurring_end_date := p_week_date - INTERVAL '7 days';
+  UPDATE public.lesson_appointment_deviations
+  SET recurring_end_date = v_recurring_end_date,
+      last_updated_by_user_id = p_user_id
+  WHERE id = p_deviation_id;
+
+  RETURN 'updated';
+END;
+$$;
+
+-- Set function owner to postgres for SECURITY DEFINER
+ALTER FUNCTION public.end_recurring_deviation_from_week(UUID, DATE, UUID) OWNER TO postgres;
+
+-- Grant execute permission to authenticated users
+GRANT EXECUTE ON FUNCTION public.end_recurring_deviation_from_week(UUID, DATE, UUID) TO authenticated;
+
 -- =============================================================================
 -- SECTION 7: PERMISSIONS
 -- =============================================================================

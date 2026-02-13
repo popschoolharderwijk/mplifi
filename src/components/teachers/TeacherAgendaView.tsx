@@ -314,40 +314,21 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		if (recurringDeviationToEnd) {
 			const weekWhereUserDropped = occurrenceWeekOriginalDateStr ?? originalDateStr;
 
-			// Restoring in the first week (same week as deviation's original_date) => remove deviation entirely
-			if (weekWhereUserDropped === recurringDeviationToEnd.original_date) {
-				const { error } = await supabase
-					.from('lesson_appointment_deviations')
-					.delete()
-					.eq('id', recurringDeviationToEnd.id);
+			const { data: result, error } = await supabase.rpc('end_recurring_deviation_from_week', {
+				p_deviation_id: recurringDeviationToEnd.id,
+				p_week_date: weekWhereUserDropped,
+				p_user_id: user.id,
+			});
 
-				if (error) {
-					console.error('Error removing recurring deviation:', error);
-					toast.error('Fout bij verwijderen terugkerende wijziging');
-					setPendingEvent(null);
-					return;
-				}
+			if (error) {
+				console.error('Error ending recurring deviation:', error);
+				toast.error('Fout bij beëindigen terugkerende wijziging');
+				setPendingEvent(null);
+				return;
+			}
+			if (result === 'deleted') {
 				toast.success('Terugkerende wijziging verwijderd');
 			} else {
-				// Set recurring_end_date to the last week the deviation still applies (week before this occurrence)
-				const endDate = new Date(weekWhereUserDropped + 'T12:00:00');
-				endDate.setDate(endDate.getDate() - 7);
-				const recurringEndDateStr = endDate.toISOString().split('T')[0];
-
-				const { error } = await supabase
-					.from('lesson_appointment_deviations')
-					.update({
-						recurring_end_date: recurringEndDateStr,
-						last_updated_by_user_id: user.id,
-					})
-					.eq('id', recurringDeviationToEnd.id);
-
-				if (error) {
-					console.error('Error setting recurring end date:', error);
-					toast.error('Fout bij beëindigen terugkerende wijziging');
-					setPendingEvent(null);
-					return;
-				}
 				toast.success('Terugkerende wijziging beëindigd vanaf deze week');
 			}
 			await loadData(false);

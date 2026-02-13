@@ -460,6 +460,10 @@ export type Database = {
 				Args: { _user_id: string };
 				Returns: undefined;
 			};
+			end_recurring_deviation_from_week: {
+				Args: { p_deviation_id: string; p_user_id: string; p_week_date: string };
+				Returns: string;
+			};
 			ensure_student_exists: { Args: { _user_id: string }; Returns: undefined };
 			function_exists: { Args: { p_fn_name: string }; Returns: boolean };
 			get_lesson_agreements_paginated: {
