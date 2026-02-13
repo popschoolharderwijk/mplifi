@@ -228,17 +228,17 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 			originalDateStr = event.resource.originalDate;
 			originalStartTime = event.resource.originalStartTime;
 		} else {
-			const originalDate = getDateForDayOfWeek(agreement.day_of_week, start);
-			originalDateStr = originalDate.toISOString().split('T')[0];
+			originalDateStr = event.start ? getDroppedDateString(event.start) : getDroppedDateString(start);
 			originalStartTime = agreement.start_time;
 		}
 
-		// For recurring deviations: compute the agreement's original slot for the occurrence's week
-		// This tells us if we're on a LATER week than the deviation's original_date
+		// For recurring deviations: agreement's weekday in the occurrence's week (for override lookup).
 		const occurrenceWeekOriginalDate = event.start
 			? getDateForDayOfWeek(agreement.day_of_week, new Date(event.start))
 			: null;
-		const occurrenceWeekOriginalDateStr = occurrenceWeekOriginalDate?.toISOString().split('T')[0] ?? '';
+		const occurrenceWeekOriginalDateStr = occurrenceWeekOriginalDate
+			? getDroppedDateString(occurrenceWeekOriginalDate)
+			: '';
 
 		// Are we editing a later occurrence of a recurring deviation? (e.g., week 4 when deviation is from week 1)
 		const isLaterRecurringOccurrence =
@@ -295,7 +295,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 			? actualDateStr === existingDeviation.actual_date &&
 				normalizeTime(actualStartTime) === normalizeTime(existingDeviation.actual_start_time)
 			: event.start &&
-				actualDateStr === event.start.toISOString().split('T')[0] &&
+				actualDateStr === getDroppedDateString(event.start) &&
 				normalizeTime(actualStartTime) === normalizeTimeFromDate(event.start);
 
 		if (droppedOnSameSlot) {
@@ -352,9 +352,12 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 			if (error) {
 				console.error('Error updating deviation:', error);
 				const isDateCheck =
-					error.code === PG_CHECK_VIOLATION || (error.message ?? '').toLowerCase().includes('deviation_date_check');
+					error.code === PG_CHECK_VIOLATION ||
+					(error.message ?? '').toLowerCase().includes('deviation_date_check');
 				toast.error(
-					isDateCheck ? 'Afspraak kan niet in het verleden worden geplaatst.' : 'Fout bij bijwerken afwijking',
+					isDateCheck
+						? 'Afspraak kan niet in het verleden worden geplaatst.'
+						: 'Fout bij bijwerken afwijking',
 				);
 				setPendingEvent(null);
 				return;
@@ -375,7 +378,8 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 			if (error) {
 				console.error('Error creating deviation:', error);
 				const isDateCheck =
-					error.code === PG_CHECK_VIOLATION || (error.message ?? '').toLowerCase().includes('deviation_date_check');
+					error.code === PG_CHECK_VIOLATION ||
+					(error.message ?? '').toLowerCase().includes('deviation_date_check');
 				toast.error(
 					isDateCheck ? 'Afspraak kan niet in het verleden worden geplaatst.' : 'Fout bij aanmaken afwijking',
 				);
@@ -414,7 +418,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		const eventWeekOriginalDate = event.start
 			? getDateForDayOfWeek(agreement.day_of_week, new Date(event.start))
 			: null;
-		const eventWeekOriginalDateStr = eventWeekOriginalDate?.toISOString().split('T')[0] ?? '';
+		const eventWeekOriginalDateStr = eventWeekOriginalDate ? getDroppedDateString(eventWeekOriginalDate) : '';
 
 		// For recurring deviations, the "original slot" to restore to is the agreement's slot for this week
 		// For regular deviations, use the stored original_date
@@ -429,7 +433,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 			originalDateStr = event.resource.originalDate;
 			originalStartTime = event.resource.originalStartTime;
 		} else {
-			originalDateStr = event.start ? new Date(event.start).toISOString().split('T')[0] : '';
+			originalDateStr = event.start ? getDroppedDateString(event.start) : '';
 			originalStartTime = agreement.start_time;
 		}
 

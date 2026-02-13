@@ -999,7 +999,12 @@ describe('deviation scenarios: ensure_week_shows_original_slot RPC', () => {
 			.eq('original_date', week2Monday)
 			.eq('recurring', false);
 		expect((overrideRows ?? []).length).toBe(1);
-		const override = (overrideRows ?? [])[0] as { id: string; original_date: string; actual_date: string; actual_start_time: string };
+		const override = (overrideRows ?? [])[0] as {
+			id: string;
+			original_date: string;
+			actual_date: string;
+			actual_start_time: string;
+		};
 		expect(override.original_date).toBe(week2Monday);
 		expect(override.actual_date).toBe(week2Monday);
 		expect(override.actual_start_time).toBe(agreement.start_time);

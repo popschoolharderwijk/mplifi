@@ -14,17 +14,17 @@ export function AgendaEvent({ event, title }: AgendaEventProps) {
 			{/* Recurring icon top-right inside bounds so selection ring matches event size */}
 			{isRecurring && (
 				<LuRepeat
-					className="absolute bottom-0 right-0.5 h-3 w-3 text-white drop-shadow-md z-10 shrink-0"
+					className="absolute bottom-0.5 right-0.5 h-3 w-3 text-white drop-shadow-md z-10 shrink-0"
 					title="Afwijkende reeks"
 					aria-hidden
 				/>
 			)}
 			{isCancelled && (
-				<LuBan className={`absolute h-3 w-3 text-white drop-shadow-md z-10 shrink-0 top-0 right-0.5`} />
+				<LuBan className={`absolute h-3 w-3 text-white drop-shadow-md z-10 shrink-0 top-0.5 right-0.5`} />
 			)}
 			{isDeviation && !isCancelled && (
 				<LuTriangleAlert
-					className={`absolute h-3 w-3 text-white drop-shadow-md z-10 shrink-0 top-0 right-0.5`}
+					className={`absolute h-3 w-3 text-white drop-shadow-md z-10 shrink-0 top-0.5 right-0.5`}
 				/>
 			)}
 			<span

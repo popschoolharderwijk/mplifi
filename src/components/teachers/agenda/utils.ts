@@ -199,7 +199,7 @@ export function generateRecurringEvents(
 
 		while (currentLessonDate <= rangeEnd) {
 			if (currentLessonDate >= earliestStartDate && (!latestEndDate || currentLessonDate <= latestEndDate)) {
-				const lessonDateStr = currentLessonDate.toISOString().split('T')[0];
+				const lessonDateStr = getDroppedDateString(currentLessonDate);
 
 				if (!isGroupLesson && group.length === 1) {
 					const deviation = deviations.get(`${firstAgreement.id}-${lessonDateStr}`);
