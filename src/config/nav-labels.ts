@@ -1,6 +1,6 @@
 /**
- * Centrale bron voor navigatielabels (sidebar, breadcrumbs, paginatitels, command palette).
- * Gebruik deze constanten overal zodat we DRY blijven en geen typefouten zoals "Lestypen" vs "Lessoorten".
+ * Central source for navigation labels (sidebar, breadcrumbs, page titles, command palette).
+ * Use these constants everywhere to stay DRY and avoid typos like "Lestypen" vs "Lessoorten".
  */
 export const NAV_LABELS = {
 	dashboard: 'Dashboard',

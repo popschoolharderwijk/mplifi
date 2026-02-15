@@ -212,7 +212,7 @@ export function TeacherAvailabilitySection({ teacherId, canEdit }: TeacherAvaila
 		return availabilityBlocks.filter((b) => b.displayDay === displayDay);
 	};
 
-	// Tijden weglaten alleen voor blokjes van precies 30 min; grotere blokken tonen start en eind op twee regels
+	// Hide times for blocks of exactly 30 min; larger blocks show start and end on two lines
 	const blockDurationMinutes = (startTime: string, endTime: string): number => {
 		const [sh, sm] = startTime.split(':').map(Number);
 		const [eh, em] = endTime.split(':').map(Number);
@@ -367,7 +367,7 @@ export function TeacherAvailabilitySection({ teacherId, canEdit }: TeacherAvaila
 											}}
 											title={`${dayName} ${displayTime(block.startTime)} - ${displayTime(block.endTime)}`}
 										>
-											{/* Tijden op twee regels; alleen tonen bij hele uren (niet bij :30) */}
+											{/* Times on two lines; only show for full hours (not at :30) */}
 											{showTimeInBlock(block.startTime, block.endTime) && (
 												<>
 													<div
