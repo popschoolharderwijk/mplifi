@@ -1,12 +1,8 @@
 import { LuBug } from 'react-icons/lu';
 import { DevLoginButton } from '@/components/DevLoginButton';
-import { EnvironmentBadge } from '@/components/ui/environment-badge';
 import { Button } from '@/components/ui/button';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { EnvironmentBadge } from '@/components/ui/environment-badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 

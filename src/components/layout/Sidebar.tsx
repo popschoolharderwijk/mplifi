@@ -96,10 +96,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 					className="flex-1 w-full px-2"
 					style={{ paddingTop: NAV_GAP, paddingBottom: NAV_GAP } as React.CSSProperties}
 				>
-					<nav
-						className="flex flex-col w-full"
-						style={{ gap: NAV_GAP } as React.CSSProperties}
-					>
+					<nav className="flex flex-col w-full" style={{ gap: NAV_GAP } as React.CSSProperties}>
 						{/* Main navigation items */}
 						{mainNavItems.map((item) => (
 							<NavItem key={item.href} {...item} collapsed={collapsed} />

@@ -218,8 +218,7 @@ export function TeacherAvailabilitySection({ teacherId, canEdit }: TeacherAvaila
 		const [eh, em] = endTime.split(':').map(Number);
 		return (eh - sh) * 60 + (em - sm);
 	};
-	const showTimeInBlock = (startTime: string, endTime: string) =>
-		blockDurationMinutes(startTime, endTime) > 30;
+	const showTimeInBlock = (startTime: string, endTime: string) => blockDurationMinutes(startTime, endTime) > 30;
 
 	if (loading) {
 		return (
