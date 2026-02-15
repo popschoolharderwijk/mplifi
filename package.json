@@ -15,7 +15,8 @@
 		"format": "npx @biomejs/biome format --write",
 		"lint": "npx @biomejs/biome lint --write",
 		"check": "npx @biomejs/biome check --write",
-		"reset:dev": "bun run scripts/reset-db.ts",
+		"reset-db:dev": "bun run scripts/reset-db.ts",
+		"reset-branch:lovable": "bun run scripts/reset-branch-lovable.ts",
 		"preview": "vite preview"
 	},
 	"dependencies": {
