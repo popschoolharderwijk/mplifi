@@ -1,13 +1,48 @@
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import type { Formats } from 'react-big-calendar';
-import { displayTime, formatDate } from '@/lib/dateHelpers';
+import { displayTime, formatDate, getDateForDayOfWeek, toLocalDateString } from '@/lib/dateHelpers';
 import type {
 	LessonAgreementWithStudent,
 	LessonAppointmentDeviationWithAgreement,
 	LessonFrequency,
 } from '@/types/lesson-agreements';
+import type { StudentEventInfo } from '@/types/students';
 import type { CalendarEvent } from './types';
+
+type Profile = {
+	first_name: string | null;
+	last_name: string | null;
+	email: string | null;
+	avatar_url?: string | null;
+};
+
+/** Extract display name from profile. */
+function formatStudentName(profile: Profile | null | undefined): string {
+	if (!profile) return 'Onbekend';
+	if (profile.first_name && profile.last_name) return `${profile.first_name} ${profile.last_name}`;
+	return profile.first_name || profile.email || 'Onbekend';
+}
+
+/** Build StudentEventInfo from profile and user_id. */
+function buildStudentInfo(profile: Profile | null | undefined, userId: string): StudentEventInfo | undefined {
+	if (!profile || !profile.email) return undefined;
+	return {
+		user_id: userId,
+		first_name: profile.first_name,
+		last_name: profile.last_name,
+		email: profile.email,
+		avatar_url: profile.avatar_url ?? null,
+	};
+}
+
+/** Date in the same week as originalDateStr with the same weekday as referenceDate (YYYY-MM-DD). */
+export function getActualDateInOriginalWeek(originalDateStr: string, referenceDate: Date): string {
+	const originalDate = new Date(originalDateStr + 'T12:00:00');
+	const targetDayOfWeek = referenceDate.getDay();
+	const actualDate = getDateForDayOfWeek(targetDayOfWeek, originalDate);
+	return toLocalDateString(actualDate);
+}
 
 export const dutchFormats: Formats = {
 	timeGutterFormat: (date: Date) => format(date, 'HH:mm', { locale: nl }),
@@ -28,34 +63,6 @@ export const dutchFormats: Formats = {
 	selectRangeFormat: ({ start, end }: { start: Date; end: Date }) =>
 		`${format(start, 'HH:mm', { locale: nl })} - ${format(end, 'HH:mm', { locale: nl })}`,
 };
-
-export function getDateForDayOfWeek(dayOfWeek: number, referenceDate: Date): Date {
-	const date = new Date(referenceDate);
-	const currentDay = date.getDay();
-	const diff = dayOfWeek - currentDay;
-	date.setDate(date.getDate() + diff);
-	return date;
-}
-
-/**
- * Returns a date string in the same week as originalDateStr but with the same weekday and time as droppedStart.
- * Same-week-only helper; actual_date is forced to the same week as originalDateStr.
- * @deprecated Prefer getDroppedDateString for drag-and-drop (actual_date >= CURRENT_DATE in DB).
- */
-export function getActualDateInOriginalWeek(originalDateStr: string, droppedStart: Date): string {
-	const originalDate = new Date(originalDateStr + 'T12:00:00');
-	const targetDayOfWeek = droppedStart.getDay();
-	const actualDate = getDateForDayOfWeek(targetDayOfWeek, originalDate);
-	return actualDate.toISOString().split('T')[0];
-}
-
-/** Returns the calendar date of the drop as YYYY-MM-DD (local date). Use for actual_date when moving appointments (e.g. to next week). */
-export function getDroppedDateString(droppedStart: Date): string {
-	const y = droppedStart.getFullYear();
-	const m = String(droppedStart.getMonth() + 1).padStart(2, '0');
-	const d = String(droppedStart.getDate()).padStart(2, '0');
-	return `${y}-${m}-${d}`;
-}
 
 function getFrequency(agreement: LessonAgreementWithStudent): LessonFrequency {
 	const freq = agreement.lesson_types?.frequency;
@@ -182,11 +189,7 @@ export function generateRecurringEvents(
 		const isGroupLesson = firstAgreement.lesson_types.is_group_lesson;
 		const durationMinutes = firstAgreement.lesson_types.duration_minutes || 30;
 
-		const studentNames = group.map((a) =>
-			a.profiles?.first_name && a.profiles?.last_name
-				? `${a.profiles.first_name} ${a.profiles.last_name}`
-				: a.profiles?.first_name || a.profiles?.email || 'Onbekend',
-		);
+		const studentNames = group.map((a) => formatStudentName(a.profiles));
 
 		const earliestStartDate = new Date(Math.min(...group.map((a) => new Date(a.start_date).getTime())));
 		const latestEndDate = group.some((a) => !a.end_date)
@@ -199,7 +202,7 @@ export function generateRecurringEvents(
 
 		while (currentLessonDate <= rangeEnd) {
 			if (currentLessonDate >= earliestStartDate && (!latestEndDate || currentLessonDate <= latestEndDate)) {
-				const lessonDateStr = getDroppedDateString(currentLessonDate);
+				const lessonDateStr = toLocalDateString(currentLessonDate);
 
 				if (!isGroupLesson && group.length === 1) {
 					const deviation = deviations.get(`${firstAgreement.id}-${lessonDateStr}`);
@@ -223,21 +226,12 @@ export function generateRecurringEvents(
 							actualDayOfWeek === firstAgreement.day_of_week &&
 							actualTimeNormalized === agreementTimeNormalized;
 
-						const deviationProfile = deviation.lesson_agreements.profiles;
-						const deviationStudentName =
-							deviationProfile?.first_name && deviationProfile?.last_name
-								? `${deviationProfile.first_name} ${deviationProfile.last_name}`
-								: deviationProfile?.first_name || deviationProfile?.email || 'Onbekend';
-
-						const deviationStudentInfo = deviationProfile
-							? {
-									user_id: deviation.lesson_agreements.student_user_id,
-									first_name: deviationProfile.first_name,
-									last_name: deviationProfile.last_name,
-									email: deviationProfile.email,
-									avatar_url: (deviationProfile as { avatar_url?: string | null }).avatar_url ?? null,
-								}
-							: undefined;
+						const deviationProfile = deviation.lesson_agreements.profiles as Profile | null;
+						const deviationStudentName = formatStudentName(deviationProfile);
+						const deviationStudentInfo = buildStudentInfo(
+							deviationProfile,
+							deviation.lesson_agreements.student_user_id,
+						);
 
 						events.push({
 							title: `${deviation.lesson_agreements.lesson_types.name} - ${deviationStudentName}`,
@@ -276,33 +270,24 @@ export function generateRecurringEvents(
 						const eventDate = getDateForDayOfWeek(actualDayOfWeek, currentLessonDate);
 						eventDate.setHours(Number.parseInt(hours, 10), Number.parseInt(minutes, 10), 0, 0);
 
-						const deviationProfile = recurringDeviation.lesson_agreements.profiles;
-						const deviationStudentName =
-							deviationProfile?.first_name && deviationProfile?.last_name
-								? `${deviationProfile.first_name} ${deviationProfile.last_name}`
-								: deviationProfile?.first_name || deviationProfile?.email || 'Onbekend';
-
-						const deviationStudentInfo = deviationProfile
-							? {
-									user_id: recurringDeviation.lesson_agreements.student_user_id,
-									first_name: deviationProfile.first_name,
-									last_name: deviationProfile.last_name,
-									email: deviationProfile.email,
-									avatar_url: (deviationProfile as { avatar_url?: string | null }).avatar_url ?? null,
-								}
-							: undefined;
+						const recurringProfile = recurringDeviation.lesson_agreements.profiles as Profile | null;
+						const recurringStudentName = formatStudentName(recurringProfile);
+						const recurringStudentInfo = buildStudentInfo(
+							recurringProfile,
+							recurringDeviation.lesson_agreements.student_user_id,
+						);
 
 						events.push({
-							title: `${recurringDeviation.lesson_agreements.lesson_types.name} - ${deviationStudentName}`,
+							title: `${recurringDeviation.lesson_agreements.lesson_types.name} - ${recurringStudentName}`,
 							start: eventDate,
 							end: new Date(eventDate.getTime() + durationMinutes * 60 * 1000),
 							resource: {
 								type: 'deviation',
 								agreementId: firstAgreement.id,
 								deviationId: recurringDeviation.id,
-								studentName: deviationStudentName,
-								studentInfo: deviationStudentInfo,
-								lessonTypeName: recurringDeviation.lesson_agreements.lesson_types.name,
+							studentName: recurringStudentName,
+							studentInfo: recurringStudentInfo,
+							lessonTypeName: recurringDeviation.lesson_agreements.lesson_types.name,
 								lessonTypeColor: recurringDeviation.lesson_agreements.lesson_types.color,
 								lessonTypeIcon: recurringDeviation.lesson_agreements.lesson_types.icon,
 								isDeviation: !isCancelled,
@@ -327,21 +312,9 @@ export function generateRecurringEvents(
 					? `${firstAgreement.lesson_types.name} (${group.length} deelnemers)`
 					: `${firstAgreement.lesson_types.name} - ${studentNames[0]}`;
 
-				const studentInfoList = group
-					.filter(
-						(
-							a,
-						): a is LessonAgreementWithStudent & {
-							profiles: NonNullable<LessonAgreementWithStudent['profiles']>;
-						} => a.profiles !== null,
-					)
-					.map((a) => ({
-						user_id: a.student_user_id,
-						first_name: a.profiles.first_name,
-						last_name: a.profiles.last_name,
-						email: a.profiles.email,
-						avatar_url: (a.profiles as { avatar_url?: string | null }).avatar_url ?? null,
-					}));
+			const studentInfoList = group
+				.map((a) => buildStudentInfo(a.profiles as Profile | null, a.student_user_id))
+				.filter((info): info is StudentEventInfo => info !== undefined);
 
 				events.push({
 					title,

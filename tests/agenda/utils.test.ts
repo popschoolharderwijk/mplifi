@@ -3,11 +3,8 @@
  * No database required; tests pure logic.
  */
 import { describe, expect, it } from 'bun:test';
-import {
-	generateRecurringEvents,
-	getActualDateInOriginalWeek,
-	getDateForDayOfWeek,
-} from '../../src/components/teachers/agenda/utils';
+import { generateRecurringEvents, getActualDateInOriginalWeek } from '../../src/components/teachers/agenda/utils';
+import { getDateForDayOfWeek } from '../../src/lib/dateHelpers';
 import type {
 	LessonAgreementWithStudent,
 	LessonAppointmentDeviationWithAgreement,

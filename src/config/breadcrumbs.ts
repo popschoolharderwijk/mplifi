@@ -1,8 +1,8 @@
 /**
- * Centrale configuratie voor breadcrumbs per route.
- * Gebruikt NAV_LABELS voor alle labels (DRY met sidebar e.d.).
- * Voor routes met dynamische segmenten (bijv. /teachers/:id) geef je alleen de
- * basis-items; de pagina zelf voegt het laatste item toe via setBreadcrumbSuffix().
+ * Central breadcrumb configuration per route.
+ * Uses NAV_LABELS for all labels (DRY with sidebar etc.).
+ * For routes with dynamic segments (e.g. /teachers/:id) only the base items
+ * are defined here; the page adds the last item via setBreadcrumbSuffix().
  */
 
 import { NAV_LABELS } from './nav-labels';
@@ -19,7 +19,7 @@ interface RouteBreadcrumb {
 	items: BreadcrumbItem[];
 }
 
-/** Volgorde is belangrijk: specifiekere routes eerst (bijv. /teachers/my-profile vóór /teachers/:id). */
+/** Order matters: more specific routes first (e.g. /teachers/my-profile before /teachers/:id). */
 const ROUTE_BREADCRUMBS: RouteBreadcrumb[] = [
 	{ pattern: '/', items: [] },
 	{ pattern: '/users', items: [{ label: NAV_LABELS.users, href: '/users' }] },
@@ -54,7 +54,7 @@ const ROUTE_BREADCRUMBS: RouteBreadcrumb[] = [
 			{ label: NAV_LABELS.myStatistics, href: '/teachers/my-statistics' },
 		],
 	},
-	// /teachers/:id – basis; pagina voegt docentnaam toe via suffix
+	// /teachers/:id – base only; page adds teacher name via suffix
 	{
 		pattern: /^\/teachers\/[^/]+$/,
 		items: [{ label: NAV_LABELS.teachers, href: '/teachers' }],
@@ -84,9 +84,9 @@ function matchesPattern(pathname: string, pattern: PathPattern): boolean {
 }
 
 /**
- * Geeft de basis-breadcrumb items voor het gegeven pad.
- * Voor routes met dynamische titel (bijv. docentnaam) voegt de pagina
- * extra items toe via useBreadcrumb().setBreadcrumbSuffix().
+ * Returns the base breadcrumb items for the given path.
+ * For routes with a dynamic title (e.g. teacher name) the page adds
+ * extra items via useBreadcrumb().setBreadcrumbSuffix().
  */
 export function getBaseBreadcrumb(pathname: string): BreadcrumbItem[] {
 	for (const { pattern, items } of ROUTE_BREADCRUMBS) {

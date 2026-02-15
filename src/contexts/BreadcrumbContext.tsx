@@ -6,7 +6,7 @@ export interface BreadcrumbItem {
 }
 
 interface BreadcrumbContextValue {
-	/** Extra items achter de route-basis (bijv. docentnaam op /teachers/:id). */
+	/** Extra items after the route base (e.g. teacher name on /teachers/:id). */
 	suffix: BreadcrumbItem[];
 	setBreadcrumbSuffix: (items: BreadcrumbItem[]) => void;
 }

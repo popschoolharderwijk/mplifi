@@ -24,7 +24,7 @@ export const DAY_NAMES_DISPLAY = [
 /**
  * Get day name by day of week (0 = Sunday, 1 = Monday, etc.)
  * @param dayOfWeek - Day of week in database format (0-6, where 0 = Sunday)
- * @returns Day name or "Onbekend" if invalid
+ * @returns Day name, or unknown fallback if invalid
  */
 export function getDayName(dayOfWeek: number): string {
 	if (dayOfWeek >= 0 && dayOfWeek < DAY_NAMES.length) {
@@ -105,6 +105,35 @@ export function displayDayToDbDay(displayIndex: number): number {
  */
 export function dbDayToDisplayDay(dbIndex: number): number {
 	return dbIndex === 0 ? 6 : dbIndex - 1;
+}
+
+/**
+ * Returns the date for a given day of week (0=Sun, 1=Mon, ... 6=Sat) in the week of referenceDate.
+ */
+export function getDateForDayOfWeek(dayOfWeek: number, referenceDate: Date): Date {
+	const date = new Date(referenceDate);
+	const currentDay = date.getDay();
+	const diff = dayOfWeek - currentDay;
+	date.setDate(date.getDate() + diff);
+	return date;
+}
+
+/**
+ * Returns the local calendar date as YYYY-MM-DD.
+ * Use for any date-only value (e.g. DB date columns, API payloads).
+ */
+export function toLocalDateString(date: Date): string {
+	return format(date, 'yyyy-MM-dd');
+}
+
+/**
+ * Returns a date n days from now (same time of day).
+ * Useful for tests that need future dates (e.g. deviation_date_check: actual_date >= CURRENT_DATE).
+ */
+export function dateDaysFromNow(days: number): Date {
+	const d = new Date();
+	d.setDate(d.getDate() + days);
+	return d;
 }
 
 /**
