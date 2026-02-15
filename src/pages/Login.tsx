@@ -24,7 +24,7 @@ export default function Login() {
 		setError(null);
 		setState('sending');
 
-		const { error } = await supabase.auth.signInWithOtp({
+		await supabase.auth.signInWithOtp({
 			email,
 			options: {
 				shouldCreateUser: false,
@@ -32,17 +32,7 @@ export default function Login() {
 			},
 		});
 
-		if (error) {
-			// User-friendly error message for unregistered users
-			if (error.message === 'Signups not allowed for otp') {
-				setError('Dit emailadres is niet geregistreerd.');
-			} else {
-				setError(error.message);
-			}
-			setState('idle');
-		} else {
-			setState('sent');
-		}
+		setState('sent');
 	};
 
 	const handleVerifyOtp = async (e: React.FormEvent) => {
@@ -111,9 +101,11 @@ export default function Login() {
 						<div className="bg-accent border border-border px-4 py-3 rounded">
 							<p className="font-medium text-foreground">Check je email!</p>
 							<p className="text-sm mt-1 text-muted-foreground">
-								We hebben een magic link gestuurd naar{' '}
-								<strong className="text-foreground">{email}</strong>. Klik op de link of voer de code
-								hieronder in.
+								Als het emailadres <strong className="text-foreground">{email}</strong> bij ons bekend
+								is, ontvang je een magic link om in te loggen.
+							</p>
+							<p className="text-sm mt-1 text-muted-foreground">
+								Klik op de link of voer de code hieronder in.
 							</p>
 						</div>
 
