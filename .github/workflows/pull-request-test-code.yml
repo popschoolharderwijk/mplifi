@@ -2,6 +2,7 @@ name: PR - Test Code
 
 on:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   pull-request-test-code:
