@@ -6,6 +6,7 @@ import { type LessonAgreement, LessonAgreementItem } from '@/components/students
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { NAV_LABELS } from '@/config/nav-labels';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -258,7 +259,7 @@ export default function MyStudents() {
 	return (
 		<div>
 			<DataTable
-				title="Mijn Leerlingen"
+				title={NAV_LABELS.myStudents}
 				description="Overzicht van alle leerlingen met lesovereenkomsten bij jou. Klik op een leerling om de leshistorie te bekijken."
 				data={students}
 				columns={columns}

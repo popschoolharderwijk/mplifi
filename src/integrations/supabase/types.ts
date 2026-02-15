@@ -106,6 +106,8 @@ export type Database = {
 					original_date: string;
 					original_start_time: string;
 					reason: string | null;
+					recurring: boolean;
+					recurring_end_date: string | null;
 					updated_at: string;
 				};
 				Insert: {
@@ -120,6 +122,8 @@ export type Database = {
 					original_date: string;
 					original_start_time: string;
 					reason?: string | null;
+					recurring?: boolean;
+					recurring_end_date?: string | null;
 					updated_at?: string;
 				};
 				Update: {
@@ -134,6 +138,8 @@ export type Database = {
 					original_date?: string;
 					original_start_time?: string;
 					reason?: string | null;
+					recurring?: boolean;
+					recurring_end_date?: string | null;
 					updated_at?: string;
 				};
 				Relationships: [
@@ -454,7 +460,20 @@ export type Database = {
 				Args: { _user_id: string };
 				Returns: undefined;
 			};
+			end_recurring_deviation_from_week: {
+				Args: { p_deviation_id: string; p_user_id: string; p_week_date: string };
+				Returns: string;
+			};
 			ensure_student_exists: { Args: { _user_id: string }; Returns: undefined };
+			ensure_week_shows_original_slot: {
+				Args: {
+					p_lesson_agreement_id: string;
+					p_scope: string;
+					p_user_id: string;
+					p_week_date: string;
+				};
+				Returns: string;
+			};
 			function_exists: { Args: { p_fn_name: string }; Returns: boolean };
 			get_lesson_agreements_paginated: {
 				Args: {
@@ -543,10 +562,14 @@ export type Database = {
 				Args: { p_policy_name: string; p_table_name: string };
 				Returns: boolean;
 			};
+			shift_recurring_deviation_to_next_week: {
+				Args: { p_deviation_id: string; p_user_id: string };
+				Returns: string;
+			};
 		};
 		Enums: {
 			app_role: 'site_admin' | 'admin' | 'staff';
-			lesson_frequency: 'weekly' | 'biweekly' | 'monthly';
+			lesson_frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
 		};
 		CompositeTypes: {
 			[_ in never]: never;
@@ -670,7 +693,7 @@ export const Constants = {
 	public: {
 		Enums: {
 			app_role: ['site_admin', 'admin', 'staff'],
-			lesson_frequency: ['weekly', 'biweekly', 'monthly'],
+			lesson_frequency: ['daily', 'weekly', 'biweekly', 'monthly'],
 		},
 	},
 } as const;

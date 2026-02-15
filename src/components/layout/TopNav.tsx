@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { LuLogOut, LuMoon, LuSearch, LuSettings, LuSun } from 'react-icons/lu';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '@/components/ThemeProvider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import {
 	CommandDialog,
@@ -20,6 +21,9 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { getBaseBreadcrumb } from '@/config/breadcrumbs';
+import { NAV_LABELS } from '@/config/nav-labels';
+import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -27,11 +31,14 @@ const quickActions: Array<{ action: string; label: string; group: string }> = []
 
 export function TopNav() {
 	const { user, signOut, isAdmin, isSiteAdmin } = useAuth();
+	const { pathname } = useLocation();
+	const { suffix } = useBreadcrumb();
+	const breadcrumbItems = useMemo(() => [...getBaseBreadcrumb(pathname), ...suffix], [pathname, suffix]);
 
 	// Quick navigation items for command palette (filtered by permissions)
 	const quickNavItems = [
-		{ href: '/', label: 'Dashboard', group: 'Navigatie' },
-		...(isAdmin || isSiteAdmin ? [{ href: '/teachers', label: 'Docenten', group: 'Navigatie' }] : []),
+		{ href: '/', label: NAV_LABELS.dashboard, group: 'Navigatie' },
+		...(isAdmin || isSiteAdmin ? [{ href: '/teachers', label: NAV_LABELS.teachers, group: 'Navigatie' }] : []),
 	];
 	const { setTheme, resolvedTheme } = useTheme();
 	const navigate = useNavigate();
@@ -104,10 +111,15 @@ export function TopNav() {
 	return (
 		<>
 			<header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b border-border bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+				{/* Breadcrumbs */}
+				{breadcrumbItems.length > 0 && <Breadcrumb items={breadcrumbItems} className="min-w-0 shrink-0" />}
+
+				<div className="flex-1" />
+
 				{/* Search / Command Palette Trigger */}
 				<Button
 					variant="outline"
-					className="relative h-9 w-full max-w-sm justify-start text-sm text-muted-foreground"
+					className="relative h-9 w-full max-w-sm justify-start text-sm text-muted-foreground shrink-0"
 					onClick={() => setOpen(true)}
 				>
 					<LuSearch className="mr-2 h-4 w-4" />
@@ -116,8 +128,6 @@ export function TopNav() {
 						<span className="text-xs">⌘</span>K
 					</kbd>
 				</Button>
-
-				<div className="flex-1" />
 
 				{/* Theme Toggle */}
 				<Button
@@ -163,7 +173,7 @@ export function TopNav() {
 						<DropdownMenuSeparator />
 						<DropdownMenuItem onClick={() => navigate('/settings')}>
 							<LuSettings className="mr-2 h-4 w-4" />
-							<span>Instellingen</span>
+							<span>{NAV_LABELS.settings}</span>
 						</DropdownMenuItem>
 						<DropdownMenuSeparator />
 						<DropdownMenuItem onClick={handleSignOut}>

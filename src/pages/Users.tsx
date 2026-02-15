@@ -18,6 +18,7 @@ import {
 import { RoleBadge } from '@/components/ui/role-badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { UserFormDialog } from '@/components/users/UserFormDialog';
+import { NAV_LABELS } from '@/config/nav-labels';
 import { useAuth } from '@/hooks/useAuth';
 import { useServerTableState } from '@/hooks/useServerTableState';
 import { supabase } from '@/integrations/supabase/client';
@@ -352,7 +353,7 @@ export default function Users() {
 	return (
 		<div>
 			<DataTable
-				title="Gebruikers"
+				title={NAV_LABELS.users}
 				description={
 					<>
 						Beheer alle gebruikers en hun rollen

@@ -2,11 +2,14 @@
 alwaysApply: true
 ---
 
-* Remember the development platform (Windows). Use PowerShell-compatible commands:
-  - ❌ `cd dir && bun dev` (Unix)
-  - ✅ `cd dir; bun dev` (PowerShell)
-  - ✅ Or run commands separately
+# NEVER do this (we are already in project root)
+* ❌ `cd C:\git\popschool\mcp && ...` or any `cd` to the workspace path
+* ❌ `npx biome check .` or any `npx biome ...` — use `biome ...` without npx
 
-* Run Biome directly, never via npx:
-  - ❌ `npx biome ...`
-  - ✅ `biome ...`
+# Always do this instead
+* Run commands from current directory: `biome check .` or `bun run ...`
+* Use `biome` (or `bunx biome`) — never `npx biome`
+
+# Windows / PowerShell
+* Use PowerShell-compatible syntax: `cmd1; cmd2` not `cmd1 && cmd2` when chaining
+* Or run commands separately

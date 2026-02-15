@@ -75,9 +75,14 @@ export function TeacherLessonTypesSection({ teacherId, canEdit: _canEdit }: Teac
 						{lessonTypes.map((lt) => {
 							const Icon = lt.icon ? resolveIconFromList(MUSIC_ICONS, lt.icon) : undefined;
 							return (
-								<div key={lt.id} className="flex items-center gap-3 rounded-md border p-3">
-									<ColorIcon icon={Icon} color={lt.color} size="md" />
-									<span className="font-medium">{lt.name}</span>
+								<div
+									key={lt.id}
+									className="flex min-w-0 items-center gap-3 overflow-hidden rounded-md border p-3"
+								>
+									<ColorIcon icon={Icon} color={lt.color} size="md" className="shrink-0" />
+									<span className="min-w-0 truncate font-medium" title={lt.name}>
+										{lt.name}
+									</span>
 								</div>
 							);
 						})}

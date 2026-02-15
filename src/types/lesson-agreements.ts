@@ -11,6 +11,9 @@ type LessonTypeRow = Database['public']['Tables']['lesson_types']['Row'];
 type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 type LessonAppointmentDeviationRow = Database['public']['Tables']['lesson_appointment_deviations']['Row'];
 
+/** Lesson scheduling frequency from Supabase enum (use this instead of defining locally) */
+export type LessonFrequency = Database['public']['Enums']['lesson_frequency'];
+
 /**
  * Lesson agreement from teacher's perspective (includes student profile)
  */
@@ -19,7 +22,10 @@ export type LessonAgreementWithStudent = Pick<
 	'id' | 'day_of_week' | 'start_time' | 'start_date' | 'end_date' | 'is_active' | 'student_user_id' | 'lesson_type_id'
 > & {
 	profiles: Pick<ProfileRow, 'first_name' | 'last_name' | 'email'> | null;
-	lesson_types: Pick<LessonTypeRow, 'id' | 'name' | 'icon' | 'color' | 'is_group_lesson' | 'duration_minutes'>;
+	lesson_types: Pick<
+		LessonTypeRow,
+		'id' | 'name' | 'icon' | 'color' | 'is_group_lesson' | 'duration_minutes' | 'frequency'
+	>;
 };
 
 /**

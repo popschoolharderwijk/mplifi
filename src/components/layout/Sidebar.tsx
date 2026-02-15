@@ -8,22 +8,25 @@ import {
 	LuUserCog,
 	LuUsers,
 } from 'react-icons/lu';
-import { NavLink } from 'react-router-dom';
 import { DevTools } from '@/components/DevTools';
+import { NavItem } from '@/components/layout/NavItem';
 import { Button } from '@/components/ui/button';
-import { EnvironmentBadge } from '@/components/ui/environment-badge';
 import { Separator } from '@/components/ui/separator';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { NAV_LABELS } from '@/config/nav-labels';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
-// Navigation items configuration
-const mainNavItems = [{ href: '/', label: 'Dashboard', icon: LuLayoutDashboard }];
+// Single value for all vertical spacing between nav items (padding + gap)
+const NAV_GAP = '1rem';
+
+// Main nav items (labels from central config)
+const mainNavItems = [{ href: '/', label: NAV_LABELS.dashboard, icon: LuLayoutDashboard }];
 
 // Admin-only navigation items
 const adminNavItems = [
-	{ href: '/users', label: 'Gebruikers', icon: LuUserCog },
-	{ href: '/lesson-types', label: 'Lessoorten', icon: LuMusic2 },
+	{ href: '/users', label: NAV_LABELS.users, icon: LuUserCog },
+	{ href: '/lesson-types', label: NAV_LABELS.lessonTypes, icon: LuMusic2 },
 ];
 
 interface SidebarProps {
@@ -89,8 +92,11 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 				</div>
 
 				{/* Navigation */}
-				<div className={cn('flex-1 overflow-auto py-4', collapsed ? 'px-0' : 'px-2')}>
-					<nav className={cn('flex flex-col gap-1', collapsed && 'items-center')}>
+				<div
+					className="flex-1 w-full px-2"
+					style={{ paddingTop: NAV_GAP, paddingBottom: NAV_GAP } as React.CSSProperties}
+				>
+					<nav className="flex flex-col w-full" style={{ gap: NAV_GAP } as React.CSSProperties}>
 						{/* Main navigation items */}
 						{mainNavItems.map((item) => (
 							<NavItem key={item.href} {...item} collapsed={collapsed} />
@@ -103,14 +109,14 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 									<div className="mt-4 mb-2 px-3">
 										<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
 											<LuGraduationCap className="h-3.5 w-3.5" />
-											<span>Docenten</span>
+											<span>{NAV_LABELS.teachers}</span>
 										</div>
 									</div>
 								)}
-								{collapsed && <Separator className="my-2" />}
+								{collapsed && <Separator />}
 								<NavItem
 									href="/teachers"
-									label="Docenten"
+									label={NAV_LABELS.teachers}
 									icon={LuGraduationCap}
 									collapsed={collapsed}
 								/>
@@ -128,10 +134,10 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 										</div>
 									</div>
 								)}
-								{collapsed && <Separator className="my-2" />}
+								{collapsed && <Separator />}
 								<NavItem
 									href="/students/my-students"
-									label="Mijn Leerlingen"
+									label={NAV_LABELS.myStudents}
 									icon={LuUsers}
 									collapsed={collapsed}
 								/>
@@ -145,12 +151,17 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 									<div className="mt-4 mb-2 px-3">
 										<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
 											<LuUsers className="h-3.5 w-3.5" />
-											<span>Leerlingen</span>
+											<span>{NAV_LABELS.students}</span>
 										</div>
 									</div>
 								)}
-								{collapsed && <Separator className="my-2" />}
-								<NavItem href="/students" label="Leerlingen" icon={LuUsers} collapsed={collapsed} />
+								{collapsed && <Separator />}
+								<NavItem
+									href="/students"
+									label={NAV_LABELS.students}
+									icon={LuUsers}
+									collapsed={collapsed}
+								/>
 							</>
 						)}
 
@@ -165,7 +176,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 										</div>
 									</div>
 								)}
-								{collapsed && <Separator className="my-2" />}
+								{collapsed && <Separator />}
 								{adminNavItems.map((item) => (
 									<NavItem key={item.href} {...item} collapsed={collapsed} />
 								))}
@@ -181,57 +192,9 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 						collapsed ? 'flex justify-center p-2' : 'p-2 w-full',
 					)}
 				>
-					{!collapsed && <DevTools className="w-full" />}
-					{collapsed && <EnvironmentBadge />}
+					<DevTools className={collapsed ? undefined : 'w-full'} collapsed={collapsed} />
 				</div>
 			</aside>
 		</TooltipProvider>
 	);
-}
-
-interface NavItemProps {
-	href: string;
-	label: string;
-	icon: React.ComponentType<{ className?: string }>;
-	collapsed: boolean;
-}
-
-function NavItem({ href, label, icon: Icon, collapsed }: NavItemProps) {
-	const navLink = (
-		<NavLink
-			to={href}
-			className={({ isActive }) =>
-				cn(
-					// Base styles
-					'flex h-10 items-center rounded-lg text-sm font-medium whitespace-nowrap',
-					// Transition for smooth hover/active effects
-					'transition-colors duration-150 ease-in-out',
-					// Default state
-					'text-sidebar-foreground',
-					// Hover state - only when not active
-					!isActive && 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-					// Active/selected state
-					isActive && ['bg-primary text-primary-foreground', 'shadow-sm', 'hover:bg-primary/90'],
-					// Expanded state
-					!collapsed && 'gap-3 px-3',
-					// Collapsed state - center icon in available space
-					collapsed && 'w-10 justify-center',
-				)
-			}
-		>
-			<Icon className="h-5 w-5 shrink-0" />
-			{!collapsed && <span className="truncate">{label}</span>}
-		</NavLink>
-	);
-
-	if (collapsed) {
-		return (
-			<Tooltip delayDuration={0}>
-				<TooltipTrigger asChild>{navLink}</TooltipTrigger>
-				<TooltipContent side="right">{label}</TooltipContent>
-			</Tooltip>
-		);
-	}
-
-	return navLink;
 }

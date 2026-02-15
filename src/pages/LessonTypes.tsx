@@ -16,11 +16,11 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { resolveIconFromList } from '@/components/ui/icon-picker';
+import { NAV_LABELS } from '@/config/nav-labels';
 import { MUSIC_ICONS } from '@/constants/icons';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-
-type LessonFrequency = 'weekly' | 'biweekly' | 'monthly';
+import type { LessonFrequency } from '@/types/lesson-agreements';
 
 interface LessonType {
 	id: string;
@@ -39,6 +39,7 @@ interface LessonType {
 }
 
 const frequencyLabels: Record<LessonFrequency, string> = {
+	daily: 'Dagelijks',
 	weekly: 'Wekelijks',
 	biweekly: 'Tweewekelijks',
 	monthly: 'Maandelijks',
@@ -208,8 +209,8 @@ export default function LessonTypes() {
 	return (
 		<div>
 			<DataTable
-				title="Lessoorten"
-				description="Beheer alle lessoorten en hun configuratie"
+				title={NAV_LABELS.lessonTypes}
+				description={`Beheer alle ${NAV_LABELS.lessonTypes.toLowerCase()} en hun configuratie`}
 				data={lessonTypes}
 				columns={columns}
 				searchQuery={searchQuery}

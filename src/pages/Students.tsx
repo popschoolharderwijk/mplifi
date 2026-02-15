@@ -17,6 +17,7 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { NAV_LABELS } from '@/config/nav-labels';
 import { useAuth } from '@/hooks/useAuth';
 import { useServerTableState } from '@/hooks/useServerTableState';
 import { type LessonType, useLessonTypeFilter, useStatusFilter } from '@/hooks/useTableFilters';
@@ -381,7 +382,7 @@ export default function Students() {
 	return (
 		<div>
 			<DataTable
-				title="Leerlingen"
+				title={NAV_LABELS.students}
 				description="Beheer alle leerlingen en hun gegevens"
 				data={students}
 				columns={columns}

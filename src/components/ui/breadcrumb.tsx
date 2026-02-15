@@ -22,18 +22,24 @@ export function Breadcrumb({ items, className }: BreadcrumbProps) {
 			<Link to="/" className="flex items-center hover:text-foreground transition-colors" aria-label="Home">
 				<LuLayoutDashboard className="h-4 w-4" />
 			</Link>
-			{items.map((item) => (
-				<React.Fragment key={item.href ?? item.label}>
-					<LuChevronRight className="h-4 w-4" />
-					{item.href ? (
-						<Link to={item.href} className="hover:text-foreground transition-colors">
-							{item.label}
-						</Link>
-					) : (
-						<span className="text-foreground font-medium">{item.label}</span>
-					)}
-				</React.Fragment>
-			))}
+			{items.map((item, index) => {
+				const isLast = index === items.length - 1;
+				const currentPageClass = 'text-foreground font-medium';
+				return (
+					<React.Fragment key={item.href ?? item.label}>
+						<LuChevronRight className="h-4 w-4" />
+						{isLast ? (
+							<span className={currentPageClass}>{item.label}</span>
+						) : item.href ? (
+							<Link to={item.href} className="hover:text-foreground transition-colors">
+								{item.label}
+							</Link>
+						) : (
+							<span className={currentPageClass}>{item.label}</span>
+						)}
+					</React.Fragment>
+				);
+			})}
 		</nav>
 	);
 }

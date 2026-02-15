@@ -2,6 +2,7 @@
 alwaysApply: true
 ---
 
-* Only apply after big changes (multiple files, many lines). Skip for small fixes (typos, single line changes)
-* When applying: run `biome check --write .` to auto-format, then `biome ci` to verify
-* Fix reported issues and repeat until `biome ci` passes
+* Prefer **ReadLints** for quick feedback when editing files; only run biome in terminal for a full check/format.
+* When running biome in terminal: use `biome ...` (never `npx biome ...` or `cd ... && biome` — see cli.mdc).
+* Only run biome after bigger changes (multiple files). Skip for tiny fixes (typos, single-line).
+* When applying: run `biome check --write .` then `biome ci`; fix issues and repeat until `biome ci` passes.

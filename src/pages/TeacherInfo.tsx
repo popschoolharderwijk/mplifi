@@ -6,8 +6,8 @@ import { TeacherAvailabilitySection } from '@/components/teachers/TeacherAvailab
 import { TeacherLessonTypesSection } from '@/components/teachers/TeacherLessonTypesSection';
 import { TeacherProfileSection } from '@/components/teachers/TeacherProfileSection';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import type { TeacherWithProfile } from '@/types/teachers';
@@ -89,6 +89,20 @@ export default function TeacherInfo() {
 		}
 	}, [targetTeacherId, loadProfile]);
 
+	const { setBreadcrumbSuffix } = useBreadcrumb();
+	useEffect(() => {
+		if (!teacherProfile) {
+			setBreadcrumbSuffix([]);
+			return;
+		}
+		const name =
+			teacherProfile.profile.first_name && teacherProfile.profile.last_name
+				? `${teacherProfile.profile.first_name} ${teacherProfile.profile.last_name}`
+				: teacherProfile.profile.first_name || teacherProfile.profile.email;
+		setBreadcrumbSuffix([{ label: name }]);
+		return () => setBreadcrumbSuffix([]);
+	}, [teacherProfile, setBreadcrumbSuffix]);
+
 	// Check access
 	const canView = useCallback(() => {
 		if (!targetTeacherId) return false;
@@ -146,9 +160,6 @@ export default function TeacherInfo() {
 
 	return (
 		<div className="space-y-6">
-			{/* Breadcrumb */}
-			<Breadcrumb items={[{ label: 'Docenten', href: '/teachers' }, { label: teacherName }]} />
-
 			{/* Header */}
 			<div className="flex items-center gap-4">
 				<Avatar className="h-16 w-16">
@@ -162,17 +173,17 @@ export default function TeacherInfo() {
 			</div>
 
 			{/* Tabs */}
-			<Tabs defaultValue="profile" className="space-y-6">
+			<Tabs defaultValue="profile" className="space-y-2">
 				<TabsList>
 					<TabsTrigger value="profile">Profiel</TabsTrigger>
 					<TabsTrigger value="agenda">Agenda</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="profile">
-					{/* Two-column layout: Left = Profile + Lesson Types, Right = Availability */}
-					<div className="grid gap-6 lg:grid-cols-[1fr,auto]">
-						{/* Left column: Profile info & Lesson Types */}
-						<div className="space-y-6">
+					{/* Two-column grid: both columns scale with viewport */}
+					<div className="grid gap-6 lg:grid-cols-2">
+						{/* Left column: Profile + Lesson types */}
+						<div className="space-y-6 min-w-0">
 							<TeacherProfileSection
 								teacherId={targetTeacherId}
 								user_id={teacherProfile.user_id}
@@ -190,8 +201,8 @@ export default function TeacherInfo() {
 							</div>
 						</div>
 
-						{/* Right column: Availability */}
-						<div className="lg:w-[680px]">
+						{/* Right column: Availability (scales with viewport) */}
+						<div className="min-w-0">
 							<TeacherAvailabilitySection teacherId={targetTeacherId} canEdit={canEdit()} />
 						</div>
 					</div>

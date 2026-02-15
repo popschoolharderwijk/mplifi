@@ -1,326 +1,35 @@
-import { format } from 'date-fns';
-import { nl } from 'date-fns/locale';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Calendar, type Event, type Formats, type View } from 'react-big-calendar';
+import { Calendar, type View } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
-import { LuBan, LuLoaderCircle, LuTriangleAlert } from 'react-icons/lu';
+import { LuLoaderCircle } from 'react-icons/lu';
 import { toast } from 'sonner';
-import { StudentInfoCard } from '@/components/students/StudentInfoCard';
 import { StudentInfoModal, type StudentInfoModalData } from '@/components/students/StudentInfoModal';
-import { Button } from '@/components/ui/button';
-import { ColorIcon } from '@/components/ui/color-icon';
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from '@/components/ui/dialog';
-import { resolveIconFromList } from '@/components/ui/icon-picker';
-import { MUSIC_ICONS } from '@/constants/icons';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { AVAILABILITY_SETTINGS, calendarLocalizer, formatDate, formatTime } from '@/lib/dateHelpers';
+import {
+	AVAILABILITY_SETTINGS,
+	calendarLocalizer,
+	getDateForDayOfWeek,
+	normalizeTime,
+	normalizeTimeFromDate,
+	toLocalDateString,
+} from '@/lib/dateHelpers';
 import type { LessonAgreementWithStudent, LessonAppointmentDeviationWithAgreement } from '@/types/lesson-agreements';
-import type { StudentEventInfo } from '@/types/students';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
+import { CalendarViewProvider } from './agenda/CalendarViewContext';
+import { ConfirmCancelDialog } from './agenda/ConfirmCancelDialog';
+import { DetailModal } from './agenda/DetailModal';
+import { AgendaEvent } from './agenda/Event';
+import { Legend } from './agenda/Legend';
+import { RecurrenceChoiceDialog, type RecurrenceScope } from './agenda/RecurrenceChoiceDialog';
+import type { CalendarEvent, TeacherAgendaViewProps } from './agenda/types';
+import { buildTooltipText, dutchFormats, generateRecurringEvents } from './agenda/utils';
 
 const DragAndDropCalendar = withDragAndDrop(Calendar);
 
-/**
- * Dutch calendar formats for react-big-calendar
- * Uses 24-hour time format and Dutch date formatting
- */
-const dutchFormats: Formats = {
-	timeGutterFormat: (date: Date) => format(date, 'HH:mm', { locale: nl }),
-	eventTimeRangeFormat: ({ start, end }: { start: Date; end: Date }) =>
-		`${format(start, 'HH:mm', { locale: nl })} - ${format(end, 'HH:mm', { locale: nl })}`,
-	dayFormat: (date: Date) => format(date, 'EEEE d', { locale: nl }),
-	dayHeaderFormat: (date: Date) => format(date, 'EEEE d MMMM', { locale: nl }),
-	dayRangeHeaderFormat: ({ start, end }: { start: Date; end: Date }) =>
-		`${format(start, 'd MMM', { locale: nl })} - ${format(end, 'd MMM', { locale: nl })} ${format(end, 'yyyy', { locale: nl })}`,
-	monthHeaderFormat: (date: Date) => format(date, 'MMMM yyyy', { locale: nl }),
-	weekdayFormat: (date: Date) => format(date, 'EEE', { locale: nl }),
-	agendaTimeFormat: (date: Date) => format(date, 'HH:mm', { locale: nl }),
-	agendaTimeRangeFormat: ({ start, end }: { start: Date; end: Date }) =>
-		`${format(start, 'HH:mm', { locale: nl })} - ${format(end, 'HH:mm', { locale: nl })}`,
-	agendaDateFormat: (date: Date) => format(date, 'EEEE d MMMM', { locale: nl }),
-	agendaHeaderFormat: ({ start, end }: { start: Date; end: Date }) =>
-		`${format(start, 'd MMM', { locale: nl })} - ${format(end, 'd MMM', { locale: nl })} ${format(end, 'yyyy', { locale: nl })}`,
-	selectRangeFormat: ({ start, end }: { start: Date; end: Date }) =>
-		`${format(start, 'HH:mm', { locale: nl })} - ${format(end, 'HH:mm', { locale: nl })}`,
-};
-
-interface TeacherAgendaViewProps {
-	teacherId: string;
-	canEdit: boolean;
-}
-
-interface CalendarEvent extends Event {
-	resource: {
-		type: 'agreement' | 'deviation';
-		agreementId: string;
-		deviationId?: string;
-		studentName: string;
-		studentInfo?: StudentEventInfo; // Full student info for individual lessons
-		studentInfoList?: StudentEventInfo[]; // List of students for group lessons
-		lessonTypeName: string;
-		lessonTypeColor: string | null;
-		lessonTypeIcon: string | null;
-		isDeviation: boolean;
-		isCancelled: boolean;
-		isGroupLesson: boolean;
-		studentCount?: number;
-		originalDate?: string;
-		originalStartTime?: string;
-		reason?: string | null;
-		isPending?: boolean; // True when event is being saved (optimistic UI)
-	};
-}
-
-// Custom event component to show warning icon for deviations
-interface CustomEventProps {
-	event: CalendarEvent;
-	title: React.ReactNode;
-}
-
-function CustomEvent({ event, title }: CustomEventProps) {
-	const { isDeviation, isCancelled } = event.resource;
-
-	return (
-		<div className="h-full w-full overflow-hidden relative">
-			{isCancelled && <LuBan className="absolute top-0.5 right-0.5 h-3 w-3 text-white drop-shadow-md z-10" />}
-			{isDeviation && !isCancelled && (
-				<LuTriangleAlert className="absolute top-0.5 right-0.5 h-3 w-3 text-white drop-shadow-md z-10" />
-			)}
-			<span className={`text-xs leading-tight ${isCancelled ? 'line-through' : ''}`}>{title}</span>
-		</div>
-	);
-}
-
-// Build tooltip text for native title attribute
-function buildTooltipText(event: CalendarEvent): string {
-	const {
-		isDeviation,
-		isCancelled,
-		originalDate,
-		originalStartTime,
-		reason,
-		lessonTypeName,
-		studentName,
-		isGroupLesson,
-		studentCount,
-	} = event.resource;
-
-	const lines: string[] = [lessonTypeName];
-
-	if (isGroupLesson) {
-		lines.push(`${studentCount} deelnemers:`);
-		// Split student names and add each on a new line
-		const students = studentName.split(', ');
-		for (const student of students) {
-			lines.push(`  • ${student}`);
-		}
-	} else {
-		lines.push(studentName);
-	}
-
-	if (isCancelled) {
-		lines.push('');
-		lines.push('❌ Les vervallen');
-		if (reason) {
-			lines.push(`Reden: ${reason}`);
-		}
-	} else if (isDeviation) {
-		lines.push('');
-		lines.push('⚠ Gewijzigde afspraak');
-		if (originalDate && originalStartTime) {
-			lines.push(`Origineel: ${formatDate(originalDate)} om ${formatTime(originalStartTime)}`);
-		}
-		if (reason) {
-			lines.push(`Reden: ${reason}`);
-		}
-	}
-
-	return lines.join('\n');
-}
-
-// Helper to calculate the date of a specific day of week in a given week
-function getDateForDayOfWeek(dayOfWeek: number, referenceDate: Date): Date {
-	const date = new Date(referenceDate);
-	const currentDay = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
-	const diff = dayOfWeek - currentDay;
-	date.setDate(date.getDate() + diff);
-	return date;
-}
-
-// Helper to generate recurring events from agreements
-// Groups agreements by lesson type for group lessons
-function generateRecurringEvents(
-	agreements: LessonAgreementWithStudent[],
-	rangeStart: Date,
-	rangeEnd: Date,
-	deviations: Map<string, LessonAppointmentDeviationWithAgreement>,
-): CalendarEvent[] {
-	const events: CalendarEvent[] = [];
-
-	// Group agreements by (day_of_week, start_time, lesson_type_id) to handle group lessons
-	const groupedAgreements = new Map<string, LessonAgreementWithStudent[]>();
-	for (const agreement of agreements) {
-		const key = `${agreement.day_of_week}-${agreement.start_time}-${agreement.lesson_type_id}`;
-		const existing = groupedAgreements.get(key) || [];
-		existing.push(agreement);
-		groupedAgreements.set(key, existing);
-	}
-
-	// Process each group
-	for (const [, group] of groupedAgreements) {
-		const firstAgreement = group[0];
-		const isGroupLesson = firstAgreement.lesson_types.is_group_lesson;
-		const durationMinutes = firstAgreement.lesson_types.duration_minutes || 30;
-
-		// For group lessons, combine all student names
-		const studentNames = group.map((a) =>
-			a.profiles?.first_name && a.profiles?.last_name
-				? `${a.profiles.first_name} ${a.profiles.last_name}`
-				: a.profiles?.first_name || a.profiles?.email || 'Onbekend',
-		);
-
-		// Find the first occurrence of this lesson day that falls within the range
-		const firstLessonDate = new Date(rangeStart);
-		const daysUntilLesson = (firstAgreement.day_of_week - firstLessonDate.getDay() + 7) % 7;
-		firstLessonDate.setDate(firstLessonDate.getDate() + daysUntilLesson);
-
-		// Use the earliest start_date and latest end_date from all agreements in the group
-		const earliestStartDate = new Date(Math.min(...group.map((a) => new Date(a.start_date).getTime())));
-		const latestEndDate = group.some((a) => !a.end_date)
-			? null
-			: new Date(
-					Math.max(...group.filter((a) => a.end_date).map((a) => new Date(a.end_date as string).getTime())),
-				);
-
-		// Iterate through each occurrence
-		const currentLessonDate = new Date(firstLessonDate);
-
-		while (currentLessonDate <= rangeEnd) {
-			// Check if this date is within the agreements' validity period
-			if (currentLessonDate >= earliestStartDate && (!latestEndDate || currentLessonDate <= latestEndDate)) {
-				const lessonDateStr = currentLessonDate.toISOString().split('T')[0];
-
-				// For group lessons, check if any member has a deviation (for now, skip deviations for group lessons)
-				// Individual lessons check for deviations
-				if (!isGroupLesson && group.length === 1) {
-					const deviation = deviations.get(`${firstAgreement.id}-${lessonDateStr}`);
-
-					if (deviation) {
-						const isCancelled = deviation.is_cancelled;
-
-						// For cancelled lessons, show at original time; for moved lessons, show at actual time
-						const [hours, minutes] = isCancelled
-							? deviation.original_start_time.split(':')
-							: deviation.actual_start_time.split(':');
-						const eventDate = new Date(isCancelled ? deviation.original_date : deviation.actual_date);
-						eventDate.setHours(Number.parseInt(hours, 10), Number.parseInt(minutes, 10), 0, 0);
-
-						const deviationProfile = deviation.lesson_agreements.profiles;
-						const deviationStudentName =
-							deviationProfile?.first_name && deviationProfile?.last_name
-								? `${deviationProfile.first_name} ${deviationProfile.last_name}`
-								: deviationProfile?.first_name || deviationProfile?.email || 'Onbekend';
-
-						// Build student info for deviation - need to cast because profiles has avatar_url now
-						const deviationStudentInfo: StudentEventInfo | undefined = deviationProfile
-							? {
-									user_id: deviation.lesson_agreements.student_user_id,
-									first_name: deviationProfile.first_name,
-									last_name: deviationProfile.last_name,
-									email: deviationProfile.email,
-									avatar_url: (deviationProfile as { avatar_url?: string | null }).avatar_url ?? null,
-								}
-							: undefined;
-
-						events.push({
-							title: `${deviation.lesson_agreements.lesson_types.name} - ${deviationStudentName}`,
-							start: eventDate,
-							end: new Date(eventDate.getTime() + durationMinutes * 60 * 1000),
-							resource: {
-								type: 'deviation',
-								agreementId: firstAgreement.id,
-								deviationId: deviation.id,
-								studentName: deviationStudentName,
-								studentInfo: deviationStudentInfo,
-								lessonTypeName: deviation.lesson_agreements.lesson_types.name,
-								lessonTypeColor: deviation.lesson_agreements.lesson_types.color,
-								lessonTypeIcon: deviation.lesson_agreements.lesson_types.icon,
-								isDeviation: !isCancelled,
-								isCancelled,
-								isGroupLesson: false,
-								originalDate: deviation.original_date,
-								originalStartTime: deviation.original_start_time,
-								reason: deviation.reason,
-							},
-						});
-						currentLessonDate.setDate(currentLessonDate.getDate() + 7);
-						continue;
-					}
-				}
-
-				// Create the event
-				const [hours, minutes] = firstAgreement.start_time.split(':');
-				const eventDate = new Date(currentLessonDate);
-				eventDate.setHours(Number.parseInt(hours, 10), Number.parseInt(minutes, 10), 0, 0);
-
-				const title = isGroupLesson
-					? `${firstAgreement.lesson_types.name} (${group.length} deelnemers)`
-					: `${firstAgreement.lesson_types.name} - ${studentNames[0]}`;
-
-				// Build student info for individual lessons or student list for group lessons
-				const studentInfoList: StudentEventInfo[] = group
-					.filter(
-						(
-							a,
-						): a is LessonAgreementWithStudent & {
-							profiles: NonNullable<LessonAgreementWithStudent['profiles']>;
-						} => a.profiles !== null,
-					)
-					.map((a) => ({
-						user_id: a.student_user_id,
-						first_name: a.profiles.first_name,
-						last_name: a.profiles.last_name,
-						email: a.profiles.email,
-						avatar_url: (a.profiles as { avatar_url?: string | null }).avatar_url ?? null,
-					}));
-
-				events.push({
-					title,
-					start: eventDate,
-					end: new Date(eventDate.getTime() + durationMinutes * 60 * 1000),
-					resource: {
-						type: 'agreement',
-						agreementId: firstAgreement.id,
-						studentName: isGroupLesson ? studentNames.join(', ') : studentNames[0],
-						studentInfo: !isGroupLesson && studentInfoList.length > 0 ? studentInfoList[0] : undefined,
-						studentInfoList: isGroupLesson ? studentInfoList : undefined,
-						lessonTypeName: firstAgreement.lesson_types.name,
-						lessonTypeColor: firstAgreement.lesson_types.color,
-						lessonTypeIcon: firstAgreement.lesson_types.icon,
-						isDeviation: false,
-						isCancelled: false,
-						isGroupLesson,
-						studentCount: isGroupLesson ? group.length : undefined,
-					},
-				});
-			}
-
-			// Move to next week
-			currentLessonDate.setDate(currentLessonDate.getDate() + 7);
-		}
-	}
-
-	return events;
-}
+/** Postgres SQLSTATE for check constraint violation (e.g. deviation_date_check). */
+const PG_CHECK_VIOLATION = '23514';
 
 export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps) {
 	const { user } = useAuth();
@@ -332,11 +41,20 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 	const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [isCancelling, setIsCancelling] = useState(false);
+	const [isReverting, setIsReverting] = useState(false);
+	const [cancelLessonConfirmOpen, setCancelLessonConfirmOpen] = useState(false);
+	const [recurrenceChoiceOpen, setRecurrenceChoiceOpen] = useState(false);
+	const [recurrenceChoiceAction, setRecurrenceChoiceAction] = useState<'change' | 'cancel'>('change');
+	const [pendingDrop, setPendingDrop] = useState<{
+		event: CalendarEvent;
+		start: Date;
+		end: Date;
+	} | null>(null);
+	const [pendingCancelScope, setPendingCancelScope] = useState<RecurrenceScope>('single');
 	const [studentInfoModal, setStudentInfoModal] = useState<{
 		open: boolean;
 		student: StudentInfoModalData | null;
 	}>({ open: false, student: null });
-	// Pending event for optimistic UI during drag operations
 	const [pendingEvent, setPendingEvent] = useState<CalendarEvent | null>(null);
 
 	const loadData = useCallback(
@@ -347,16 +65,14 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 				setLoading(true);
 			}
 
-			// Load agreements
 			const { data: agreementsData, error: agreementsError } = await supabase
 				.from('lesson_agreements')
 				.select(
-					'id, day_of_week, start_time, start_date, end_date, is_active, student_user_id, lesson_type_id, lesson_types(id, name, icon, color, is_group_lesson, duration_minutes)',
+					'id, day_of_week, start_time, start_date, end_date, is_active, student_user_id, lesson_type_id, lesson_types(id, name, icon, color, is_group_lesson, duration_minutes, frequency)',
 				)
 				.eq('teacher_id', teacherId)
 				.eq('is_active', true);
 
-			// Load profiles separately
 			if (agreementsData) {
 				const studentUserIds = [...new Set(agreementsData.map((a) => a.student_user_id))];
 				const { data: profilesData } = await supabase
@@ -364,7 +80,6 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 					.select('user_id, first_name, last_name, email, avatar_url')
 					.in('user_id', studentUserIds);
 
-				// Merge profiles into agreements
 				if (profilesData && agreementsData) {
 					const profilesMap = new Map(profilesData.map((p) => [p.user_id, p]));
 					for (const agreement of agreementsData) {
@@ -381,15 +96,13 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 				return;
 			}
 
-			// Load deviations
 			const { data: deviationsData, error: deviationsError } = await supabase
 				.from('lesson_appointment_deviations')
 				.select(
-					'id, lesson_agreement_id, original_date, original_start_time, actual_date, actual_start_time, reason, is_cancelled, lesson_agreements(id, day_of_week, start_time, start_date, end_date, is_active, student_user_id, lesson_type_id, lesson_types(id, name, icon, color))',
+					'id, lesson_agreement_id, original_date, original_start_time, actual_date, actual_start_time, reason, is_cancelled, recurring, recurring_end_date, lesson_agreements(id, day_of_week, start_time, start_date, end_date, is_active, student_user_id, lesson_type_id, lesson_types(id, name, icon, color, frequency))',
 				)
 				.eq('lesson_agreements.teacher_id', teacherId);
 
-			// Load profiles for deviations
 			if (deviationsData && deviationsData.length > 0) {
 				const studentUserIds: string[] = [];
 				for (const deviation of deviationsData) {
@@ -407,7 +120,6 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 						.select('user_id, first_name, last_name, email, avatar_url')
 						.in('user_id', uniqueStudentUserIds);
 
-					// Merge profiles into deviations
 					if (profilesData) {
 						const profilesMap = new Map(profilesData.map((p) => [p.user_id, p]));
 						for (const deviation of deviationsData) {
@@ -448,7 +160,6 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		loadData();
 	}, [loadData]);
 
-	// Create a map of deviations for quick lookup
 	const deviationsMap = useMemo(() => {
 		const map = new Map<string, LessonAppointmentDeviationWithAgreement>();
 		for (const deviation of deviations) {
@@ -458,26 +169,34 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		return map;
 	}, [deviations]);
 
-	// Generate calendar events
+	const recurringByAgreement = useMemo(() => {
+		const map = new Map<string, LessonAppointmentDeviationWithAgreement[]>();
+		for (const deviation of deviations) {
+			if (!deviation.recurring) continue;
+			const list = map.get(deviation.lesson_agreement_id) ?? [];
+			list.push(deviation);
+			map.set(deviation.lesson_agreement_id, list);
+		}
+		for (const list of map.values()) {
+			list.sort((a, b) => b.original_date.localeCompare(a.original_date));
+		}
+		return map;
+	}, [deviations]);
+
 	const events = useMemo(() => {
 		const startDate = new Date(currentDate);
-		startDate.setMonth(startDate.getMonth() - 1); // Show 1 month back
+		startDate.setMonth(startDate.getMonth() - 1);
 		const endDate = new Date(currentDate);
-		endDate.setMonth(endDate.getMonth() + 2); // Show 2 months forward
+		endDate.setMonth(endDate.getMonth() + 2);
 
-		const baseEvents = generateRecurringEvents(agreements, startDate, endDate, deviationsMap);
+		const baseEvents = generateRecurringEvents(agreements, startDate, endDate, deviationsMap, recurringByAgreement);
 
-		// If there's a pending event (optimistic update), replace the matching event
 		if (pendingEvent) {
-			// Find and remove the original event that's being moved
 			const filteredEvents = baseEvents.filter((e) => {
-				// Match by agreementId and original start time (before the move)
 				const isSameAgreement = e.resource.agreementId === pendingEvent.resource.agreementId;
-				// For deviations, match by deviationId; for regular events, match by the pending event's original position
 				if (pendingEvent.resource.deviationId) {
 					return !(isSameAgreement && e.resource.deviationId === pendingEvent.resource.deviationId);
 				}
-				// For regular events being moved, we need to match by the original date
 				const pendingOriginalDate = pendingEvent.resource.originalDate;
 				if (pendingOriginalDate && e.start) {
 					const eventDateStr = new Date(e.start).toISOString().split('T')[0];
@@ -485,42 +204,62 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 				}
 				return true;
 			});
-			// Add the pending event with ghost styling
 			return [...filteredEvents, pendingEvent];
 		}
 
 		return baseEvents;
-	}, [agreements, deviationsMap, currentDate, pendingEvent]);
+	}, [agreements, deviationsMap, recurringByAgreement, currentDate, pendingEvent]);
 
-	const handleEventDrop = async ({ event, start, end }: { event: CalendarEvent; start: Date; end: Date }) => {
+	const handleEventDrop = async (
+		{ event, start, end }: { event: CalendarEvent; start: Date; end: Date },
+		scope: RecurrenceScope,
+	) => {
 		if (!canEdit || !user) return;
 
 		const agreement = agreements.find((a) => a.id === event.resource.agreementId);
 		if (!agreement) return;
 
-		// For deviation events, use the stored original date/time
-		// For regular agreement events, calculate based on the week of the new position
 		const isExistingDeviation = event.resource.isDeviation && event.resource.deviationId;
+		const isRecurringDeviation = isExistingDeviation && event.resource.isRecurring;
+		const recurring = scope === 'thisAndFuture';
 
 		let originalDateStr: string;
 		let originalStartTime: string;
 
 		if (isExistingDeviation && event.resource.originalDate && event.resource.originalStartTime) {
-			// Use the stored original date/time from the deviation
 			originalDateStr = event.resource.originalDate;
 			originalStartTime = event.resource.originalStartTime;
 		} else {
-			// Calculate original_date for this week based on the agreement
-			const originalDate = getDateForDayOfWeek(agreement.day_of_week, start);
-			originalDateStr = originalDate.toISOString().split('T')[0];
+			originalDateStr = event.start ? toLocalDateString(event.start) : toLocalDateString(start);
 			originalStartTime = agreement.start_time;
 		}
 
-		// Calculate new date/time
-		const actualDateStr = start.toISOString().split('T')[0];
-		const actualStartTime = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
+		// For recurring deviations: agreement's weekday in the occurrence's week (for override lookup).
+		const occurrenceWeekOriginalDate = event.start
+			? getDateForDayOfWeek(agreement.day_of_week, new Date(event.start))
+			: null;
+		const occurrenceWeekOriginalDateStr = occurrenceWeekOriginalDate
+			? toLocalDateString(occurrenceWeekOriginalDate)
+			: '';
 
-		// Set pending event for optimistic UI (ghost event at new position)
+		// Are we editing a later occurrence of a recurring deviation? (e.g., week 4 when deviation is from week 1)
+		const isLaterRecurringOccurrence =
+			isRecurringDeviation && occurrenceWeekOriginalDateStr && occurrenceWeekOriginalDateStr !== originalDateStr;
+
+		if (isLaterRecurringOccurrence) {
+			// For "only this" on a later occurrence: create a NEW deviation for this week.
+			// The original_date must be the AGREEMENT's original day for this week
+			// because the deviations Map is keyed by agreement_id + agreement's original date.
+			// The DB trigger (enforce_deviation_validity) allows actual = original when
+			// it serves as an override for a recurring deviation.
+			originalDateStr = occurrenceWeekOriginalDateStr;
+			originalStartTime = normalizeTime(agreement.start_time);
+		}
+
+		// Use dropped date (DB: actual_date >= CURRENT_DATE).
+		const actualDateStr = toLocalDateString(start);
+		const actualStartTime = normalizeTimeFromDate(start);
+
 		const pendingEventData: CalendarEvent = {
 			...event,
 			start,
@@ -534,53 +273,118 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		};
 		setPendingEvent(pendingEventData);
 
-		// Check if deviation already exists
-		const existingDeviation = deviations.find(
-			(d) => d.lesson_agreement_id === agreement.id && d.original_date === originalDateStr,
-		);
+		// For later occurrences of a recurring deviation, look up by (agreement_id, originalDateStr)
+		// to find/create a deviation for THIS specific week, not the recurring row.
+		// For non-recurring or the original occurrence, use deviationId to find the existing row.
+		const existingDeviation = isLaterRecurringOccurrence
+			? deviations.find((d) => d.lesson_agreement_id === agreement.id && d.original_date === originalDateStr)
+			: event.resource.deviationId
+				? deviations.find((d) => d.id === event.resource.deviationId)
+				: deviations.find((d) => d.lesson_agreement_id === agreement.id && d.original_date === originalDateStr);
 
-		// Determine if this update will restore to original (for correct toast message)
-		const isRestoringToOriginal = originalDateStr === actualDateStr && originalStartTime === actualStartTime;
+		const isRestoringToOriginal =
+			originalDateStr === actualDateStr && normalizeTime(originalStartTime) === normalizeTime(actualStartTime);
 
+		// For recurring deviation "this and future" restore: user dropped on agreement's original slot.
+		// This checks if the user is restoring to the agreement's original schedule for this week.
+		const isRestoringRecurringToOriginalSlot =
+			isRecurringDeviation &&
+			actualDateStr === occurrenceWeekOriginalDateStr &&
+			normalizeTime(actualStartTime) === normalizeTime(agreement.start_time);
+
+		// No-op: dropped on same slot as current (no change)
+		const droppedOnSameSlot = existingDeviation
+			? actualDateStr === existingDeviation.actual_date &&
+				normalizeTime(actualStartTime) === normalizeTime(existingDeviation.actual_start_time)
+			: event.start &&
+				actualDateStr === toLocalDateString(event.start) &&
+				normalizeTime(actualStartTime) === normalizeTimeFromDate(event.start);
+
+		if (droppedOnSameSlot) {
+			setPendingEvent(null);
+			return;
+		}
+
+		// Restore to original slot: one DB rule handles all cases (recurring/single, only this/this and future)
+		if (isRestoringToOriginal || isRestoringRecurringToOriginalSlot) {
+			const weekWhereUserDropped = occurrenceWeekOriginalDateStr ?? originalDateStr;
+			const scopeParam = recurring ? 'this_and_future' : 'only_this';
+
+			const { data: result, error } = await supabase.rpc('ensure_week_shows_original_slot', {
+				p_lesson_agreement_id: agreement.id,
+				p_week_date: weekWhereUserDropped,
+				p_user_id: user.id,
+				p_scope: scopeParam,
+			});
+
+			if (error) {
+				console.error('Error restoring to original:', error);
+				toast.error('Fout bij terugzetten');
+				setPendingEvent(null);
+				return;
+			}
+			if (result === 'recurring_deleted' || result === 'recurring_ended') {
+				toast.success(
+					result === 'recurring_deleted'
+						? 'Terugkerende wijziging verwijderd'
+						: 'Terugkerende wijziging beëindigd vanaf deze week',
+				);
+			} else if (result === 'recurring_shifted') {
+				toast.success('Alleen deze afspraak teruggezet; terugkerende wijziging start volgende week');
+			} else {
+				toast.success('Les teruggezet naar originele planning');
+			}
+			await loadData(false);
+			setPendingEvent(null);
+			return;
+		}
+
+		// Update if a row already exists (unique on agreement_id + original_date); otherwise insert
 		if (existingDeviation) {
-			// Update existing deviation
-			// Note: if actual matches original, the database trigger will auto-delete the deviation
 			const { error } = await supabase
 				.from('lesson_appointment_deviations')
 				.update({
 					actual_date: actualDateStr,
 					actual_start_time: actualStartTime,
+					recurring,
 					last_updated_by_user_id: user.id,
 				})
 				.eq('id', existingDeviation.id);
 
 			if (error) {
 				console.error('Error updating deviation:', error);
-				toast.error('Fout bij bijwerken afwijking');
+				const isDateCheck =
+					error.code === PG_CHECK_VIOLATION ||
+					(error.message ?? '').toLowerCase().includes('deviation_date_check');
+				toast.error(
+					isDateCheck
+						? 'Afspraak kan niet in het verleden worden geplaatst.'
+						: 'Fout bij bijwerken afwijking',
+				);
 				setPendingEvent(null);
 				return;
 			}
-
-			if (isRestoringToOriginal) {
-				toast.success('Les teruggezet naar originele planning');
-			} else {
-				toast.success('Afspraak bijgewerkt');
-			}
+			toast.success('Afspraak bijgewerkt');
 		} else {
-			// Create new deviation
 			const { error } = await supabase.from('lesson_appointment_deviations').insert({
 				lesson_agreement_id: agreement.id,
 				original_date: originalDateStr,
-				original_start_time: originalStartTime,
+				original_start_time: normalizeTime(originalStartTime),
 				actual_date: actualDateStr,
 				actual_start_time: actualStartTime,
+				recurring,
 				created_by_user_id: user.id,
 				last_updated_by_user_id: user.id,
 			});
 
 			if (error) {
 				console.error('Error creating deviation:', error);
-				toast.error('Fout bij aanmaken afwijking');
+				const isDateCheck =
+					error.code === PG_CHECK_VIOLATION ||
+					(error.message ?? '').toLowerCase().includes('deviation_date_check');
+				toast.error(
+					isDateCheck ? 'Afspraak kan niet in het verleden worden geplaatst.' : 'Fout bij aanmaken afwijking',
+				);
 				setPendingEvent(null);
 				return;
 			}
@@ -592,18 +396,93 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		setPendingEvent(null);
 	};
 
-	// Handle clicking on an event to open the detail modal
+	const needsRecurrenceChoice = (event: CalendarEvent) => {
+		// Single deviation (already detached): no popup, move directly
+		if (event.resource.isDeviation && event.resource.deviationId && event.resource.isRecurring === false) {
+			return false;
+		}
+		// Original series or recurring deviation: show choice
+		return true;
+	};
+
+	const isDropBackToOriginalSlot = (args: { event: CalendarEvent; start: Date }) => {
+		const { event, start } = args;
+		const agreement = agreements.find((a) => a.id === event.resource.agreementId);
+		if (!agreement) return false;
+
+		// For deviations: "original slot" is the agreement's original position
+		// For later occurrences of recurring deviations: we need to check against the
+		// agreement's original slot for THIS SPECIFIC WEEK, not the deviation's stored original_date
+		const isRecurringDeviation =
+			event.resource.isDeviation && event.resource.deviationId && event.resource.isRecurring;
+
+		// Get the agreement's original slot for the week of the current event
+		const eventWeekOriginalDate = event.start
+			? getDateForDayOfWeek(agreement.day_of_week, new Date(event.start))
+			: null;
+		const eventWeekOriginalDateStr = eventWeekOriginalDate ? toLocalDateString(eventWeekOriginalDate) : '';
+
+		// For recurring deviations, the "original slot" to restore to is the agreement's slot for this week
+		// For regular deviations, use the stored original_date
+		let originalDateStr: string;
+		let originalStartTime: string;
+
+		if (isRecurringDeviation) {
+			// For later occurrences of recurring deviations: compare against agreement's original slot
+			originalDateStr = eventWeekOriginalDateStr;
+			originalStartTime = agreement.start_time;
+		} else if (event.resource.isDeviation && event.resource.originalDate && event.resource.originalStartTime) {
+			originalDateStr = event.resource.originalDate;
+			originalStartTime = event.resource.originalStartTime;
+		} else {
+			originalDateStr = event.start ? toLocalDateString(event.start) : '';
+			originalStartTime = agreement.start_time;
+		}
+
+		const actualDateStr = toLocalDateString(start);
+		const actualStartTime = normalizeTimeFromDate(start);
+		return actualDateStr === originalDateStr && normalizeTime(actualStartTime) === normalizeTime(originalStartTime);
+	};
+
+	const onEventDropWithChoice = (args: { event: CalendarEvent; start: Date; end: Date }) => {
+		const isRecurringDeviation =
+			args.event.resource.isDeviation && args.event.resource.deviationId && args.event.resource.isRecurring;
+
+		if (isDropBackToOriginalSlot(args)) {
+			// For recurring deviations: show choice dialog even when restoring to original
+			// User may want to restore "only this week" or "this and future"
+			if (isRecurringDeviation) {
+				setPendingDrop(args);
+				setRecurrenceChoiceAction('change');
+				setRecurrenceChoiceOpen(true);
+				return;
+			}
+			// For non-recurring deviations: restore directly
+			if (args.event.resource.isDeviation && args.event.resource.deviationId) {
+				handleEventDrop(args, 'single');
+			}
+			return;
+		}
+		if (!needsRecurrenceChoice(args.event)) {
+			handleEventDrop(args, 'single');
+			return;
+		}
+		setPendingDrop(args);
+		setRecurrenceChoiceAction('change');
+		setRecurrenceChoiceOpen(true);
+	};
+
 	const handleEventClick = (event: CalendarEvent) => {
 		if (!canEdit) return;
 		setSelectedEvent(event);
 		setIsModalOpen(true);
 	};
 
-	// Handle cancelling/uncancelling a lesson
-	const handleCancelLesson = async () => {
+	const handleCancelLesson = async (scope: RecurrenceScope = 'single') => {
 		if (!selectedEvent || !user) return;
 
 		setIsCancelling(true);
+		const recurring = scope === 'thisAndFuture';
 
 		const agreement = agreements.find((a) => a.id === selectedEvent.resource.agreementId);
 		if (!agreement) {
@@ -614,7 +493,6 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		const isCancelled = selectedEvent.resource.isCancelled;
 		const isExistingDeviation = selectedEvent.resource.deviationId;
 
-		// Calculate original date/time for this specific occurrence
 		let originalDateStr: string;
 		let originalStartTime: string;
 
@@ -622,7 +500,6 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 			originalDateStr = selectedEvent.resource.originalDate;
 			originalStartTime = selectedEvent.resource.originalStartTime;
 		} else {
-			// For regular events, the start date is the original date
 			originalDateStr = selectedEvent.start
 				? new Date(selectedEvent.start).toISOString().split('T')[0]
 				: new Date().toISOString().split('T')[0];
@@ -630,7 +507,6 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		}
 
 		if (isCancelled && isExistingDeviation) {
-			// Restore the lesson: delete the cancellation deviation
 			const { error } = await supabase
 				.from('lesson_appointment_deviations')
 				.delete()
@@ -645,13 +521,13 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 
 			toast.success('Les hersteld');
 		} else if (isExistingDeviation) {
-			// Update existing deviation to mark as cancelled
 			const { error } = await supabase
 				.from('lesson_appointment_deviations')
 				.update({
 					is_cancelled: true,
 					actual_date: originalDateStr,
 					actual_start_time: originalStartTime,
+					recurring,
 					last_updated_by_user_id: user.id,
 				})
 				.eq('id', selectedEvent.resource.deviationId);
@@ -665,7 +541,6 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 
 			toast.success('Les geannuleerd');
 		} else {
-			// Create new deviation with is_cancelled = true
 			const { error } = await supabase.from('lesson_appointment_deviations').insert({
 				lesson_agreement_id: agreement.id,
 				original_date: originalDateStr,
@@ -673,6 +548,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 				actual_date: originalDateStr,
 				actual_start_time: originalStartTime,
 				is_cancelled: true,
+				recurring,
 				created_by_user_id: user.id,
 				last_updated_by_user_id: user.id,
 			});
@@ -688,6 +564,59 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		}
 
 		setIsCancelling(false);
+		setIsModalOpen(false);
+		setSelectedEvent(null);
+		setCancelLessonConfirmOpen(false);
+		loadData(false);
+	};
+
+	const handleRevertToOriginal = async () => {
+		if (
+			!user ||
+			!selectedEvent?.resource.deviationId ||
+			!selectedEvent.resource.originalDate ||
+			!selectedEvent.resource.originalStartTime
+		)
+			return;
+		setIsReverting(true);
+		const { error } = await supabase
+			.from('lesson_appointment_deviations')
+			.update({
+				actual_date: selectedEvent.resource.originalDate,
+				actual_start_time: selectedEvent.resource.originalStartTime,
+				last_updated_by_user_id: user.id,
+			})
+			.eq('id', selectedEvent.resource.deviationId);
+
+		if (error) {
+			console.error('Error reverting deviation:', error);
+			toast.error('Fout bij terugzetten afspraak');
+			setIsReverting(false);
+			return;
+		}
+		toast.success('Afspraak teruggezet naar origineel');
+		setIsReverting(false);
+		setIsModalOpen(false);
+		setSelectedEvent(null);
+		loadData(false);
+	};
+
+	const handleRevertRecurringAll = async () => {
+		if (!selectedEvent?.resource.deviationId || !user) return;
+		setIsReverting(true);
+		const { error } = await supabase
+			.from('lesson_appointment_deviations')
+			.delete()
+			.eq('id', selectedEvent.resource.deviationId);
+
+		if (error) {
+			console.error('Error reverting recurring deviation:', error);
+			toast.error('Fout bij herstellen');
+			setIsReverting(false);
+			return;
+		}
+		toast.success('Alle volgende afspraken hersteld');
+		setIsReverting(false);
 		setIsModalOpen(false);
 		setSelectedEvent(null);
 		loadData(false);
@@ -710,31 +639,23 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		const isGroupLesson = event.resource.isGroupLesson;
 		const isPending = event.resource.isPending;
 
-		// Color scheme:
-		// - Green (emerald-500): regular individual lessons (same as availability)
-		// - Blue (indigo-500): group lessons
-		// - Yellow/Amber (amber-500): deviations from normal schedule
-		// - Red (red-500): cancelled lessons (with reduced opacity)
-		// - Ghost (reduced opacity + dashed border): pending/saving events
 		let backgroundColor: string;
 		let borderColor: string;
 
 		if (isCancelled) {
-			backgroundColor = '#ef4444'; // red-500
-			borderColor = '#dc2626'; // red-600
+			backgroundColor = '#ef4444';
+			borderColor = '#dc2626';
 		} else if (isDeviation || isPending) {
-			// Pending events also show as amber (they will become deviations)
-			backgroundColor = '#f59e0b'; // amber-500
-			borderColor = '#d97706'; // amber-600
+			backgroundColor = '#f59e0b';
+			borderColor = '#d97706';
 		} else if (isGroupLesson) {
-			backgroundColor = '#6366f1'; // indigo-500
-			borderColor = '#4f46e5'; // indigo-600
+			backgroundColor = '#6366f1';
+			borderColor = '#4f46e5';
 		} else {
-			backgroundColor = '#10b981'; // emerald-500 (same as availability)
-			borderColor = '#059669'; // emerald-600
+			backgroundColor = '#10b981';
+			borderColor = '#059669';
 		}
 
-		// Determine opacity: pending events are semi-transparent (ghost effect)
 		let opacity = 0.9;
 		if (isCancelled) {
 			opacity = 0.5;
@@ -756,17 +677,11 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 		};
 	};
 
-	// Calculate scroll time: if current time is past END_HOUR, scroll to start (START_HOUR)
-	// Otherwise scroll to current time
 	const scrollToTime = useMemo(() => {
 		const now = new Date();
-
 		if (now.getHours() >= AVAILABILITY_SETTINGS.END_HOUR) {
-			// After end time, scroll to start of day (for next day visibility)
 			return new Date(0, 0, 0, AVAILABILITY_SETTINGS.START_HOUR, 0, 0);
 		}
-
-		// During working hours, scroll to current time
 		return now;
 	}, []);
 
@@ -780,299 +695,109 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 
 	return (
 		<div className="space-y-4">
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-				<div>
-					<h2 className="text-2xl font-bold text-foreground">Agenda</h2>
-					<p className="text-sm text-muted-foreground">
-						{canEdit
-							? 'Bekijk en beheer lessen. Sleep afspraken om ze te verplaatsen.'
-							: 'Bekijk de geplande lessen voor deze docent'}
-					</p>
-				</div>
-				<div className="flex items-center gap-2">
-					<select
-						value={currentView}
-						onChange={(e) => setCurrentView(e.target.value as View)}
-						className="h-9 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring"
-					>
-						<option value="month">Maand</option>
-						<option value="week">Week</option>
-						<option value="day">Dag</option>
-						<option value="agenda">Agenda</option>
-					</select>
-					<Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
-						Vandaag
-					</Button>
-				</div>
-			</div>
-
 			<div className="popschool-calendar rounded-lg border border-border bg-card overflow-hidden">
-				<div className="h-[600px]">
-					<DragAndDropCalendar
-						localizer={calendarLocalizer}
-						formats={dutchFormats}
-						culture="nl-NL"
-						events={events}
-						startAccessor={(event) => (event as CalendarEvent).start}
-						endAccessor={(event) => (event as CalendarEvent).end}
-						view={currentView}
-						onView={setCurrentView}
-						date={currentDate}
-						onNavigate={setCurrentDate}
-						onSelectEvent={(event) => handleEventClick(event as CalendarEvent)}
-						onEventDrop={canEdit ? handleEventDrop : undefined}
-						onEventResize={canEdit ? handleEventDrop : undefined}
-						draggableAccessor={() => canEdit}
-						resizableAccessor={() => canEdit}
-						eventPropGetter={eventStyleGetter}
-						tooltipAccessor={(event) => buildTooltipText(event as CalendarEvent)}
-						components={{
-							// biome-ignore lint/suspicious/noExplicitAny: react-big-calendar event component typing is complex
-							event: CustomEvent as unknown as React.ComponentType<any>,
-						}}
-						min={new Date(0, 0, 0, 9, 0, 0)}
-						max={new Date(0, 0, 0, 21, 0, 0)}
-						scrollToTime={scrollToTime}
-						step={30}
-						timeslots={1}
-						messages={{
-							next: 'Volgende',
-							previous: 'Vorige',
-							today: 'Vandaag',
-							month: 'Maand',
-							week: 'Week',
-							day: 'Dag',
-							agenda: 'Agenda',
-							date: 'Datum',
-							time: 'Tijd',
-							event: 'Afspraak',
-							noEventsInRange: 'Geen afspraken in dit bereik',
-							showMore: (total) => `+${total} meer`,
-						}}
-					/>
+				<div className="h-[600px] min-h-0 overflow-y-auto overflow-x-hidden">
+					<CalendarViewProvider value={currentView}>
+						<DragAndDropCalendar
+							localizer={calendarLocalizer}
+							formats={dutchFormats}
+							culture="nl-NL"
+							events={events}
+							showAllEvents
+							startAccessor={(event) => (event as CalendarEvent).start}
+							endAccessor={(event) => (event as CalendarEvent).end}
+							view={currentView}
+							onView={setCurrentView}
+							date={currentDate}
+							onNavigate={setCurrentDate}
+							onSelectEvent={(event) => handleEventClick(event as CalendarEvent)}
+							onEventDrop={canEdit ? onEventDropWithChoice : undefined}
+							draggableAccessor={() => canEdit}
+							resizableAccessor={() => false}
+							eventPropGetter={eventStyleGetter}
+							tooltipAccessor={(event) => buildTooltipText(event as CalendarEvent)}
+							components={{
+								// biome-ignore lint/suspicious/noExplicitAny: react-big-calendar event component typing is complex
+								event: AgendaEvent as unknown as React.ComponentType<any>,
+							}}
+							min={new Date(0, 0, 0, 9, 0, 0)}
+							max={new Date(0, 0, 0, 21, 0, 0)}
+							scrollToTime={scrollToTime}
+							step={30}
+							timeslots={1}
+							messages={{
+								next: 'Volgende',
+								previous: 'Vorige',
+								today: 'Vandaag',
+								month: 'Maand',
+								week: 'Week',
+								day: 'Dag',
+								agenda: 'Agenda',
+								date: 'Datum',
+								time: 'Tijd',
+								event: 'Afspraak',
+								noEventsInRange: 'Geen afspraken in dit bereik',
+								showMore: (total) => `+${total} meer`,
+							}}
+						/>
+					</CalendarViewProvider>
 				</div>
 			</div>
 
-			{/* Legend - only show when not in agenda view */}
-			{currentView !== 'agenda' && (
-				<div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-					<div className="flex items-center gap-2">
-						<div className="h-4 w-4 rounded border border-l-4 border-emerald-600 bg-emerald-500" />
-						<span>Individuele les</span>
-					</div>
-					<div className="flex items-center gap-2">
-						<div className="h-4 w-4 rounded border border-l-4 border-indigo-600 bg-indigo-500" />
-						<span>Groepsles</span>
-					</div>
-					<div className="flex items-center gap-2">
-						<div className="h-4 w-4 rounded border border-l-4 border-amber-600 bg-amber-500" />
-						<span>⚠ Afwijkende afspraak</span>
-					</div>
-					<div className="flex items-center gap-2">
-						<div className="h-4 w-4 rounded border border-l-4 border-red-600 bg-red-500 opacity-50" />
-						<span>❌ Vervallen les</span>
-					</div>
-				</div>
-			)}
+			<Legend show={currentView !== 'agenda'} />
 
-			{/* Lesson Detail Modal */}
-			<Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<div className="flex items-center gap-3">
-							<ColorIcon
-								icon={
-									selectedEvent?.resource.lessonTypeIcon
-										? resolveIconFromList(MUSIC_ICONS, selectedEvent.resource.lessonTypeIcon)
-										: undefined
-								}
-								color={selectedEvent?.resource.lessonTypeColor ?? null}
-								size="lg"
-							/>
-							<div>
-								<DialogTitle>{selectedEvent?.resource.lessonTypeName}</DialogTitle>
-								{selectedEvent?.resource.isGroupLesson && (
-									<DialogDescription>
-										Groepsles met {selectedEvent?.resource.studentCount} deelnemers
-									</DialogDescription>
-								)}
-							</div>
-						</div>
-					</DialogHeader>
+			<DetailModal
+				open={isModalOpen}
+				onOpenChange={setIsModalOpen}
+				event={selectedEvent}
+				canEdit={canEdit}
+				isCancelling={isCancelling}
+				isReverting={isReverting}
+				onCancelLesson={handleCancelLesson}
+				onRevertToOriginal={handleRevertToOriginal}
+				onRevertRecurringAll={handleRevertRecurringAll}
+				onOpenCancelConfirm={() => {
+					if (selectedEvent && !needsRecurrenceChoice(selectedEvent)) {
+						setPendingCancelScope('single');
+						setCancelLessonConfirmOpen(true);
+					} else {
+						setRecurrenceChoiceAction('cancel');
+						setRecurrenceChoiceOpen(true);
+					}
+				}}
+				onOpenStudentInfo={(student) =>
+					setStudentInfoModal({
+						open: true,
+						student,
+					})
+				}
+			/>
 
-					<div className="space-y-4">
-						{/* Student info card for individual lessons */}
-						{selectedEvent?.resource.studentInfo && !selectedEvent.resource.isGroupLesson && (
-							<StudentInfoCard
-								student={{
-									id: selectedEvent.resource.agreementId,
-									user_id: selectedEvent.resource.studentInfo.user_id,
-									profile: {
-										email: selectedEvent.resource.studentInfo.email,
-										first_name: selectedEvent.resource.studentInfo.first_name,
-										last_name: selectedEvent.resource.studentInfo.last_name,
-										avatar_url: selectedEvent.resource.studentInfo.avatar_url,
-									},
-								}}
-								onClick={() => {
-									const info = selectedEvent.resource.studentInfo;
-									if (!info) return;
-									setStudentInfoModal({
-										open: true,
-										student: {
-											id: selectedEvent.resource.agreementId,
-											user_id: info.user_id,
-											profile: {
-												email: info.email,
-												first_name: info.first_name,
-												last_name: info.last_name,
-												avatar_url: info.avatar_url,
-												phone_number: null, // Will be loaded by the modal
-											},
-										},
-									});
-								}}
-							/>
-						)}
+			<RecurrenceChoiceDialog
+				open={recurrenceChoiceOpen}
+				onOpenChange={(open) => {
+					setRecurrenceChoiceOpen(open);
+					if (!open) setPendingDrop(null);
+				}}
+				action={recurrenceChoiceAction}
+				onChoose={(scope) => {
+					if (recurrenceChoiceAction === 'change' && pendingDrop) {
+						handleEventDrop(pendingDrop, scope);
+						setPendingDrop(null);
+					} else if (recurrenceChoiceAction === 'cancel') {
+						setPendingCancelScope(scope);
+						setCancelLessonConfirmOpen(true);
+					}
+				}}
+			/>
 
-						{/* Group lesson participants */}
-						{selectedEvent?.resource.isGroupLesson && selectedEvent.resource.studentInfoList && (
-							<div className="space-y-2">
-								<h4 className="text-sm font-medium">Deelnemers</h4>
-								<div className="space-y-2 max-h-48 overflow-y-auto">
-									{selectedEvent.resource.studentInfoList.map((student) => (
-										<StudentInfoCard
-											key={student.user_id}
-											student={{
-												id: selectedEvent.resource.agreementId,
-												user_id: student.user_id,
-												profile: {
-													email: student.email,
-													first_name: student.first_name,
-													last_name: student.last_name,
-													avatar_url: student.avatar_url,
-												},
-											}}
-											onClick={() => {
-												setStudentInfoModal({
-													open: true,
-													student: {
-														id: selectedEvent.resource.agreementId,
-														user_id: student.user_id,
-														profile: {
-															email: student.email,
-															first_name: student.first_name,
-															last_name: student.last_name,
-															avatar_url: student.avatar_url,
-															phone_number: null, // Will be loaded by the modal
-														},
-													},
-												});
-											}}
-											className="py-2"
-										/>
-									))}
-								</div>
-							</div>
-						)}
+			<ConfirmCancelDialog
+				open={cancelLessonConfirmOpen}
+				onOpenChange={setCancelLessonConfirmOpen}
+				onConfirm={() => handleCancelLesson(pendingCancelScope)}
+				disabled={isCancelling}
+			/>
 
-						{/* Fallback for group lessons without studentInfoList (shouldn't happen) */}
-						{selectedEvent?.resource.isGroupLesson && !selectedEvent.resource.studentInfoList && (
-							<div className="space-y-2">
-								<h4 className="text-sm font-medium">Deelnemers</h4>
-								<ul className="space-y-1">
-									{selectedEvent.resource.studentName.split(', ').map((name) => (
-										<li key={name} className="text-sm text-muted-foreground">
-											• {name}
-										</li>
-									))}
-								</ul>
-							</div>
-						)}
-
-						{/* Lesson time info */}
-						<div className="rounded-lg bg-muted p-4 space-y-2">
-							<div className="flex justify-between">
-								<span className="text-sm text-muted-foreground">Datum</span>
-								<span className="font-medium">
-									{selectedEvent?.start
-										? formatDate(new Date(selectedEvent.start).toISOString().split('T')[0])
-										: ''}
-								</span>
-							</div>
-							<div className="flex justify-between">
-								<span className="text-sm text-muted-foreground">Tijd</span>
-								<span className="font-medium">
-									{selectedEvent?.start
-										? `${String(new Date(selectedEvent.start).getHours()).padStart(2, '0')}:${String(new Date(selectedEvent.start).getMinutes()).padStart(2, '0')}`
-										: ''}
-									{' - '}
-									{selectedEvent?.end
-										? `${String(new Date(selectedEvent.end).getHours()).padStart(2, '0')}:${String(new Date(selectedEvent.end).getMinutes()).padStart(2, '0')}`
-										: ''}
-								</span>
-							</div>
-						</div>
-
-						{/* Status info */}
-						{selectedEvent?.resource.isCancelled && (
-							<div className="flex items-center gap-2 rounded-lg bg-red-500/10 p-3 text-red-600">
-								<LuBan className="h-4 w-4" />
-								<span className="text-sm font-medium">Deze les is geannuleerd</span>
-							</div>
-						)}
-
-						{selectedEvent?.resource.isDeviation && !selectedEvent?.resource.isCancelled && (
-							<div className="flex items-center gap-2 rounded-lg bg-amber-500/10 p-3 text-amber-600">
-								<LuTriangleAlert className="h-4 w-4" />
-								<div className="space-y-1">
-									<span className="text-sm font-medium">Afwijkende afspraak</span>
-									{selectedEvent.resource.originalDate &&
-										selectedEvent.resource.originalStartTime && (
-											<p className="text-xs">
-												Origineel: {formatDate(selectedEvent.resource.originalDate)} om{' '}
-												{formatTime(selectedEvent.resource.originalStartTime)}
-											</p>
-										)}
-									{selectedEvent.resource.reason && (
-										<p className="text-xs">Reden: {selectedEvent.resource.reason}</p>
-									)}
-								</div>
-							</div>
-						)}
-					</div>
-
-					{canEdit && !selectedEvent?.resource.isGroupLesson && (
-						<DialogFooter>
-							{selectedEvent?.resource.isCancelled ? (
-								<Button onClick={handleCancelLesson} disabled={isCancelling}>
-									{isCancelling ? (
-										<>
-											<LuLoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-											Bezig...
-										</>
-									) : (
-										'Les herstellen'
-									)}
-								</Button>
-							) : (
-								<Button variant="destructive" onClick={handleCancelLesson} disabled={isCancelling}>
-									{isCancelling ? (
-										<>
-											<LuLoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-											Bezig...
-										</>
-									) : (
-										'Les annuleren'
-									)}
-								</Button>
-							)}
-						</DialogFooter>
-					)}
-				</DialogContent>
-			</Dialog>
-
-			{/* Student Info Modal */}
 			<StudentInfoModal
 				open={studentInfoModal.open}
 				onOpenChange={(open) => setStudentInfoModal({ ...studentInfoModal, open })}

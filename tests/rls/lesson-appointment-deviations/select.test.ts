@@ -3,51 +3,13 @@ import { createClientAs, createClientBypassRLS } from '../../db';
 import { type DatabaseState, setupDatabaseStateVerification } from '../db-state';
 import { fixtures } from '../fixtures';
 import { TestUsers } from '../test-users';
+import { buildDeviationData } from './utils';
 
 const dbNoRLS = createClientBypassRLS();
 
 // Setup: Use seed data
 const agreementStudent009TeacherAlice = fixtures.requireAgreementId(TestUsers.STUDENT_009, TestUsers.TEACHER_ALICE);
 const agreementStudent026TeacherBob = fixtures.requireAgreementId(TestUsers.STUDENT_026, TestUsers.TEACHER_BOB);
-
-// Helper to calculate original_date from day_of_week and a reference date
-function calculateOriginalDate(dayOfWeek: number, referenceDate: Date): Date {
-	const date = new Date(referenceDate);
-	const currentDay = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
-	const diff = dayOfWeek - currentDay;
-	date.setDate(date.getDate() + diff);
-	return date;
-}
-
-// Helper to create a test deviation
-async function createTestDeviation(
-	lessonAgreementId: string,
-	originalDate: Date,
-	originalStartTime: string,
-	actualDate: Date,
-	actualStartTime: string,
-	createdByUserId: string,
-) {
-	const { data, error } = await dbNoRLS
-		.from('lesson_appointment_deviations')
-		.insert({
-			lesson_agreement_id: lessonAgreementId,
-			original_date: originalDate.toISOString().split('T')[0],
-			original_start_time: originalStartTime,
-			actual_date: actualDate.toISOString().split('T')[0],
-			actual_start_time: actualStartTime,
-			created_by_user_id: createdByUserId,
-			last_updated_by_user_id: createdByUserId,
-		})
-		.select()
-		.single();
-
-	if (error) {
-		throw new Error(`Failed to create test deviation: ${error.message}`);
-	}
-
-	return data;
-}
 
 /**
  * Lesson Appointment Deviations SELECT permissions:
@@ -73,11 +35,7 @@ describe('RLS: lesson_appointment_deviations SELECT', () => {
 	beforeAll(async () => {
 		initialState = await setupState();
 
-		// Create test deviations
-		const aliceUserId = fixtures.requireUserId(TestUsers.TEACHER_ALICE);
-		const bobUserId = fixtures.requireUserId(TestUsers.TEACHER_BOB);
-
-		// Get agreement details to calculate original_date
+		// Get agreement details
 		const agreementAlice = fixtures.allLessonAgreements.find((a) => a.id === agreementStudent009TeacherAlice);
 		const agreementBob = fixtures.allLessonAgreements.find((a) => a.id === agreementStudent026TeacherBob);
 
@@ -85,27 +43,49 @@ describe('RLS: lesson_appointment_deviations SELECT', () => {
 			throw new Error('Agreements not found');
 		}
 
-		const referenceDate = new Date('2024-02-13'); // Week of Feb 13
-		const originalDateAlice = calculateOriginalDate(agreementAlice.day_of_week, referenceDate);
-		const originalDateBob = calculateOriginalDate(agreementBob.day_of_week, referenceDate);
+		// Create test deviations using dynamic dates
+		const { insertRow: insertAlice } = buildDeviationData({
+			agreementId: agreementStudent009TeacherAlice,
+			dayOfWeek: agreementAlice.day_of_week,
+			startTime: agreementAlice.start_time,
+			refDays: 7,
+			actualStartTime: '14:00',
+			recurring: false,
+		});
 
-		deviationAlice = await createTestDeviation(
-			agreementStudent009TeacherAlice,
-			originalDateAlice,
-			agreementAlice.start_time,
-			new Date('2024-02-15'), // Thursday
-			'14:00',
-			aliceUserId,
-		);
+		const { insertRow: insertBob } = buildDeviationData({
+			agreementId: agreementStudent026TeacherBob,
+			dayOfWeek: agreementBob.day_of_week,
+			startTime: agreementBob.start_time,
+			refDays: 14,
+			actualStartTime: '15:00',
+			recurring: false,
+		});
 
-		deviationBob = await createTestDeviation(
-			agreementStudent026TeacherBob,
-			originalDateBob,
-			agreementBob.start_time,
-			new Date('2024-02-16'), // Friday
-			'15:00',
-			bobUserId,
-		);
+		const bobUserId = fixtures.requireUserId(TestUsers.TEACHER_BOB);
+		const insertBobWithUser = { ...insertBob, created_by_user_id: bobUserId, last_updated_by_user_id: bobUserId };
+
+		const { data: dataAlice, error: errorAlice } = await dbNoRLS
+			.from('lesson_appointment_deviations')
+			.insert(insertAlice)
+			.select()
+			.single();
+
+		if (errorAlice) {
+			throw new Error(`Failed to create test deviation for Alice: ${errorAlice.message}`);
+		}
+		deviationAlice = dataAlice;
+
+		const { data: dataBob, error: errorBob } = await dbNoRLS
+			.from('lesson_appointment_deviations')
+			.insert(insertBobWithUser)
+			.select()
+			.single();
+
+		if (errorBob) {
+			throw new Error(`Failed to create test deviation for Bob: ${errorBob.message}`);
+		}
+		deviationBob = dataBob;
 	});
 
 	afterAll(async () => {

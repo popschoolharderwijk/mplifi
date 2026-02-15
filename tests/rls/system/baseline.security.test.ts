@@ -142,8 +142,13 @@ const EXPECTED_FUNCTIONS = [
 	// Lesson agreements triggers
 	'trigger_ensure_student_on_agreement_insert',
 	'trigger_cleanup_student_on_agreement_delete',
-	// Lesson appointment deviations triggers
+	// Lesson appointment deviations triggers and functions
 	'enforce_deviation_immutable_fields',
+	'auto_delete_noop_deviation',
+	'enforce_deviation_validity',
+	'shift_recurring_deviation_to_next_week',
+	'end_recurring_deviation_from_week',
+	'ensure_week_shows_original_slot',
 	// Authorization helpers
 	'can_delete_user',
 	// Introspection functions for CI testing

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { DAY_NAMES } from '@/lib/dateHelpers';
+import { DAY_NAMES, displayTime } from '@/lib/dateHelpers';
 
 interface Teacher {
 	id: string;
@@ -201,7 +201,8 @@ export default function TeacherAvailability() {
 															className="rounded-md border bg-muted/50 p-2 text-sm"
 														>
 															<div className="font-medium">
-																{avail.start_time} - {avail.end_time}
+																{displayTime(avail.start_time)} -{' '}
+																{displayTime(avail.end_time)}
 															</div>
 															{selectedTeacherId === 'all' && teacher && (
 																<div className="text-xs text-muted-foreground">

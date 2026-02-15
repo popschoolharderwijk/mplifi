@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { resolveIconFromList } from '@/components/ui/icon-picker';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { NAV_LABELS } from '@/config/nav-labels';
 import { MUSIC_ICONS } from '@/constants/icons';
 import { useAuth } from '@/hooks/useAuth';
 import { useServerTableState } from '@/hooks/useServerTableState';
@@ -332,7 +333,7 @@ export default function Teachers() {
 	return (
 		<div>
 			<DataTable
-				title="Docenten"
+				title={NAV_LABELS.teachers}
 				description="Beheer alle docenten en hun profielgegevens"
 				data={teachers}
 				columns={columns}

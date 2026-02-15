@@ -24,7 +24,7 @@ export const DAY_NAMES_DISPLAY = [
 /**
  * Get day name by day of week (0 = Sunday, 1 = Monday, etc.)
  * @param dayOfWeek - Day of week in database format (0-6, where 0 = Sunday)
- * @returns Day name or "Onbekend" if invalid
+ * @returns Day name, or unknown fallback if invalid
  */
 export function getDayName(dayOfWeek: number): string {
 	if (dayOfWeek >= 0 && dayOfWeek < DAY_NAMES.length) {
@@ -108,6 +108,35 @@ export function dbDayToDisplayDay(dbIndex: number): number {
 }
 
 /**
+ * Returns the date for a given day of week (0=Sun, 1=Mon, ... 6=Sat) in the week of referenceDate.
+ */
+export function getDateForDayOfWeek(dayOfWeek: number, referenceDate: Date): Date {
+	const date = new Date(referenceDate);
+	const currentDay = date.getDay();
+	const diff = dayOfWeek - currentDay;
+	date.setDate(date.getDate() + diff);
+	return date;
+}
+
+/**
+ * Returns the local calendar date as YYYY-MM-DD.
+ * Use for any date-only value (e.g. DB date columns, API payloads).
+ */
+export function toLocalDateString(date: Date): string {
+	return format(date, 'yyyy-MM-dd');
+}
+
+/**
+ * Returns a date n days from now (same time of day).
+ * Useful for tests that need future dates (e.g. deviation_date_check: actual_date >= CURRENT_DATE).
+ */
+export function dateDaysFromNow(days: number): Date {
+	const d = new Date();
+	d.setDate(d.getDate() + days);
+	return d;
+}
+
+/**
  * Format a date string to Dutch format (e.g., "maandag 10 februari")
  * @param dateStr - Date string in ISO format (YYYY-MM-DD or full ISO)
  * @returns Formatted date string in Dutch
@@ -117,11 +146,48 @@ export function formatDate(dateStr: string): string {
 	return format(date, 'EEEE d MMMM', { locale: nl });
 }
 
+/** Regex: HH:mm or HH:mm:ss (hour 00-23, minutes/seconds 00-59, strict two-digit format) */
+const TIME_STRING_REGEX = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
+
 /**
- * Format a time string by removing seconds if present (HH:MM:SS -> HH:MM)
- * @param timeStr - Time string, possibly with seconds
- * @returns Time string in HH:MM format
+ * Display a time string for UI: HH:mm or HH:mm:ss → HH:mm.
+ * Use for values from the DB (e.g. teacher_availability.start_time).
+ * @param timeStr - Time string (HH:mm or HH:mm:ss, e.g. from PostgreSQL TIME)
+ * @returns Time string in HH:mm format, or empty string if format invalid
  */
-export function formatTime(timeStr: string): string {
-	return timeStr.substring(0, 5);
+export function displayTime(timeStr: string): string {
+	if (!timeStr || typeof timeStr !== 'string') return '';
+	const trimmed = timeStr.trim();
+	return TIME_STRING_REGEX.test(trimmed) ? trimmed.substring(0, 5) : '';
+}
+
+/**
+ * Display a Date's time part for UI: always HH:mm.
+ * Use when you have a Date object (e.g. from a date picker or new Date()).
+ * @param date - Date instance
+ * @returns Time string in HH:mm format
+ */
+export function displayTimeFromDate(date: Date): string {
+	return format(date, 'HH:mm');
+}
+
+/**
+ * Normalise a time string to database TIME format HH:mm:ss.
+ * Use for storage, API payloads and comparisons (so "14:00" and "14:00:00" compare equal).
+ * @param timeStr - Time string (HH:mm or HH:mm:ss)
+ * @returns Time string in HH:mm:ss format, or empty string if invalid
+ */
+export function normalizeTime(timeStr: string): string {
+	if (!timeStr || typeof timeStr !== 'string') return '';
+	const trimmed = timeStr.trim();
+	if (!TIME_STRING_REGEX.test(trimmed)) return '';
+	return trimmed.length === 5 ? `${trimmed}:00` : trimmed;
+}
+
+/**
+ * Time part of a Date as database format HH:mm:ss.
+ * Use when sending a Date's time to the API (e.g. from a drop event).
+ */
+export function normalizeTimeFromDate(date: Date): string {
+	return format(date, 'HH:mm:ss');
 }

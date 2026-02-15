@@ -161,7 +161,10 @@ Als `VITE_DEV_LOGIN_PASSWORD` niet is ingesteld, wordt de Dev Login knop uitgesc
 # Unit tests (geen Supabase nodig)
 bun test code
 
-# RLS tests (lokale Supabase moet draaien voor CI)
+# Agenda-logica (recurrence, frequency, deviations; geen Supabase nodig)
+bun test agenda
+
+# RLS tests (lokale Supabase moet draaien voor CI; incl. lesson_appointment_deviations agenda: recurring, opheffen)
 bun test rls
 
 # Auth tests (lokale Supabase moet draaien voor CI)

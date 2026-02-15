@@ -18,6 +18,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { NAV_LABELS } from '@/config/nav-labels';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -304,7 +305,7 @@ export default function Settings() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<h1 className="text-3xl font-bold tracking-tight">Instellingen</h1>
+					<h1 className="text-3xl font-bold tracking-tight">{NAV_LABELS.settings}</h1>
 					<p className="text-muted-foreground">Beheer je voorkeuren en accountinstellingen</p>
 				</div>
 				<p>Laden...</p>
@@ -315,7 +316,7 @@ export default function Settings() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-3xl font-bold tracking-tight">Instellingen</h1>
+				<h1 className="text-3xl font-bold tracking-tight">{NAV_LABELS.settings}</h1>
 				<p className="text-muted-foreground">Beheer je voorkeuren en accountinstellingen</p>
 			</div>
 
