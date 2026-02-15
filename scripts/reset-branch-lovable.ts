@@ -49,4 +49,15 @@ await $`git push -u origin lovable --force`;
 console.log('Switch back to main...');
 await $`git switch main`;
 
-console.log('Done.');
+// Verify lovable and main point to the same commit
+const lovableRef = (await $`git rev-parse lovable`.text()).trim();
+const shortRef = localMain.slice(0, 7);
+
+if (localMain !== lovableRef) {
+	console.error('\nError: lovable and main do not point to the same commit!');
+	console.error(`  main:    ${localMain}`);
+	console.error(`  lovable: ${lovableRef}`);
+	process.exit(1);
+}
+
+console.log(`\nDone. main and lovable both point to ${shortRef}.`);
