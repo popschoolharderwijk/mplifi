@@ -94,3 +94,4 @@ if (localMain !== lovableRef) {
 }
 
 console.log(`\nDone. main and lovable both point to ${shortRef}.`);
+process.exit(0);
