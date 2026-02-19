@@ -157,6 +157,8 @@ function useTeacherSlots(
 
 		const load = async () => {
 			setLoading(true);
+			// Load ALL agreements for this teacher (all lesson types) so slot status reflects
+			// whether the teacher is free/partially/fully occupied in that slot (e.g. drums + gitaar).
 			const [avail, agreements] = await Promise.all([
 				supabase
 					.from('teacher_availability')
@@ -574,6 +576,11 @@ export default function AgreementWizard() {
 						}))}
 						slotsWithStatus={slotsWithStatus}
 						selectedSlot={form.slot}
+						currentAgreementSlot={
+							isEditMode && agreement && form.teacherId === agreement.teacher_id
+								? { day_of_week: agreement.day_of_week, start_time: agreement.start_time }
+								: null
+						}
 						loadingStep3={loadingSlots}
 						isTeacherOwnStudent={isTeacherOwnStudent}
 						onTeacherChange={(v) => setForm((f) => ({ ...f, teacherId: v, slot: null }))}
@@ -658,8 +665,10 @@ export default function AgreementWizard() {
 							<h3 className="text-lg font-semibold">Deels bezet tijdslot</h3>
 						</div>
 						<p className="text-muted-foreground mb-6">
-							Dit tijdslot is deels bezet in de gekozen periode. Weet je zeker dat je dit tijdslot wilt
-							gebruiken?
+							Dit tijdslot is deels bezet in de gekozen periode
+							{form.slot?.totalOccurrences != null && form.slot?.occupiedOccurrences != null && (
+								<> ({form.slot.occupiedOccurrences} van {form.slot.totalOccurrences} momenten bezet)</>
+							)}. Weet je zeker dat je dit tijdslot wilt gebruiken?
 						</p>
 						<div className="flex justify-end gap-2">
 							<Button variant="outline" onClick={() => setPartialConfirmOpen(false)}>

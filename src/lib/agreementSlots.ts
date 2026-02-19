@@ -52,6 +52,13 @@ function agreementHasOccurrenceOnDate(agreement: ExistingAgreementForSlot, dateS
 /**
  * Compute status (free / occupied / partial) for each availability slot of a teacher
  * in the given period, based on existing lesson agreements.
+ *
+ * Important: existingAgreements must be ALL agreements for this teacher in the period
+ * (all lesson types). Otherwise a teacher who gives e.g. guitar and drums could
+ * appear "free" for guitar in a slot where they already have drums.
+ * - free: no agreements in this slot in the period
+ * - partial: some occurrences occupied (slot remains selectable; teacher resolves conflicts)
+ * - occupied: every occurrence in the period is occupied (slot not selectable)
  */
 export function getSlotStatuses(
 	periodStart: Date,
