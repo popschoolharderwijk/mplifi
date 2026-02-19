@@ -2,7 +2,7 @@
  * Shared helpers for lesson_appointment_deviations tests.
  */
 import { getActualDateInOriginalWeek } from '../../../src/components/teachers/agenda/utils';
-import { dateDaysFromNow, getDateForDayOfWeek, toLocalDateString } from '../../../src/lib/dateHelpers';
+import { dateDaysFromNow, formatDateToDb, getDateForDayOfWeek } from '../../../src/lib/date/date-format';
 import { fixtures } from '../fixtures';
 import { TestUsers } from '../test-users';
 import type { LessonAppointmentDeviationInsert } from '../types';
@@ -11,7 +11,7 @@ export { dateDaysFromNow, getDateForDayOfWeek, getActualDateInOriginalWeek };
 
 /** Calculate the agreement's original_date (day_of_week) for the week containing refDate. */
 export function originalDateForWeek(dayOfWeek: number, refDate: Date): string {
-	return toLocalDateString(getDateForDayOfWeek(dayOfWeek, refDate));
+	return formatDateToDb(getDateForDayOfWeek(dayOfWeek, refDate));
 }
 
 /** Build standard deviation data for a given reference offset. */

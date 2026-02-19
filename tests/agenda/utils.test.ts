@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'bun:test';
 import { generateRecurringEvents, getActualDateInOriginalWeek } from '../../src/components/teachers/agenda/utils';
-import { getDateForDayOfWeek } from '../../src/lib/dateHelpers';
+import { getDateForDayOfWeek } from '../../src/lib/date/date-format';
 import type {
 	LessonAgreementWithStudent,
 	LessonAppointmentDeviationWithAgreement,
