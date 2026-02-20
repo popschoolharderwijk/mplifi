@@ -3,8 +3,8 @@
  * No database required; tests pure logic.
  */
 import { describe, expect, it } from 'bun:test';
-import { generateRecurringEvents, getActualDateInOriginalWeek } from '../../src/components/teachers/agenda/utils';
-import { getDateForDayOfWeek } from '../../src/lib/date/date-format';
+import { generateRecurringEvents } from '../../src/components/teachers/agenda/utils';
+import { formatDateToDb, getDateForDayOfWeek } from '../../src/lib/date/date-format';
 import type {
 	LessonAgreementWithStudent,
 	LessonAppointmentDeviationWithAgreement,
@@ -14,45 +14,19 @@ describe('agenda utils: getDateForDayOfWeek', () => {
 	it('returns same day when reference is already that weekday', () => {
 		const ref = new Date('2025-02-17T12:00:00'); // Monday
 		const result = getDateForDayOfWeek(1, ref);
-		expect(result.toISOString().split('T')[0]).toBe('2025-02-17');
+		expect(formatDateToDb(result)).toBe('2025-02-17');
 	});
 
 	it('returns next Monday when reference is Wednesday', () => {
 		const ref = new Date('2025-02-19T12:00:00'); // Wed
 		const result = getDateForDayOfWeek(1, ref); // Monday
-		expect(result.toISOString().split('T')[0]).toBe('2025-02-17');
+		expect(formatDateToDb(result)).toBe('2025-02-17');
 	});
 
 	it('returns Thursday in same week when reference is Monday', () => {
 		const ref = new Date('2025-02-17T12:00:00'); // Monday
 		const result = getDateForDayOfWeek(4, ref); // Thursday
-		expect(result.toISOString().split('T')[0]).toBe('2025-02-20');
-	});
-});
-
-describe('agenda utils: getActualDateInOriginalWeek', () => {
-	it('returns same weekday as dropped date within original week', () => {
-		const originalDateStr = '2025-02-17'; // Monday
-		const droppedStart = new Date('2025-03-06T14:00:00'); // Thursday in another week
-		const result = getActualDateInOriginalWeek(originalDateStr, droppedStart);
-		expect(result).toBe('2025-02-20'); // Thursday in week of 2025-02-17
-	});
-
-	it('returns original date when dropped is same weekday in same week', () => {
-		const originalDateStr = '2025-02-17';
-		const droppedStart = new Date('2025-02-17T10:00:00');
-		const result = getActualDateInOriginalWeek(originalDateStr, droppedStart);
-		expect(result).toBe('2025-02-17');
-	});
-
-	it('keeps actual_date within 7 days of original (constraint)', () => {
-		const originalDateStr = '2025-02-17';
-		const droppedStart = new Date('2025-04-01T09:00:00'); // far later
-		const result = getActualDateInOriginalWeek(originalDateStr, droppedStart);
-		const resultDate = new Date(result + 'T12:00:00');
-		const originalDate = new Date(originalDateStr + 'T12:00:00');
-		const diffDays = Math.round((resultDate.getTime() - originalDate.getTime()) / (24 * 60 * 60 * 1000));
-		expect(Math.abs(diffDays)).toBeLessThanOrEqual(7);
+		expect(formatDateToDb(result)).toBe('2025-02-20');
 	});
 });
 
@@ -136,7 +110,7 @@ describe('agenda utils: generateRecurringEvents', () => {
 		const rangeStart = new Date('2025-02-01');
 		const rangeEnd = new Date('2025-03-31');
 		const events = generateRecurringEvents([agreement], rangeStart, rangeEnd, new Map());
-		const eventDates = events.map((e) => (e.start ? new Date(e.start).toISOString().split('T')[0] : ''));
+		const eventDates = events.map((e) => (e.start ? formatDateToDb(e.start) : ''));
 		expect(eventDates).toContain('2025-02-03');
 		expect(eventDates).toContain('2025-02-17');
 		expect(eventDates).toContain('2025-03-03');
@@ -220,9 +194,7 @@ describe('agenda utils: generateRecurringEvents', () => {
 		const rangeStart = new Date('2025-02-01');
 		const rangeEnd = new Date('2025-03-31');
 		const events = generateRecurringEvents([agreement], rangeStart, rangeEnd, new Map(), recurringByAgreement);
-		const weekAfterEnd = events.find(
-			(e) => e.start && new Date(e.start).toISOString().split('T')[0] === '2025-03-10',
-		);
+		const weekAfterEnd = events.find((e) => e.start && formatDateToDb(e.start) === '2025-03-10');
 		expect(weekAfterEnd).toBeDefined();
 		expect(weekAfterEnd?.resource.type).toBe('agreement');
 		expect(weekAfterEnd?.resource.isDeviation).toBe(false);
@@ -255,9 +227,7 @@ describe('agenda utils: generateRecurringEvents', () => {
 		);
 		expect(deviationEvents.length).toBeGreaterThan(0);
 		const lastDeviationEvent = deviationEvents[deviationEvents.length - 1];
-		const lastDateStr = lastDeviationEvent.start
-			? new Date(lastDeviationEvent.start).toISOString().split('T')[0]
-			: '';
+		const lastDateStr = lastDeviationEvent.start ? formatDateToDb(lastDeviationEvent.start) : '';
 		expect(lastDateStr >= '2025-02-17' && lastDateStr <= '2025-03-02').toBe(true);
 		expect(lastDeviationEvent.resource.type).toBe('deviation');
 	});
@@ -281,8 +251,7 @@ describe('agenda utils: generateRecurringEvents', () => {
 		const rangeEnd = new Date('2025-02-28');
 		const events = generateRecurringEvents([agreement], rangeStart, rangeEnd, deviationsMap);
 		const event = events.find(
-			(e) =>
-				e.resource.type !== undefined && new Date(e.start as Date).toISOString().split('T')[0] === '2025-02-17',
+			(e) => e.start && e.resource.type !== undefined && formatDateToDb(e.start) === '2025-02-17',
 		);
 		expect(event).toBeDefined();
 		expect(event?.resource.type).toBe('agreement');

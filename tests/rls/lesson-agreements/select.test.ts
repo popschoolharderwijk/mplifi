@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { createClientAs } from '../../db';
-import { expectNoError } from '../../utils';
+import { unwrap } from '../../utils';
 import { type DatabaseState, setupDatabaseStateVerification } from '../db-state';
 import { fixtures } from '../fixtures';
 import { LESSON_AGREEMENTS } from '../seed-data-constants';
@@ -40,8 +40,7 @@ describe('RLS: lesson_agreements teacher/student logic', () => {
 	it('student sees only their own agreements', async () => {
 		const db = await createClientAs(TestUsers.STUDENT_009);
 
-		const { data, error } = await db.from('lesson_agreements').select('*');
-		expectNoError(data, error);
+		const data = unwrap(await db.from('lesson_agreements').select('*'));
 
 		expect(data.length).toBe(LESSON_AGREEMENTS.STUDENT_009);
 		const agreementIds = data.map((a) => a.id) ?? [];
@@ -53,8 +52,7 @@ describe('RLS: lesson_agreements teacher/student logic', () => {
 	it('student cannot see other students agreements', async () => {
 		const db = await createClientAs(TestUsers.STUDENT_010);
 
-		const { data, error } = await db.from('lesson_agreements').select('*');
-		expectNoError(data, error);
+		const data = unwrap(await db.from('lesson_agreements').select('*'));
 
 		expect(data.length).toBe(LESSON_AGREEMENTS.STUDENT_010);
 		const agreementIds = data.map((a) => a.id) ?? [];
@@ -66,8 +64,7 @@ describe('RLS: lesson_agreements teacher/student logic', () => {
 	it('teacher sees only agreements where they are the teacher', async () => {
 		const db = await createClientAs(TestUsers.TEACHER_ALICE);
 
-		const { data, error } = await db.from('lesson_agreements').select('*');
-		expectNoError(data, error);
+		const data = unwrap(await db.from('lesson_agreements').select('*'));
 
 		expect(data.length).toBe(LESSON_AGREEMENTS.TEACHER_ALICE);
 		const agreementIds = data.map((a) => a.id) ?? [];
@@ -80,8 +77,7 @@ describe('RLS: lesson_agreements teacher/student logic', () => {
 	it('teacher cannot see agreements where they are not the teacher', async () => {
 		const db = await createClientAs(TestUsers.TEACHER_BOB);
 
-		const { data, error } = await db.from('lesson_agreements').select('*');
-		expectNoError(data, error);
+		const data = unwrap(await db.from('lesson_agreements').select('*'));
 
 		expect(data.length).toBe(LESSON_AGREEMENTS.TEACHER_BOB);
 		const agreementIds = data.map((a) => a.id) ?? [];
@@ -96,8 +92,7 @@ describe('RLS: lesson_agreements SELECT', () => {
 	async function select(user: TestUser) {
 		const db = await createClientAs(user);
 
-		const { data, error } = await db.from('lesson_agreements').select('*');
-		expectNoError(data, error);
+		const data = unwrap(await db.from('lesson_agreements').select('*'));
 
 		expect(data.length).toBe(LESSON_AGREEMENTS.TOTAL);
 		const agreementIds = data.map((a) => a.id) ?? [];

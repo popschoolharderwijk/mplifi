@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { formatDateToDb, now } from '../../../src/lib/date/date-format';
 import { createClientAs, createClientBypassRLS } from '../../db';
 import { type DatabaseState, setupDatabaseStateVerification } from '../db-state';
 import { fixtures } from '../fixtures';
@@ -138,7 +139,7 @@ describe('RLS: users without role/teacher/student - INSERT/UPDATE/DELETE', () =>
 					lesson_type_id: lessonType.id,
 					day_of_week: 1,
 					start_time: '14:00',
-					start_date: new Date().toISOString().split('T')[0],
+					start_date: formatDateToDb(now()),
 					is_active: true,
 				})
 				.select();

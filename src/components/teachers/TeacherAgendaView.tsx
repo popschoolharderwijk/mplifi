@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { PostgresErrorCodes } from '@/integrations/supabase/errorcodes';
 import { AVAILABILITY_CONFIG } from '@/lib/availability';
 import { calendarLocalizer } from '@/lib/calendar';
-import { formatDateToDb, getDateForDayOfWeek } from '@/lib/date/date-format';
+import { formatDateToDb, getDateForDayOfWeek, now } from '@/lib/date/date-format';
 import { normalizeTime, normalizeTimeFromDate } from '@/lib/time/time-format';
 import type { LessonAgreementWithStudent, LessonAppointmentDeviationWithAgreement } from '@/types/lesson-agreements';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -193,7 +193,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 				}
 				const pendingOriginalDate = pendingEvent.resource.originalDate;
 				if (pendingOriginalDate && e.start) {
-					const eventDateStr = new Date(e.start).toISOString().split('T')[0];
+					const eventDateStr = formatDateToDb(e.start);
 					return !(isSameAgreement && eventDateStr === pendingOriginalDate);
 				}
 				return true;
@@ -494,9 +494,7 @@ export function TeacherAgendaView({ teacherId, canEdit }: TeacherAgendaViewProps
 			originalDateStr = selectedEvent.resource.originalDate;
 			originalStartTime = selectedEvent.resource.originalStartTime;
 		} else {
-			originalDateStr = selectedEvent.start
-				? new Date(selectedEvent.start).toISOString().split('T')[0]
-				: new Date().toISOString().split('T')[0];
+			originalDateStr = selectedEvent.start ? formatDateToDb(selectedEvent.start) : formatDateToDb(now());
 			originalStartTime = agreement.start_time;
 		}
 
