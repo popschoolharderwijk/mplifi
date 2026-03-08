@@ -800,6 +800,91 @@ WHERE NOT EXISTS (
 );
 
 -- -----------------------------------------------------------------------------
+-- CONSOLIDATE BANDCOACHING AGENDA EVENTS
+-- -----------------------------------------------------------------------------
+-- The trigger creates 1 agenda_event per lesson_agreement. For group lessons
+-- (Bandcoaching), we want 1 event with multiple participants instead of 8
+-- separate events. This block:
+-- 1. Creates 1 consolidated Bandcoaching event for teacher Eve
+-- 2. Adds all Bandcoaching students as participants to this single event
+-- 3. Deletes the 8 individual events that the trigger created
+-- -----------------------------------------------------------------------------
+DO $$
+DECLARE
+  v_eve_teacher_id UUID;
+  v_eve_user_id UUID;
+  v_bandcoaching_lt_id UUID;
+  v_consolidated_event_id UUID;
+  v_first_start_date DATE;
+  v_last_end_date DATE;
+BEGIN
+  -- Get Eve's teacher and user IDs
+  SELECT t.id, t.user_id INTO v_eve_teacher_id, v_eve_user_id
+  FROM public.teachers t
+  JOIN public.profiles p ON p.user_id = t.user_id
+  WHERE p.email = 'teacher-eve@test.nl';
+
+  -- Get Bandcoaching lesson type ID
+  SELECT id INTO v_bandcoaching_lt_id
+  FROM public.lesson_types WHERE name = 'Bandcoaching';
+
+  -- Get the date range from all Bandcoaching agreements
+  -- Note: Bandcoaching is on Monday (day_of_week = 1), so we need to find the first Monday
+  SELECT MIN(start_date), MAX(end_date) INTO v_first_start_date, v_last_end_date
+  FROM public.lesson_agreements
+  WHERE teacher_id = v_eve_teacher_id AND lesson_type_id = v_bandcoaching_lt_id;
+
+  -- Adjust start_date to be a Monday (day_of_week = 1)
+  -- If v_first_start_date is not a Monday, find the next Monday after it
+  -- EXTRACT(DOW FROM date) returns 0=Sunday, 1=Monday, ..., 6=Saturday
+  IF EXTRACT(DOW FROM v_first_start_date) != 1 THEN
+    -- Move to next Monday: add (8 - current_dow) % 7 days, but if current_dow is 0 (Sunday), add 1
+    v_first_start_date := v_first_start_date + ((8 - EXTRACT(DOW FROM v_first_start_date)::int) % 7)::int;
+    -- If the result is still not Monday (edge case for Sunday), adjust
+    IF EXTRACT(DOW FROM v_first_start_date) != 1 THEN
+      v_first_start_date := v_first_start_date + (1 - EXTRACT(DOW FROM v_first_start_date)::int + 7) % 7;
+    END IF;
+  END IF;
+
+  -- Delete the individual agenda_events that were auto-created by the trigger
+  -- (This also cascades to delete their agenda_participants via ON DELETE CASCADE)
+  DELETE FROM public.agenda_events
+  WHERE source_type = 'lesson_agreement'
+    AND source_id IN (
+      SELECT id FROM public.lesson_agreements
+      WHERE teacher_id = v_eve_teacher_id AND lesson_type_id = v_bandcoaching_lt_id
+    );
+
+  -- Create 1 consolidated Bandcoaching event
+  -- Note: source_type = 'manual' because we're not linking to a single lesson_agreement
+  -- The start_date is guaranteed to be a Monday (matching day_of_week = 1 from agreements)
+  INSERT INTO public.agenda_events (
+    source_type, source_id, owner_user_id, title, description,
+    start_date, start_time, end_date, end_time,
+    is_all_day, recurring, recurring_frequency, recurring_end_date,
+    color, created_by, updated_by
+  ) VALUES (
+    'manual', NULL, v_eve_user_id, 'Bandcoaching', 'Groepsles met meerdere deelnemers',
+    v_first_start_date, '14:00'::TIME,
+    v_last_end_date, '15:00'::TIME,
+    false, true, 'biweekly', v_last_end_date,
+    '#6366F1', v_eve_user_id, v_eve_user_id
+  )
+  RETURNING id INTO v_consolidated_event_id;
+
+  -- Add Eve (teacher) as participant
+  INSERT INTO public.agenda_participants (event_id, user_id)
+  VALUES (v_consolidated_event_id, v_eve_user_id);
+
+  -- Add all Bandcoaching students as participants
+  INSERT INTO public.agenda_participants (event_id, user_id)
+  SELECT DISTINCT v_consolidated_event_id, la.student_user_id
+  FROM public.lesson_agreements la
+  WHERE la.teacher_id = v_eve_teacher_id
+    AND la.lesson_type_id = v_bandcoaching_lt_id;
+END $$;
+
+-- -----------------------------------------------------------------------------
 -- STUDENT DATE_OF_BIRTH (seed only: 50/50 under 18 vs 18+, dob is optional in app)
 -- -----------------------------------------------------------------------------
 UPDATE public.students s
@@ -874,25 +959,29 @@ WHERE s.user_id = dob.user_id;
 -- MANUAL AGENDA EVENTS (for dev menu users)
 -- -----------------------------------------------------------------------------
 -- All users that appear in the Dev Tools login menu get:
--- - 1 one-off event on Tuesday (to avoid Monday teacher lessons)
--- - 1 recurring weekly event on Wednesday
+-- - 1 one-off event on a day they DON'T have lessons
+-- - 1 recurring weekly event on a different day they DON'T have lessons
 -- - owner_user_id and created_by set to the creating user
 -- Plus shared events with multiple participants (from dev menu) so the same
 -- event appears in multiple users' agendas.
 --
 -- IMPORTANT: Events are scheduled to NOT overlap with teacher lessons:
--- - Teacher Alice: Monday 09:00-12:00 (Gitaar), 14:00-17:00 (Drums)
--- - Teacher Eve: Monday 14:00-15:00 (Bandcoaching)
--- - So all teacher events are scheduled on Tuesday-Friday
+-- - Teacher Alice: Monday 09:00-12:00 (Gitaar), 14:00-17:00 (Drums), Wednesday 14:00-17:00 (Zangles)
+-- - Teacher Eve: Monday 14:00-15:00 (Bandcoaching) - but Bandcoaching is now 1 event with multiple students
+-- - Teacher Jack: NO lessons (no students)
+-- - Non-teachers can have events on any day
+--
+-- Schedule per teacher:
+-- - Alice: Tuesday + Thursday (avoids her Monday and Wednesday lessons)
+-- - Eve: Tuesday + Wednesday (avoids her Monday Bandcoaching)
+-- - Jack: Tuesday + Wednesday (no lessons, so any day works)
 -- -----------------------------------------------------------------------------
 
--- NOTE: Events are scheduled on Tuesday (n=0) and Wednesday (n=3) to avoid
--- overlapping with teacher lessons (Alice has Monday 09:00-17:00, Eve has Monday 14:00-15:00)
+-- Non-teacher users: Tuesday and Wednesday events (no lesson conflicts)
 WITH
-  dev_users AS (
+  non_teacher_dev_users AS (
     SELECT user_id FROM public.profiles WHERE email IN (
       'site-admin@test.nl', 'admin-one@test.nl', 'staff-one@test.nl',
-      'teacher-alice@test.nl', 'teacher-jack@test.nl', 'teacher-eve@test.nl',
       'student-001@test.nl', 'student-009@test.nl', 'student-010@test.nl',
       'user-001@test.nl', 'user-002@test.nl', 'user-003@test.nl'
     )
@@ -909,23 +998,125 @@ WITH
       d.user_id,
       CASE n
         WHEN 0 THEN 'Persoonlijke afspraak'
-        WHEN 3 THEN 'Terugkerende planning'
+        WHEN 1 THEN 'Terugkerende planning'
       END,
-      CASE WHEN n >= 2 THEN 'Terugkerende afspraak' END,
-      -- n=0: Tuesday (+1), n=3: Wednesday (+2) - avoids Monday teacher lessons
-      (SELECT ws FROM week_start) + (CASE n WHEN 0 THEN 1 WHEN 3 THEN 2 END)::integer,
-      (CASE n WHEN 0 THEN '10:00' WHEN 3 THEN '15:00' END)::time,
-      (SELECT ws FROM week_start) + (CASE n WHEN 0 THEN 1 WHEN 3 THEN 2 END)::integer,
-      (CASE n WHEN 0 THEN '11:00' WHEN 3 THEN '16:00' END)::time,
+      CASE WHEN n = 1 THEN 'Terugkerende afspraak' END,
+      -- n=0: Tuesday (+1), n=1: Wednesday (+2)
+      (SELECT ws FROM week_start) + (CASE n WHEN 0 THEN 1 WHEN 1 THEN 2 END)::integer,
+      (CASE n WHEN 0 THEN '10:00' WHEN 1 THEN '15:00' END)::time,
+      (SELECT ws FROM week_start) + (CASE n WHEN 0 THEN 1 WHEN 1 THEN 2 END)::integer,
+      (CASE n WHEN 0 THEN '11:00' WHEN 1 THEN '16:00' END)::time,
       false,
-      n >= 2,
-      CASE WHEN n >= 2 THEN 'weekly' END,
-      CASE WHEN n >= 2 THEN (CURRENT_DATE + interval '3 months')::date END,
-      CASE n WHEN 0 THEN '#4ade80' WHEN 3 THEN '#86efac' END,
+      n = 1,
+      CASE WHEN n = 1 THEN 'weekly' END,
+      CASE WHEN n = 1 THEN (CURRENT_DATE + interval '3 months')::date END,
+      CASE n WHEN 0 THEN '#4ade80' WHEN 1 THEN '#86efac' END,
       d.user_id,
       d.user_id
-    FROM dev_users d
-    CROSS JOIN (VALUES (0), (3)) AS t(n)
+    FROM non_teacher_dev_users d
+    CROSS JOIN (VALUES (0), (1)) AS t(n)
+    RETURNING id, owner_user_id
+  )
+INSERT INTO public.agenda_participants (event_id, user_id)
+SELECT id, owner_user_id FROM inserted;
+
+-- Teacher Alice: Tuesday and Thursday events (avoids Monday + Wednesday lessons)
+WITH
+  alice AS (SELECT user_id FROM public.profiles WHERE email = 'teacher-alice@test.nl'),
+  week_start AS (SELECT date_trunc('week', CURRENT_DATE)::date AS ws),
+  inserted AS (
+    INSERT INTO public.agenda_events (
+      source_type, source_id, owner_user_id, title, description, start_date, start_time, end_date, end_time,
+      is_all_day, recurring, recurring_frequency, recurring_end_date, color, created_by, updated_by
+    )
+    SELECT
+      'manual',
+      NULL,
+      a.user_id,
+      CASE n WHEN 0 THEN 'Persoonlijke afspraak' WHEN 1 THEN 'Terugkerende planning' END,
+      CASE WHEN n = 1 THEN 'Terugkerende afspraak' END,
+      -- n=0: Tuesday (+1), n=1: Thursday (+3) - avoids Monday and Wednesday lessons
+      (SELECT ws FROM week_start) + (CASE n WHEN 0 THEN 1 WHEN 1 THEN 3 END)::integer,
+      (CASE n WHEN 0 THEN '10:00' WHEN 1 THEN '15:00' END)::time,
+      (SELECT ws FROM week_start) + (CASE n WHEN 0 THEN 1 WHEN 1 THEN 3 END)::integer,
+      (CASE n WHEN 0 THEN '11:00' WHEN 1 THEN '16:00' END)::time,
+      false,
+      n = 1,
+      CASE WHEN n = 1 THEN 'weekly' END,
+      CASE WHEN n = 1 THEN (CURRENT_DATE + interval '3 months')::date END,
+      CASE n WHEN 0 THEN '#4ade80' WHEN 1 THEN '#86efac' END,
+      a.user_id,
+      a.user_id
+    FROM alice a
+    CROSS JOIN (VALUES (0), (1)) AS t(n)
+    RETURNING id, owner_user_id
+  )
+INSERT INTO public.agenda_participants (event_id, user_id)
+SELECT id, owner_user_id FROM inserted;
+
+-- Teacher Eve: Tuesday and Wednesday events (avoids Monday Bandcoaching)
+WITH
+  eve AS (SELECT user_id FROM public.profiles WHERE email = 'teacher-eve@test.nl'),
+  week_start AS (SELECT date_trunc('week', CURRENT_DATE)::date AS ws),
+  inserted AS (
+    INSERT INTO public.agenda_events (
+      source_type, source_id, owner_user_id, title, description, start_date, start_time, end_date, end_time,
+      is_all_day, recurring, recurring_frequency, recurring_end_date, color, created_by, updated_by
+    )
+    SELECT
+      'manual',
+      NULL,
+      e.user_id,
+      CASE n WHEN 0 THEN 'Persoonlijke afspraak' WHEN 1 THEN 'Terugkerende planning' END,
+      CASE WHEN n = 1 THEN 'Terugkerende afspraak' END,
+      -- n=0: Tuesday (+1), n=1: Wednesday (+2) - avoids Monday Bandcoaching
+      (SELECT ws FROM week_start) + (CASE n WHEN 0 THEN 1 WHEN 1 THEN 2 END)::integer,
+      (CASE n WHEN 0 THEN '10:00' WHEN 1 THEN '15:00' END)::time,
+      (SELECT ws FROM week_start) + (CASE n WHEN 0 THEN 1 WHEN 1 THEN 2 END)::integer,
+      (CASE n WHEN 0 THEN '11:00' WHEN 1 THEN '16:00' END)::time,
+      false,
+      n = 1,
+      CASE WHEN n = 1 THEN 'weekly' END,
+      CASE WHEN n = 1 THEN (CURRENT_DATE + interval '3 months')::date END,
+      CASE n WHEN 0 THEN '#4ade80' WHEN 1 THEN '#86efac' END,
+      e.user_id,
+      e.user_id
+    FROM eve e
+    CROSS JOIN (VALUES (0), (1)) AS t(n)
+    RETURNING id, owner_user_id
+  )
+INSERT INTO public.agenda_participants (event_id, user_id)
+SELECT id, owner_user_id FROM inserted;
+
+-- Teacher Jack: Tuesday and Wednesday events (no lessons, any day works)
+WITH
+  jack AS (SELECT user_id FROM public.profiles WHERE email = 'teacher-jack@test.nl'),
+  week_start AS (SELECT date_trunc('week', CURRENT_DATE)::date AS ws),
+  inserted AS (
+    INSERT INTO public.agenda_events (
+      source_type, source_id, owner_user_id, title, description, start_date, start_time, end_date, end_time,
+      is_all_day, recurring, recurring_frequency, recurring_end_date, color, created_by, updated_by
+    )
+    SELECT
+      'manual',
+      NULL,
+      j.user_id,
+      CASE n WHEN 0 THEN 'Persoonlijke afspraak' WHEN 1 THEN 'Terugkerende planning' END,
+      CASE WHEN n = 1 THEN 'Terugkerende afspraak' END,
+      -- n=0: Tuesday (+1), n=1: Wednesday (+2)
+      (SELECT ws FROM week_start) + (CASE n WHEN 0 THEN 1 WHEN 1 THEN 2 END)::integer,
+      (CASE n WHEN 0 THEN '10:00' WHEN 1 THEN '15:00' END)::time,
+      (SELECT ws FROM week_start) + (CASE n WHEN 0 THEN 1 WHEN 1 THEN 2 END)::integer,
+      (CASE n WHEN 0 THEN '11:00' WHEN 1 THEN '16:00' END)::time,
+      false,
+      n = 1,
+      CASE WHEN n = 1 THEN 'weekly' END,
+      CASE WHEN n = 1 THEN (CURRENT_DATE + interval '3 months')::date END,
+      CASE n WHEN 0 THEN '#4ade80' WHEN 1 THEN '#86efac' END,
+      j.user_id,
+      j.user_id
+    FROM jack j
+    CROSS JOIN (VALUES (0), (1)) AS t(n)
     RETURNING id, owner_user_id
   )
 INSERT INTO public.agenda_participants (event_id, user_id)
@@ -987,6 +1178,7 @@ SELECT e.id, p.user_id FROM new_event e
 CROSS JOIN public.profiles p WHERE p.email IN ('site-admin@test.nl', 'admin-one@test.nl', 'staff-one@test.nl');
 
 -- Multi-participant event 2: Lesoverleg (teacher-eve + student-001 who have Bandcoaching agreement)
+-- Scheduled on Tuesday at 16:00 to avoid any conflict with Bandcoaching (Monday 14:00)
 WITH new_event AS (
   INSERT INTO public.agenda_events (
     source_type, source_id, owner_user_id, title, description, start_date, start_time, end_date, end_time,
@@ -994,8 +1186,8 @@ WITH new_event AS (
   )
   SELECT
     'manual', NULL, p.user_id, 'Lesoverleg', 'Overleg docent en leerling',
-    date_trunc('week', CURRENT_DATE)::date + 3, '14:00'::time,
-    date_trunc('week', CURRENT_DATE)::date + 3, '15:00'::time,
+    date_trunc('week', CURRENT_DATE)::date + 1, '16:00'::time,  -- Tuesday (+1) at 16:00
+    date_trunc('week', CURRENT_DATE)::date + 1, '17:00'::time,
     false, false, NULL, NULL, '#4ade80', p.user_id, p.user_id
   FROM public.profiles p WHERE p.email = 'teacher-eve@test.nl'
   RETURNING id
