@@ -63,28 +63,29 @@ BEGIN
         ))
       )
   ),
-  -- Filter out cancelled deviations
+  -- Filter out cancelled deviations (agenda_event_deviations linked via agenda_events.source_id = agreement_id)
   non_cancelled_occurrences AS (
     SELECT ao.*
     FROM agreement_occurrences ao
     WHERE NOT EXISTS (
       SELECT 1
-      FROM lesson_appointment_deviations lad
-      WHERE lad.lesson_agreement_id = ao.agreement_id
+      FROM agenda_events ae
+      JOIN agenda_event_deviations lad ON lad.event_id = ae.id
+      WHERE ae.source_type = 'lesson_agreement'
+        AND ae.source_id = ao.agreement_id
         AND lad.is_cancelled = true
         AND (
-          -- Single cancellation for this exact date
           (lad.recurring = false AND lad.original_date = ao.occurrence_date)
           OR
-          -- Recurring cancellation that covers this date
           (lad.recurring = true
            AND lad.original_date <= ao.occurrence_date
            AND (lad.recurring_end_date IS NULL OR lad.recurring_end_date >= ao.occurrence_date)
-           -- Check that no override exists for this specific week
            AND NOT EXISTS (
              SELECT 1
-             FROM lesson_appointment_deviations override
-             WHERE override.lesson_agreement_id = ao.agreement_id
+             FROM agenda_events ae2
+             JOIN agenda_event_deviations override ON override.event_id = ae2.id
+             WHERE ae2.source_type = 'lesson_agreement'
+               AND ae2.source_id = ao.agreement_id
                AND override.recurring = false
                AND override.original_date = ao.occurrence_date
                AND override.is_cancelled = false

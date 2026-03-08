@@ -12,6 +12,7 @@ interface AuthContextType {
 	isSiteAdmin: boolean;
 	isStaff: boolean;
 	isTeacher: boolean;
+	isPrivileged: boolean;
 	teacherId: string | null;
 	signOut: () => Promise<void>;
 	refreshRole: () => Promise<void>;
@@ -100,6 +101,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 	const isSiteAdmin = role === 'site_admin';
 	const isStaff = role === 'staff';
 	const isTeacher = teacherId !== null;
+	const isPrivileged = isAdmin || isSiteAdmin || isStaff;
 
 	return (
 		<AuthContext.Provider
@@ -112,6 +114,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 				isSiteAdmin,
 				isStaff,
 				isTeacher,
+				isPrivileged,
 				teacherId,
 				signOut,
 				refreshRole,

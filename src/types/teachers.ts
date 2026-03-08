@@ -4,11 +4,11 @@
  */
 
 import type { Tables } from '@/integrations/supabase/types';
+import type { LessonTypeDisplayFields } from '@/types/lesson-agreements';
 
 // Base types from Supabase
 type TeacherRow = Tables<'teachers'>;
 type ProfileRow = Tables<'profiles'>;
-type LessonTypeRow = Tables<'lesson_types'>;
 
 /**
  * Profile fields commonly used in teacher views
@@ -30,7 +30,7 @@ export type TeacherWithProfile = TeacherRow & {
  */
 export type TeacherWithProfileAndLessonTypes = TeacherRow & {
 	profile: TeacherProfileFields;
-	lesson_types: Pick<LessonTypeRow, 'id' | 'name' | 'icon' | 'color'>[];
+	lesson_types: LessonTypeDisplayFields[];
 };
 
 /**

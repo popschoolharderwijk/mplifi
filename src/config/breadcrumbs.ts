@@ -22,6 +22,7 @@ interface RouteBreadcrumb {
 /** Order matters: more specific routes first (e.g. /teachers/my-profile before /teachers/:id). */
 const ROUTE_BREADCRUMBS: RouteBreadcrumb[] = [
 	{ pattern: '/', items: [] },
+	{ pattern: '/agenda', items: [{ label: NAV_LABELS.agenda, href: '/agenda' }] },
 	{ pattern: '/users', items: [{ label: NAV_LABELS.users, href: '/users' }] },
 	{
 		pattern: '/lesson-types/new',

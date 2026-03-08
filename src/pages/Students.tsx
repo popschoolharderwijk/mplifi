@@ -29,7 +29,7 @@ interface PaginatedStudentsResponse {
 }
 
 export default function Students() {
-	const { isAdmin, isSiteAdmin, isStaff, isLoading: authLoading } = useAuth();
+	const { isAdmin, isSiteAdmin, isPrivileged, isLoading: authLoading } = useAuth();
 	const [students, setStudents] = useState<StudentWithProfile[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [totalCount, setTotalCount] = useState(0);
@@ -69,7 +69,7 @@ export default function Students() {
 	}>({ open: false, student: null });
 
 	// Check access - only admin, site_admin and staff can view this page
-	const hasAccess = isAdmin || isSiteAdmin || isStaff;
+	const hasAccess = isPrivileged;
 	const { lessonTypes } = useActiveLessonTypes(hasAccess);
 
 	// Load paginated students
@@ -297,7 +297,7 @@ export default function Students() {
 				initialSortDirection={sortDirection || undefined}
 				onSortChange={handleSortChange}
 				rowActions={{
-					onEdit: isAdmin || isSiteAdmin || isStaff ? handleEdit : undefined,
+					onEdit: isPrivileged ? handleEdit : undefined,
 					onDelete: isAdmin || isSiteAdmin ? handleDelete : undefined,
 				}}
 			/>

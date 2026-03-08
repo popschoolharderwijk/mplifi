@@ -1,9 +1,10 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { Toaster } from 'sonner';
 import { AuthProvider } from './components/AuthProvider';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { ThemedToaster } from './components/ThemedToaster';
 import { ThemeProvider } from './components/ThemeProvider';
+import Agenda from './pages/Agenda';
 import Agreements from './pages/Agreements';
 import AgreementWizard from './pages/AgreementWizard';
 import AuthCallback from './pages/AuthCallback';
@@ -47,6 +48,7 @@ const App = () => (
 						}
 					>
 						<Route path="/" element={<Dashboard />} />
+						<Route path="/agenda" element={<Agenda />} />
 						<Route path="/users" element={<Users />} />
 						<Route path="/lesson-types" element={<LessonTypes />} />
 						<Route path="/lesson-types/new" element={<LessonTypeInfo />} />
@@ -70,7 +72,7 @@ const App = () => (
 
 					<Route path="*" element={<NotFound />} />
 				</Routes>
-				<Toaster />
+				<ThemedToaster />
 			</AuthProvider>
 		</ThemeProvider>
 	</BrowserRouter>

@@ -27,6 +27,21 @@
 		@apply hover:bg-accent hover:text-accent-foreground;
 	}
 
+	/* Nav group: chevrons flank label (Google Calendar style) */
+	& .rbc-nav-group {
+		@apply flex items-center gap-1;
+	}
+
+	& .rbc-nav-prev,
+	& .rbc-nav-next {
+		@apply rounded-full border-0 bg-transparent p-1.5 text-muted-foreground transition-colors;
+		@apply hover:bg-muted hover:text-foreground;
+	}
+
+	& .rbc-nav-group .rbc-toolbar-label {
+		@apply mx-2 min-w-[8rem] text-center;
+	}
+
 	& .rbc-btn-group button.rbc-active {
 		@apply bg-primary text-primary-foreground border-primary;
 	}

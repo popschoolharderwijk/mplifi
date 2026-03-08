@@ -15,7 +15,7 @@ import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useAutofocus } from '@/hooks/useAutofocus';
 import { supabase } from '@/integrations/supabase/client';
 import { getSlotStatuses, type SlotWithStatus } from '@/lib/agreementSlots';
-import { dateDaysFromNow, dateYearsFromNow, formatDateToDb } from '@/lib/date/date-format';
+import { addDaysFromNow, addYearsFromNow, formatDateToDb } from '@/lib/date/date-format';
 import { formatTime } from '@/lib/time/time-format';
 import type {
 	AgreementTableRow,
@@ -28,11 +28,11 @@ import type {
 // ============ Helpers ============
 
 function tomorrow(): string {
-	return formatDateToDb(dateDaysFromNow(1));
+	return formatDateToDb(addDaysFromNow(1));
 }
 
 function oneYearFromToday(): string {
-	return formatDateToDb(dateYearsFromNow(1));
+	return formatDateToDb(addYearsFromNow(1));
 }
 
 // ============ Custom Hooks ============

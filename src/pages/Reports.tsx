@@ -153,10 +153,12 @@ function ReportsDataTable({
 				sortValue: (r) => r.lesson_type_name.toLowerCase(),
 				render: (row) => (
 					<LessonTypeBadge
-						name={row.lesson_type_name}
-						icon={row.lesson_type_icon}
-						color={row.lesson_type_color}
-						iconSize="sm"
+						lessonType={{
+							name: row.lesson_type_name,
+							icon: row.lesson_type_icon,
+							color: row.lesson_type_color,
+						}}
+						size="sm"
 					/>
 				),
 			},
@@ -261,8 +263,7 @@ function ReportsDataTable({
 // --- Component ---
 
 export default function Reports() {
-	const { isAdmin, isSiteAdmin, isStaff, isTeacher, isLoading: authLoading } = useAuth();
-	const isPrivileged = isAdmin || isSiteAdmin || isStaff;
+	const { isPrivileged, isTeacher, isLoading: authLoading } = useAuth();
 	const hasAccess = isPrivileged || isTeacher;
 
 	// Period state

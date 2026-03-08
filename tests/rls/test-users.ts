@@ -40,6 +40,7 @@ export const TestUsers = {
 	STUDENT_008: 'student-008@test.nl',
 	STUDENT_009: 'student-009@test.nl',
 	STUDENT_010: 'student-010@test.nl',
+	STUDENT_012: 'student-012@test.nl',
 	STUDENT_026: 'student-026@test.nl',
 
 	// Users without role, teacher, or student

@@ -203,7 +203,7 @@ export function TeacherLessonTypesSection({ teacherId, canEdit }: TeacherLessonT
 										className="w-full justify-start font-normal"
 										onClick={() => handleAddLessonType(lt.id)}
 									>
-										<LessonTypeBadge name={lt.name} icon={lt.icon} color={lt.color} iconSize="sm" />
+										<LessonTypeBadge lessonType={lt} size="sm" />
 									</Button>
 								))}
 							</div>
@@ -218,7 +218,7 @@ export function TeacherLessonTypesSection({ teacherId, canEdit }: TeacherLessonT
 					<div className="flex flex-wrap gap-2">
 						{lessonTypes.map((lt) => (
 							<div key={lt.id} className="flex items-center gap-2 rounded-md border px-3 py-1.5">
-								<LessonTypeBadge name={lt.name} icon={lt.icon} color={lt.color} />
+								<LessonTypeBadge lessonType={lt} />
 								{canEdit && (
 									<Button
 										type="button"

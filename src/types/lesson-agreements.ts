@@ -4,18 +4,20 @@
  */
 
 import type { Database } from '@/integrations/supabase/types';
+import type { AgendaEventDeviationWithEvent } from '@/types/agenda-events';
 
 // Base types from Supabase
 type LessonAgreementRow = Database['public']['Tables']['lesson_agreements']['Row'];
 export type LessonTypeRow = Database['public']['Tables']['lesson_types']['Row'];
 export type LessonTypeOptionRow = Database['public']['Tables']['lesson_type_options']['Row'];
 type ProfileRow = Database['public']['Tables']['profiles']['Row'];
-type LessonAppointmentDeviationRow = Database['public']['Tables']['lesson_appointment_deviations']['Row'];
 
 /** Lesson scheduling frequency from Supabase enum (use this instead of defining locally) */
 export type LessonFrequency = Database['public']['Enums']['lesson_frequency'];
 
-/** Form state for lesson type create/edit (nullable DB fields as string) */
+/** Common lesson type display fields (id, name, icon, color) */
+export type LessonTypeDisplayFields = Pick<LessonTypeRow, 'id' | 'name' | 'icon' | 'color'>;
+
 /** Form state for lesson type create/edit (nullable DB fields as string) */
 export type LessonTypeFormState = Pick<LessonTypeRow, 'name' | 'icon' | 'color' | 'is_group_lesson' | 'is_active'> & {
 	description: string;
@@ -113,7 +115,7 @@ export type LessonAgreementWithStudent = Pick<
 	| 'price_per_lesson'
 > & {
 	profiles: Pick<ProfileRow, 'first_name' | 'last_name' | 'email'> | null;
-	lesson_types: Pick<LessonTypeRow, 'id' | 'name' | 'icon' | 'color' | 'is_group_lesson'>;
+	lesson_types: LessonTypeDisplayFields & Pick<LessonTypeRow, 'is_group_lesson'>;
 };
 
 /**
@@ -134,7 +136,7 @@ export type LessonAgreementWithTeacher = Pick<
 	| 'price_per_lesson'
 > & {
 	teacher: Pick<ProfileRow, 'first_name' | 'last_name' | 'avatar_url'>;
-	lesson_type: Pick<LessonTypeRow, 'id' | 'name' | 'icon' | 'color'>;
+	lesson_type: LessonTypeDisplayFields;
 };
 
 /**
@@ -160,15 +162,14 @@ export type AgreementTableRow = Pick<
 > & {
 	student: Pick<ProfileRow, 'first_name' | 'last_name' | 'avatar_url' | 'email'>;
 	teacher: Pick<ProfileRow, 'first_name' | 'last_name' | 'avatar_url' | 'email'>;
-	lesson_type: Pick<LessonTypeRow, 'id' | 'name' | 'icon' | 'color'>;
+	lesson_type: LessonTypeDisplayFields;
 };
 
 /**
- * Lesson appointment deviation with its related lesson agreement
+ * Lesson appointment deviation with its agenda event (replaces old deviation + lesson_agreement).
+ * Use agenda_event for start_time, start_date, recurring_frequency; day_of_week from start_date.
+ * When source_type is lesson_agreement, lesson_agreement can be loaded via event.source_id for student/lesson type display.
  */
-export type LessonAppointmentDeviationWithAgreement = Omit<
-	LessonAppointmentDeviationRow,
-	'created_at' | 'updated_at' | 'created_by_user_id' | 'last_updated_by_user_id'
-> & {
-	lesson_agreements: LessonAgreementWithStudent;
+export type LessonAppointmentDeviationWithAgreement = AgendaEventDeviationWithEvent & {
+	lesson_agreement?: LessonAgreementWithStudent;
 };

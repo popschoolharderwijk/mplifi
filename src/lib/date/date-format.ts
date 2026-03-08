@@ -37,24 +37,30 @@ export function formatDateTimeShort(date: Date): string {
 	return format(date, 'dd-MM-yyyy HH:mm', { locale: nl });
 }
 
-export function dateDaysFromDate(date: Date, days: number) {
+export function addDaysToDate(date: Date, days: number) {
 	const d = new Date(date);
 	d.setDate(d.getDate() + days);
 	return d;
 }
 
-export function dateDaysFromNow(days: number) {
-	return dateDaysFromDate(now(), days);
+/** Add days to a DB-format date string (YYYY-MM-DD), returns DB format. */
+export function addDaysToDateStr(dateStr: string, days: number): string {
+	const d = parseISO(dateStr);
+	return formatDateToDb(addDaysToDate(d, days));
 }
 
-export function dateYearsFromDate(date: Date, years: number) {
+export function addDaysFromNow(days: number) {
+	return addDaysToDate(now(), days);
+}
+
+export function addYearsToDate(date: Date, years: number) {
 	const d = new Date(date);
 	d.setFullYear(d.getFullYear() + years);
 	return d;
 }
 
-export function dateYearsFromNow(years: number) {
-	return dateYearsFromDate(now(), years);
+export function addYearsFromNow(years: number) {
+	return addYearsToDate(now(), years);
 }
 
 export function getDateForDayOfWeek(dayOfWeek: number, referenceDate: Date) {

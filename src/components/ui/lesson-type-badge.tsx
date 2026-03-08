@@ -4,17 +4,19 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { MUSIC_ICONS } from '@/constants/icons';
 import { cn } from '@/lib/utils';
 
-interface LessonTypeBadgeProps {
-	/** Name of the lesson type */
+/** Minimal lesson type data needed for the badge */
+export interface LessonTypeData {
 	name: string;
-	/** Icon identifier (from MUSIC_ICONS) */
 	icon?: string | null;
-	/** Background color for the icon */
 	color?: string | null;
-	/** Optional description for tooltip (shown below name) */
 	description?: string | null;
+}
+
+interface LessonTypeBadgeProps {
+	/** Lesson type object with name, icon, color, and optional description */
+	lessonType: LessonTypeData;
 	/** Size variant for the icon */
-	iconSize?: 'sm' | 'md' | 'lg';
+	size?: 'sm' | 'md' | 'lg';
 	/** Show name text alongside icon (default: true) */
 	showName?: boolean;
 	/** Show tooltip with name (default: true when showName is false) */
@@ -29,15 +31,13 @@ interface LessonTypeBadgeProps {
  * Optionally shows description in tooltip.
  */
 export function LessonTypeBadge({
-	name,
-	icon,
-	color,
-	description,
-	iconSize = 'md',
+	lessonType,
+	size = 'md',
 	showName = true,
 	showTooltip,
 	className,
 }: LessonTypeBadgeProps) {
+	const { name, icon, color, description } = lessonType;
 	const Icon = icon ? resolveIconFromList(MUSIC_ICONS, icon) : undefined;
 
 	// Show tooltip when explicitly requested, or when name is hidden
@@ -45,7 +45,7 @@ export function LessonTypeBadge({
 
 	const content = (
 		<div className={cn('flex items-center gap-2', className)}>
-			<ColorIcon icon={Icon} color={color} size={iconSize} />
+			<ColorIcon icon={Icon} color={color} size={size} />
 			{showName && <span className="truncate">{name}</span>}
 		</div>
 	);

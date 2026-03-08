@@ -88,7 +88,7 @@ export default function LessonTypes() {
 				sortValue: (lt) => lt.name.toLowerCase(),
 				render: (lt) => (
 					<div className="flex items-center gap-3">
-						<LessonTypeBadge name={lt.name} icon={lt.icon} color={lt.color} showName={false} />
+						<LessonTypeBadge lessonType={lt} showName={false} />
 						<div>
 							<p className="font-medium">{lt.name}</p>
 							{lt.description && <p className="text-xs text-muted-foreground">{lt.description}</p>}

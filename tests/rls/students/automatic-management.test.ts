@@ -23,7 +23,7 @@ const dbNoRLS = createClientBypassRLS();
 // We'll use USER_001 which has no student record initially
 const studentCUserId = fixtures.requireUserId(TestUsers.USER_001);
 const teacherAliceId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
-const lessonTypeId = fixtures.requireLessonTypeId('Gitaar');
+const lessonTypeId = fixtures.requireLessonTypeId('Gitaarles');
 
 /**
  * Automatic student management via lesson agreements:

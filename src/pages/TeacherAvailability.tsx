@@ -30,14 +30,14 @@ interface Availability {
 const dayNames = DAY_NAMES;
 
 export default function TeacherAvailability() {
-	const { isAdmin, isSiteAdmin, isStaff, isLoading: authLoading } = useAuth();
+	const { isPrivileged, isLoading: authLoading } = useAuth();
 	const [teachers, setTeachers] = useState<Teacher[]>([]);
 	const [availability, setAvailability] = useState<Availability[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [selectedTeacherId, setSelectedTeacherId] = useState<string | 'all'>('all');
 
 	// Check access - staff, admin and site_admin can view this page
-	const hasAccess = isAdmin || isSiteAdmin || isStaff;
+	const hasAccess = isPrivileged;
 
 	const loadData = useCallback(async () => {
 		if (!hasAccess) return;

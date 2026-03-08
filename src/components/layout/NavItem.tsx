@@ -27,7 +27,7 @@ export function NavItem({ href, label, icon: Icon, collapsed }: NavItemProps) {
 			<span className="grid size-10 shrink-0 place-items-center">
 				<Icon className="h-5 w-5" />
 			</span>
-			{!collapsed && <span className="truncate leading-none">{label}</span>}
+			{!collapsed && <span className="truncate">{label}</span>}
 		</NavLink>
 	);
 

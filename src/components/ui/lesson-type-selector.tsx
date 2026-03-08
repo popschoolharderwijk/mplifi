@@ -107,12 +107,7 @@ export function LessonTypeSelector({
 											onSelect={() => handleSelect(option.id)}
 											className="flex items-center gap-2"
 										>
-											<LessonTypeBadge
-												name={option.name}
-												icon={option.icon}
-												color={option.color}
-												iconSize="sm"
-											/>
+											<LessonTypeBadge lessonType={option} size="sm" />
 										</CommandItem>
 									))}
 								</CommandGroup>
@@ -130,7 +125,7 @@ export function LessonTypeSelector({
 							key={option.id}
 							className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1 text-sm"
 						>
-							<LessonTypeBadge name={option.name} icon={option.icon} color={option.color} iconSize="sm" />
+							<LessonTypeBadge lessonType={option} size="sm" />
 							{!disabled && (
 								<button
 									type="button"

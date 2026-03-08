@@ -9,7 +9,7 @@ import { DAY_NAMES } from '@/lib/date/day-index';
 import { formatTime } from '@/lib/time/time-format';
 import { cn } from '@/lib/utils';
 
-/** Slot van de bestaande overeenkomst bij bewerken (voor duidelijke markering) */
+/** Slot of the existing agreement when editing (for clear visual marking) */
 export interface CurrentAgreementSlot {
 	day_of_week: number;
 	start_time: string;
@@ -55,7 +55,7 @@ function SlotStatusIcon({
 	);
 }
 
-/** Maandag=0, ..., Zondag=6 voor sortering */
+/** Monday=1, ..., Sunday=0 for sort key (day_of_week from DB) */
 function sortKeyDay(dayOfWeek: number): number {
 	return (dayOfWeek + 6) % 7;
 }
@@ -77,7 +77,7 @@ function groupSlotsByDay(slots: SlotWithStatus[]): Map<number, SlotWithStatus[]>
 		if (arr.length === 0) map.set(day, arr);
 		arr.push(slot);
 	}
-	// Binnen elke dag op tijd sorteren
+	// Sort by time within each day
 	for (const arr of map.values()) {
 		arr.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
 	}
@@ -105,7 +105,7 @@ interface TeacherSlotStepContentProps {
 	}>;
 	slotsWithStatus: SlotWithStatus[];
 	selectedSlot: SlotWithStatus | null;
-	/** Bij bewerken: het tijdslot van de bestaande overeenkomst (wordt met solide achtergrond getoond) */
+	/** When editing: the time slot of the existing agreement (shown with solid background) */
 	currentAgreementSlot?: CurrentAgreementSlot | null;
 	loadingStep3: boolean;
 	isTeacherOwnStudent: boolean;
@@ -127,7 +127,7 @@ export function TeacherSlotStepContent({
 }: TeacherSlotStepContentProps) {
 	const sortedSlots = useMemo(() => sortSlotsByDayThenTime(slotsWithStatus), [slotsWithStatus]);
 	const slotsByDay = useMemo(() => groupSlotsByDay(sortedSlots), [sortedSlots]);
-	const dayOrder = useMemo(() => [1, 2, 3, 4, 5, 6, 0] as const, []); // Maandag eerst, zondag laatst
+	const dayOrder = useMemo(() => [1, 2, 3, 4, 5, 6, 0] as const, []); // Monday first, Sunday last
 
 	return (
 		<div className="space-y-4 py-4">

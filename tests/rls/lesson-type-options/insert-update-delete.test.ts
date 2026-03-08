@@ -28,7 +28,7 @@ afterAll(async () => {
  * INSERT / UPDATE / DELETE: only admin and site_admin.
  */
 
-const lessonTypeId = fixtures.requireLessonTypeId('Gitaar');
+const lessonTypeId = fixtures.requireLessonTypeId('Gitaarles');
 
 async function getOneOptionId(): Promise<string> {
 	const { data } = await dbNoRLS

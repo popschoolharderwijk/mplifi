@@ -33,6 +33,168 @@ export type Database = {
 	};
 	public: {
 		Tables: {
+			agenda_event_deviations: {
+				Row: {
+					actual_date: string;
+					actual_start_time: string;
+					created_at: string;
+					created_by: string;
+					event_id: string;
+					id: string;
+					is_cancelled: boolean;
+					original_date: string;
+					original_start_time: string;
+					reason: string | null;
+					recurring: boolean;
+					recurring_end_date: string | null;
+					updated_at: string;
+					updated_by: string;
+				};
+				Insert: {
+					actual_date: string;
+					actual_start_time: string;
+					created_at?: string;
+					created_by: string;
+					event_id: string;
+					id?: string;
+					is_cancelled?: boolean;
+					original_date: string;
+					original_start_time: string;
+					reason?: string | null;
+					recurring?: boolean;
+					recurring_end_date?: string | null;
+					updated_at?: string;
+					updated_by: string;
+				};
+				Update: {
+					actual_date?: string;
+					actual_start_time?: string;
+					created_at?: string;
+					created_by?: string;
+					event_id?: string;
+					id?: string;
+					is_cancelled?: boolean;
+					original_date?: string;
+					original_start_time?: string;
+					reason?: string | null;
+					recurring?: boolean;
+					recurring_end_date?: string | null;
+					updated_at?: string;
+					updated_by?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'agenda_event_deviations_event_id_fkey';
+						columns: ['event_id'];
+						isOneToOne: false;
+						referencedRelation: 'agenda_events';
+						referencedColumns: ['id'];
+					},
+				];
+			};
+			agenda_events: {
+				Row: {
+					color: string | null;
+					created_at: string;
+					created_by: string | null;
+					description: string | null;
+					end_date: string | null;
+					end_time: string | null;
+					id: string;
+					is_all_day: boolean;
+					owner_user_id: string;
+					recurring: boolean;
+					recurring_end_date: string | null;
+					recurring_frequency: string | null;
+					source_id: string | null;
+					source_type: string;
+					start_date: string;
+					start_time: string;
+					title: string;
+					updated_at: string;
+					updated_by: string | null;
+				};
+				Insert: {
+					color?: string | null;
+					created_at?: string;
+					created_by?: string | null;
+					description?: string | null;
+					end_date?: string | null;
+					end_time?: string | null;
+					id?: string;
+					is_all_day?: boolean;
+					owner_user_id: string;
+					recurring?: boolean;
+					recurring_end_date?: string | null;
+					recurring_frequency?: string | null;
+					source_id?: string | null;
+					source_type: string;
+					start_date: string;
+					start_time: string;
+					title: string;
+					updated_at?: string;
+					updated_by?: string | null;
+				};
+				Update: {
+					color?: string | null;
+					created_at?: string;
+					created_by?: string | null;
+					description?: string | null;
+					end_date?: string | null;
+					end_time?: string | null;
+					id?: string;
+					is_all_day?: boolean;
+					owner_user_id?: string;
+					recurring?: boolean;
+					recurring_end_date?: string | null;
+					recurring_frequency?: string | null;
+					source_id?: string | null;
+					source_type?: string;
+					start_date?: string;
+					start_time?: string;
+					title?: string;
+					updated_at?: string;
+					updated_by?: string | null;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'agenda_events_source_id_fkey';
+						columns: ['source_id'];
+						isOneToOne: false;
+						referencedRelation: 'lesson_agreements';
+						referencedColumns: ['id'];
+					},
+				];
+			};
+			agenda_participants: {
+				Row: {
+					created_at: string;
+					event_id: string;
+					id: string;
+					user_id: string;
+				};
+				Insert: {
+					created_at?: string;
+					event_id: string;
+					id?: string;
+					user_id: string;
+				};
+				Update: {
+					created_at?: string;
+					event_id?: string;
+					id?: string;
+					user_id?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'agenda_participants_event_id_fkey';
+						columns: ['event_id'];
+						isOneToOne: false;
+						referencedRelation: 'agenda_events';
+						referencedColumns: ['id'];
+					},
+				];
+			};
 			lesson_agreements: {
 				Row: {
 					created_at: string;
@@ -98,65 +260,6 @@ export type Database = {
 						columns: ['teacher_id'];
 						isOneToOne: false;
 						referencedRelation: 'teachers';
-						referencedColumns: ['id'];
-					},
-				];
-			};
-			lesson_appointment_deviations: {
-				Row: {
-					actual_date: string;
-					actual_start_time: string;
-					created_at: string;
-					created_by_user_id: string;
-					id: string;
-					is_cancelled: boolean;
-					last_updated_by_user_id: string;
-					lesson_agreement_id: string;
-					original_date: string;
-					original_start_time: string;
-					reason: string | null;
-					recurring: boolean;
-					recurring_end_date: string | null;
-					updated_at: string;
-				};
-				Insert: {
-					actual_date: string;
-					actual_start_time: string;
-					created_at?: string;
-					created_by_user_id: string;
-					id?: string;
-					is_cancelled?: boolean;
-					last_updated_by_user_id: string;
-					lesson_agreement_id: string;
-					original_date: string;
-					original_start_time: string;
-					reason?: string | null;
-					recurring?: boolean;
-					recurring_end_date?: string | null;
-					updated_at?: string;
-				};
-				Update: {
-					actual_date?: string;
-					actual_start_time?: string;
-					created_at?: string;
-					created_by_user_id?: string;
-					id?: string;
-					is_cancelled?: boolean;
-					last_updated_by_user_id?: string;
-					lesson_agreement_id?: string;
-					original_date?: string;
-					original_start_time?: string;
-					reason?: string | null;
-					recurring?: boolean;
-					recurring_end_date?: string | null;
-					updated_at?: string;
-				};
-				Relationships: [
-					{
-						foreignKeyName: 'lesson_appointment_deviations_lesson_agreement_id_fkey';
-						columns: ['lesson_agreement_id'];
-						isOneToOne: false;
-						referencedRelation: 'lesson_agreements';
 						referencedColumns: ['id'];
 					},
 				];
@@ -498,7 +601,7 @@ export type Database = {
 			ensure_student_exists: { Args: { _user_id: string }; Returns: undefined };
 			ensure_week_shows_original_slot: {
 				Args: {
-					p_lesson_agreement_id: string;
+					p_event_id: string;
 					p_scope: string;
 					p_user_id: string;
 					p_week_date: string;
@@ -506,6 +609,7 @@ export type Database = {
 				Returns: string;
 			};
 			function_exists: { Args: { p_fn_name: string }; Returns: boolean };
+			get_agenda_event_owner: { Args: { ev_id: string }; Returns: string };
 			get_hours_report: {
 				Args: {
 					p_end_date: string;

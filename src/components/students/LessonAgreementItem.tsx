@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { ColorIcon } from '@/components/ui/color-icon';
-import { resolveIconFromList } from '@/components/ui/icon-picker';
+import { LessonTypeBadge } from '@/components/ui/lesson-type-badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { MUSIC_ICONS } from '@/constants/icons';
 import { DAY_NAMES_DISPLAY, getDayNameFromDbIndex } from '@/lib/date/day-index';
 import { formatTime } from '@/lib/time/time-format';
 import { cn } from '@/lib/utils';
@@ -38,7 +36,6 @@ function getTooltipText(agreement: LessonAgreementWithTeacher, teacherName: stri
 export function LessonAgreementItem({ agreement, className, readOnly = false }: LessonAgreementItemProps) {
 	const [dialogOpen, setDialogOpen] = useState(false);
 
-	const Icon = agreement.lesson_type.icon ? resolveIconFromList(MUSIC_ICONS, agreement.lesson_type.icon) : undefined;
 	const teacherName = getTeacherDisplayName(agreement.teacher);
 
 	const handleOpenChange = (open: boolean) => {
@@ -51,7 +48,7 @@ export function LessonAgreementItem({ agreement, className, readOnly = false }: 
 		<>
 			{/* Lesson Type Icon */}
 			<div className="shrink-0">
-				<ColorIcon icon={Icon} color={agreement.lesson_type.color} size="md" />
+				<LessonTypeBadge lessonType={agreement.lesson_type} showName={false} showTooltip={false} />
 			</div>
 
 			{/* Teacher Name with Day indicators below */}

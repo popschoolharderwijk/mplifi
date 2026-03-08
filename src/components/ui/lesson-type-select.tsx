@@ -62,13 +62,7 @@ export function LessonTypeSelect({
 				>
 					{selectedOption ? (
 						<div className="flex items-center gap-2">
-							<LessonTypeBadge
-								name={selectedOption.name}
-								icon={selectedOption.icon}
-								color={selectedOption.color}
-								iconSize="sm"
-								showName
-							/>
+							<LessonTypeBadge lessonType={selectedOption} size="sm" />
 						</div>
 					) : (
 						<span className="text-muted-foreground">{placeholder}</span>
@@ -99,13 +93,7 @@ export function LessonTypeSelect({
 										)}
 									/>
 									<div className="flex items-center gap-2 flex-1">
-										<LessonTypeBadge
-											name={option.name}
-											icon={option.icon}
-											color={option.color}
-											iconSize="sm"
-											showName
-										/>
+										<LessonTypeBadge lessonType={option} size="sm" />
 									</div>
 								</CommandItem>
 							))}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
-import { TeacherAgendaView } from '@/components/teachers/TeacherAgendaView';
+import { AgendaView } from '@/components/agenda/AgendaView';
 import { TeacherAvailabilitySection } from '@/components/teachers/TeacherAvailabilitySection';
 import { TeacherLessonTypesSection } from '@/components/teachers/TeacherLessonTypesSection';
 import { TeacherProfileSection } from '@/components/teachers/TeacherProfileSection';
@@ -203,7 +203,7 @@ export default function TeacherInfo() {
 				</TabsContent>
 
 				<TabsContent value="agenda">
-					<TeacherAgendaView teacherId={targetTeacherId} canEdit={canEdit()} />
+					<AgendaView userId={targetTeacherId} canEdit={canEdit()} />
 				</TabsContent>
 			</Tabs>
 		</div>

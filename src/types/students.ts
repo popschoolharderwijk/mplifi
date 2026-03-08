@@ -16,6 +16,14 @@ type ProfileRow = Tables<'profiles'>;
 export type StudentCardProfileFields = Pick<ProfileRow, 'email' | 'first_name' | 'last_name' | 'avatar_url'>;
 
 /**
+ * Profile info for display purposes where data may come from nullable joins.
+ * All fields are optional and nullable to handle incomplete data from LEFT JOINs.
+ */
+export type ProfileDisplayInfo = {
+	[K in keyof StudentCardProfileFields]?: StudentCardProfileFields[K] | null;
+};
+
+/**
  * Student info used in calendar events (teacher agenda)
  * Contains user_id and basic profile fields for display
  */

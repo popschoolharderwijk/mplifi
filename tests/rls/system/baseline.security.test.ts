@@ -27,7 +27,9 @@ const EXPECTED_RLS_TABLES = [
 	'lesson_type_options',
 	'lesson_agreements',
 	'students',
-	'lesson_appointment_deviations',
+	'agenda_events',
+	'agenda_participants',
+	'agenda_event_deviations',
 ];
 
 const EXPECTED_POLICIES: Record<string, string[]> = {
@@ -118,15 +120,35 @@ const EXPECTED_POLICIES: Record<string, string[]> = {
 		'students_update_admin',
 		// No INSERT/DELETE policies - students are managed via triggers
 	],
-	lesson_appointment_deviations: [
-		// SELECT policy - combined: teachers, students, and privileged users can view deviations
-		'lesson_appointment_deviations_select',
-		// INSERT policy - combined: teachers and privileged users can insert deviations
-		'lesson_appointment_deviations_insert',
-		// UPDATE policy - combined: teachers and privileged users can update deviations
-		'lesson_appointment_deviations_update',
-		// DELETE policy - combined: teachers and privileged users can delete deviations
-		'lesson_appointment_deviations_delete',
+	agenda_events: [
+		// SELECT policy - participants or privileged users can view events
+		'agenda_events_select',
+		// INSERT policy - owner or privileged users can insert events
+		'agenda_events_insert',
+		// UPDATE policy - owner or privileged users can update events
+		'agenda_events_update',
+		// DELETE policy - owner or privileged users can delete events
+		'agenda_events_delete',
+	],
+	agenda_participants: [
+		// SELECT policy - own rows, event owner, or privileged users
+		'agenda_participants_select',
+		// INSERT policy - event owner or privileged users
+		'agenda_participants_insert',
+		// UPDATE policy - event owner or privileged users
+		'agenda_participants_update',
+		// DELETE policy - event owner or privileged users
+		'agenda_participants_delete',
+	],
+	agenda_event_deviations: [
+		// SELECT policy - participants or privileged users can view deviations
+		'agenda_event_deviations_select',
+		// INSERT policy - event owner or privileged users can insert deviations
+		'agenda_event_deviations_insert',
+		// UPDATE policy - event owner or privileged users can update deviations
+		'agenda_event_deviations_update',
+		// DELETE policy - event owner or privileged users can delete deviations
+		'agenda_event_deviations_delete',
 	],
 };
 
@@ -150,10 +172,13 @@ const EXPECTED_FUNCTIONS = [
 	// Lesson agreements triggers
 	'trigger_ensure_student_on_agreement_insert',
 	'trigger_cleanup_student_on_agreement_delete',
-	// Lesson appointment deviations triggers and functions
-	'enforce_deviation_immutable_fields',
-	'auto_delete_noop_deviation',
-	'enforce_deviation_validity',
+	// Agenda system functions and triggers
+	'trigger_lesson_agreement_create_agenda_event',
+	'get_agenda_event_owner',
+	'enforce_agenda_deviation_immutable_fields',
+	'auto_delete_noop_agenda_deviation',
+	'enforce_agenda_deviation_validity',
+	'prevent_owner_participant_removal',
 	'shift_recurring_deviation_to_next_week',
 	'end_recurring_deviation_from_week',
 	'ensure_week_shows_original_slot',

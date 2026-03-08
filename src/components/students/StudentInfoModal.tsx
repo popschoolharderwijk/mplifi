@@ -87,12 +87,12 @@ function InfoSection({ title, icon, children, className }: InfoSectionProps) {
 }
 
 export function StudentInfoModal({ open, onOpenChange, student }: StudentInfoModalProps) {
-	const { isAdmin, isSiteAdmin, isStaff } = useAuth();
+	const { isPrivileged } = useAuth();
 	const [fullData, setFullData] = useState<FullStudentData | null>(null);
 	const [loading, setLoading] = useState(false);
 
 	// Only privileged users can see full student data
-	const canViewFullData = isAdmin || isSiteAdmin || isStaff;
+	const canViewFullData = isPrivileged;
 
 	const loadFullStudentData = useCallback(async () => {
 		if (!student || !canViewFullData) return;

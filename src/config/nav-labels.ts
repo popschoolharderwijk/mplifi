@@ -18,6 +18,7 @@ import {
  * Use these constants everywhere to stay DRY and avoid typos like "Lestypen" vs "Lessoorten".
  */
 export const NAV_LABELS = {
+	agenda: 'Agenda',
 	dashboard: 'Dashboard',
 	users: 'Gebruikers',
 	lessonTypes: 'Lessoorten',
@@ -40,6 +41,7 @@ export type NavLabelKey = keyof typeof NAV_LABELS;
  * Icon per nav item (sidebar, PageHeader, etc.). Single source of truth for nav icons.
  */
 export const NAV_ICONS: Record<NavLabelKey, IconType> = {
+	agenda: LuCalendar,
 	dashboard: LuLayoutDashboard,
 	users: LuUserCog,
 	lessonTypes: LuMusic2,

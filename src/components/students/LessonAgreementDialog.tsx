@@ -61,13 +61,7 @@ export function LessonAgreementDialog({ open, onOpenChange, agreement }: LessonA
 				<div className="space-y-6 py-4">
 					{/* Lesson Type */}
 					<div className="flex items-center gap-3">
-						<LessonTypeBadge
-							name={agreement.lesson_type.name}
-							icon={agreement.lesson_type.icon}
-							color={agreement.lesson_type.color}
-							iconSize="lg"
-							showName={false}
-						/>
+						<LessonTypeBadge lessonType={agreement.lesson_type} size="lg" showName={false} />
 						<div>
 							<h3 className="font-semibold text-lg">{agreement.lesson_type.name}</h3>
 							<Badge variant={agreement.is_active ? 'default' : 'secondary'} className="mt-1">

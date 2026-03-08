@@ -186,7 +186,7 @@ BEGIN
     (UUID '60000000-0005-0000-0000-000000000000', 'user-005@test.nl', 'Rick', 'Smit', NULL),
     (UUID '60000000-0006-0000-0000-000000000000', 'user-006@test.nl', 'Tom', 'Meijer', '0667890126'),
     (UUID '60000000-0007-0000-0000-000000000000', 'user-007@test.nl', 'Nick', 'de Boer', '0667890127'),
-    (UUID '60000000-0008-0000-0000-000000000000', 'user-008@test.nl', 'Bas', 'Mulder', NULL),
+    (UUID '60000000-0008-0000-0000-000000000000', 'user-008@test.nl', 'Basles', 'Mulder', NULL),
     (UUID '60000000-0009-0000-0000-000000000000', 'user-009@test.nl', 'Stijn', 'de Vries', '0667890128'),
     (UUID '60000000-0010-0000-0000-000000000000', 'user-010@test.nl', 'Willem-Jan', 'van der Berg', '0667890129');
 
@@ -309,6 +309,19 @@ INSERT INTO public.user_roles (user_id, role) VALUES
 ON CONFLICT (user_id) DO NOTHING;
 
 -- -----------------------------------------------------------------------------
+-- LESSON TYPE NAMES (reference for search/replace)
+-- -----------------------------------------------------------------------------
+-- guitar       = 'Gitaarles'
+-- drum         = 'Drumles'
+-- vocal        = 'Zangles'
+-- bass         = 'Basles'
+-- keyboard     = 'Keyboardles'
+-- saxophone    = 'Saxofoonles'
+-- dj_beats     = 'DJ / Beats'
+-- band_coaching = 'Bandcoaching'
+-- -----------------------------------------------------------------------------
+
+-- -----------------------------------------------------------------------------
 -- LESSON TYPES (no duration/frequency/price; those live in lesson_type_options)
 -- -----------------------------------------------------------------------------
 -- Insert all 8 lesson types if they don't exist.
@@ -316,12 +329,12 @@ ON CONFLICT (user_id) DO NOTHING;
 -- -----------------------------------------------------------------------------
 INSERT INTO public.lesson_types (name, description, icon, color, cost_center, is_group_lesson, is_active)
 SELECT * FROM (VALUES
-  ('Gitaar', NULL, 'LuGuitar', '#FF9500', NULL, false, true),
-  ('Drums', NULL, 'LuDrum', '#DC2626', NULL, false, true),
-  ('Zang', 'Learn to sing', 'LuMic', '#EC4899', NULL, false, true),
-  ('Bas', NULL, 'GiGuitarBassHead', '#9333EA', NULL, false, true),
-  ('Keyboard', 'Keyboard lessons', 'LuPiano', '#3B82F6', NULL, false, true),
-  ('Saxofoon', NULL, 'GiSaxophone', '#FFB8A6', NULL, false, true),
+  ('Gitaarles', NULL, 'LuGuitar', '#FF9500', NULL, false, true),
+  ('Drumles', NULL, 'LuDrum', '#DC2626', NULL, false, true),
+  ('Zangles', 'Learn to sing', 'LuMic', '#EC4899', NULL, false, true),
+  ('Basles', NULL, 'GiGuitarBassHead', '#9333EA', NULL, false, true),
+  ('Keyboardles', 'Keyboard lessons', 'LuPiano', '#3B82F6', NULL, false, true),
+  ('Saxofoonles', NULL, 'GiSaxophone', '#FFB8A6', NULL, false, true),
   ('DJ / Beats', NULL, 'LuHeadphones', '#F59E0B', NULL, false, true),
   ('Bandcoaching', NULL, 'HiUserGroup', '#6366F1', NULL, true, true)
 ) AS v(name, description, icon, color, cost_center, is_group_lesson, is_active)
@@ -330,12 +343,12 @@ WHERE NOT EXISTS (SELECT 1 FROM public.lesson_types WHERE lesson_types.name = v.
 -- -----------------------------------------------------------------------------
 -- LESSON TYPE OPTIONS
 -- Not all lesson types have all 15 options (30/45/60/90/120 x weekly/biweekly/monthly).
--- - Gitaar, Drums, Zang, Bas, Keyboard, Bandcoaching: all 15 options (price = duration).
--- - Saxofoon: 6 options (30 and 45 min only) — agreements use 30 min weekly.
+-- - Gitaarles, Drumles, Zangles, Basles, Keyboardles, Bandcoaching: all 15 options (price = duration).
+-- - Saxofoonles: 6 options (30 and 45 min only) — agreements use 30 min weekly.
 -- - DJ / Beats: 3 options (45 min only, all frequencies) — agreements use 45 min monthly.
 -- -----------------------------------------------------------------------------
 
--- Full 15 options for: Gitaar, Drums, Zang, Bas, Keyboard, Bandcoaching
+-- Full 15 options for: Gitaarles, Drumles, Zangles, Basles, Keyboardles, Bandcoaching
 INSERT INTO public.lesson_type_options (lesson_type_id, duration_minutes, frequency, price_per_lesson)
 SELECT lt.id, opt.duration_minutes, opt.frequency, opt.price_per_lesson
 FROM public.lesson_types lt
@@ -357,7 +370,7 @@ CROSS JOIN (
     (120, 'biweekly'::public.lesson_frequency, 120.00),
     (120, 'monthly'::public.lesson_frequency, 120.00)
 ) AS opt(duration_minutes, frequency, price_per_lesson)
-WHERE lt.name IN ('Gitaar', 'Drums', 'Zang', 'Bas', 'Keyboard', 'Bandcoaching')
+WHERE lt.name IN ('Gitaarles', 'Drumles', 'Zangles', 'Basles', 'Keyboardles', 'Bandcoaching')
   AND NOT EXISTS (
     SELECT 1 FROM public.lesson_type_options lto
     WHERE lto.lesson_type_id = lt.id
@@ -366,7 +379,7 @@ WHERE lt.name IN ('Gitaar', 'Drums', 'Zang', 'Bas', 'Keyboard', 'Bandcoaching')
       AND lto.price_per_lesson = opt.price_per_lesson
   );
 
--- Saxofoon: only 30 and 45 min (6 options) — agreements use 30 min weekly
+-- Saxofoonles: only 30 and 45 min (6 options) — agreements use 30 min weekly
 INSERT INTO public.lesson_type_options (lesson_type_id, duration_minutes, frequency, price_per_lesson)
 SELECT lt.id, opt.duration_minutes, opt.frequency, opt.price_per_lesson
 FROM public.lesson_types lt
@@ -379,7 +392,7 @@ CROSS JOIN (
     (45, 'biweekly'::public.lesson_frequency, 45.00),
     (45, 'monthly'::public.lesson_frequency, 45.00)
 ) AS opt(duration_minutes, frequency, price_per_lesson)
-WHERE lt.name = 'Saxofoon'
+WHERE lt.name = 'Saxofoonles'
   AND NOT EXISTS (
     SELECT 1 FROM public.lesson_type_options lto
     WHERE lto.lesson_type_id = lt.id
@@ -458,16 +471,16 @@ SELECT
   lt.id AS lesson_type_id
 FROM (VALUES
   -- Teacher 1 (Alice): 3 types
-  ('teacher-alice@test.nl', 'Gitaar'),
-  ('teacher-alice@test.nl', 'Drums'),
-  ('teacher-alice@test.nl', 'Zang'),
+  ('teacher-alice@test.nl', 'Gitaarles'),
+  ('teacher-alice@test.nl', 'Drumles'),
+  ('teacher-alice@test.nl', 'Zangles'),
 
   -- Teacher 2 (Bob): 2 types
-  ('teacher-bob@test.nl', 'Bas'),
-  ('teacher-bob@test.nl', 'Keyboard'),
+  ('teacher-bob@test.nl', 'Basles'),
+  ('teacher-bob@test.nl', 'Keyboardles'),
 
   -- Teacher 3 (Charlie): 1 type
-  ('teacher-charlie@test.nl', 'Saxofoon'),
+  ('teacher-charlie@test.nl', 'Saxofoonles'),
 
   -- Teacher 4 (Diana): 1 type
   ('teacher-diana@test.nl', 'DJ / Beats'),
@@ -476,16 +489,16 @@ FROM (VALUES
   ('teacher-eve@test.nl', 'Bandcoaching'),
 
   -- Teacher 6 (Frank): 1 type
-  ('teacher-frank@test.nl', 'Gitaar'),
+  ('teacher-frank@test.nl', 'Gitaarles'),
 
   -- Teacher 7 (Grace): 1 type
-  ('teacher-grace@test.nl', 'Drums'),
+  ('teacher-grace@test.nl', 'Drumles'),
 
   -- Teacher 8 (Henry): 1 type
-  ('teacher-henry@test.nl', 'Zang'),
+  ('teacher-henry@test.nl', 'Zangles'),
 
   -- Teacher 9 (Iris): 1 type
-  ('teacher-iris@test.nl', 'Bas')
+  ('teacher-iris@test.nl', 'Basles')
 
   -- Teacher 10 (Jack): No lesson types (no students)
 ) AS teacher_lesson_data(teacher_email, lesson_type_name)
@@ -617,58 +630,58 @@ FROM (VALUES
   ('student-008@test.nl', 'teacher-eve@test.nl', 'Bandcoaching', 1, '14:00', CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
 
   -- ========================================================================
-  -- TEACHER 1 (Alice) - Gitaar, Drums, Zang - 12 UNIQUE slots
+  -- TEACHER 1 (Alice) - Gitaarles, Drumles, Zangles - 12 UNIQUE slots
   -- ========================================================================
-  -- Monday morning 09:00-12:00 (Gitaar): 6 slots
-  ('student-009@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '09:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE - INTERVAL '7 days', true),
-  ('student-010@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '09:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE - INTERVAL '7 days', true),
-  ('student-011@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '10:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '3 days', true),
-  ('student-012@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '10:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-013@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '11:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-014@test.nl', 'teacher-alice@test.nl', 'Gitaar', 1, '11:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  -- Monday afternoon 14:00-17:00 (Drums): 6 slots
-  ('student-015@test.nl', 'teacher-alice@test.nl', 'Drums', 1, '14:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-016@test.nl', 'teacher-alice@test.nl', 'Drums', 1, '14:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-017@test.nl', 'teacher-alice@test.nl', 'Drums', 1, '15:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-018@test.nl', 'teacher-alice@test.nl', 'Drums', 1, '15:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-019@test.nl', 'teacher-alice@test.nl', 'Drums', 1, '16:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-020@test.nl', 'teacher-alice@test.nl', 'Drums', 1, '16:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  -- Monday morning 09:00-12:00 (Gitaarles): 6 slots
+  ('student-009@test.nl', 'teacher-alice@test.nl', 'Gitaarles', 1, '09:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE - INTERVAL '7 days', true),
+  ('student-010@test.nl', 'teacher-alice@test.nl', 'Gitaarles', 1, '09:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE - INTERVAL '7 days', true),
+  ('student-011@test.nl', 'teacher-alice@test.nl', 'Gitaarles', 1, '10:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '3 days', true),
+  ('student-012@test.nl', 'teacher-alice@test.nl', 'Gitaarles', 1, '10:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-013@test.nl', 'teacher-alice@test.nl', 'Gitaarles', 1, '11:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-014@test.nl', 'teacher-alice@test.nl', 'Gitaarles', 1, '11:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  -- Monday afternoon 14:00-17:00 (Drumles): 6 slots
+  ('student-015@test.nl', 'teacher-alice@test.nl', 'Drumles', 1, '14:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-016@test.nl', 'teacher-alice@test.nl', 'Drumles', 1, '14:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-017@test.nl', 'teacher-alice@test.nl', 'Drumles', 1, '15:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-018@test.nl', 'teacher-alice@test.nl', 'Drumles', 1, '15:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-019@test.nl', 'teacher-alice@test.nl', 'Drumles', 1, '16:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-020@test.nl', 'teacher-alice@test.nl', 'Drumles', 1, '16:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
 
   -- ========================================================================
-  -- TEACHER 2 (Bob) - Bas, Keyboard - 12 UNIQUE slots
+  -- TEACHER 2 (Bob) - Basles, Keyboardles - 12 UNIQUE slots
   -- ========================================================================
-  -- Tuesday morning 10:00-13:00 (Bas): 6 slots
-  ('student-021@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '10:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE - INTERVAL '7 days', true),
-  ('student-022@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '10:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '3 days', true),
-  ('student-023@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '11:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-024@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '11:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-025@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '12:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-026@test.nl', 'teacher-bob@test.nl', 'Bas', 2, '12:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  -- Tuesday afternoon 14:00-17:00 (Keyboard): 6 slots
-  ('student-027@test.nl', 'teacher-bob@test.nl', 'Keyboard', 2, '14:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-028@test.nl', 'teacher-bob@test.nl', 'Keyboard', 2, '14:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-029@test.nl', 'teacher-bob@test.nl', 'Keyboard', 2, '15:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-030@test.nl', 'teacher-bob@test.nl', 'Keyboard', 2, '15:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-031@test.nl', 'teacher-bob@test.nl', 'Keyboard', 2, '16:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-032@test.nl', 'teacher-bob@test.nl', 'Keyboard', 2, '16:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  -- Tuesday morning 10:00-13:00 (Basles): 6 slots
+  ('student-021@test.nl', 'teacher-bob@test.nl', 'Basles', 2, '10:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE - INTERVAL '7 days', true),
+  ('student-022@test.nl', 'teacher-bob@test.nl', 'Basles', 2, '10:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '3 days', true),
+  ('student-023@test.nl', 'teacher-bob@test.nl', 'Basles', 2, '11:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-024@test.nl', 'teacher-bob@test.nl', 'Basles', 2, '11:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-025@test.nl', 'teacher-bob@test.nl', 'Basles', 2, '12:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-026@test.nl', 'teacher-bob@test.nl', 'Basles', 2, '12:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  -- Tuesday afternoon 14:00-17:00 (Keyboardles): 6 slots
+  ('student-027@test.nl', 'teacher-bob@test.nl', 'Keyboardles', 2, '14:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-028@test.nl', 'teacher-bob@test.nl', 'Keyboardles', 2, '14:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-029@test.nl', 'teacher-bob@test.nl', 'Keyboardles', 2, '15:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-030@test.nl', 'teacher-bob@test.nl', 'Keyboardles', 2, '15:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-031@test.nl', 'teacher-bob@test.nl', 'Keyboardles', 2, '16:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-032@test.nl', 'teacher-bob@test.nl', 'Keyboardles', 2, '16:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
 
   -- ========================================================================
-  -- TEACHER 3 (Charlie) - Saxofoon - 12 UNIQUE slots
+  -- TEACHER 3 (Charlie) - Saxofoonles - 12 UNIQUE slots
   -- ========================================================================
   -- Monday afternoon 14:00-17:00: 6 slots
-  ('student-033@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '14:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '3 days', true),
-  ('student-034@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '14:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-035@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '15:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-036@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '15:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-037@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '16:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-038@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 1, '16:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-033@test.nl', 'teacher-charlie@test.nl', 'Saxofoonles', 1, '14:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '3 days', true),
+  ('student-034@test.nl', 'teacher-charlie@test.nl', 'Saxofoonles', 1, '14:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-035@test.nl', 'teacher-charlie@test.nl', 'Saxofoonles', 1, '15:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-036@test.nl', 'teacher-charlie@test.nl', 'Saxofoonles', 1, '15:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-037@test.nl', 'teacher-charlie@test.nl', 'Saxofoonles', 1, '16:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-038@test.nl', 'teacher-charlie@test.nl', 'Saxofoonles', 1, '16:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
   -- Friday morning 09:00-12:00: 6 slots
-  ('student-039@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '09:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-040@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '09:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-041@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '10:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-042@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '10:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-043@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '11:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-044@test.nl', 'teacher-charlie@test.nl', 'Saxofoon', 5, '11:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-039@test.nl', 'teacher-charlie@test.nl', 'Saxofoonles', 5, '09:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-040@test.nl', 'teacher-charlie@test.nl', 'Saxofoonles', 5, '09:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-041@test.nl', 'teacher-charlie@test.nl', 'Saxofoonles', 5, '10:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-042@test.nl', 'teacher-charlie@test.nl', 'Saxofoonles', 5, '10:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-043@test.nl', 'teacher-charlie@test.nl', 'Saxofoonles', 5, '11:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-044@test.nl', 'teacher-charlie@test.nl', 'Saxofoonles', 5, '11:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
 
   -- ========================================================================
   -- TEACHER 4 (Diana) - DJ / Beats (45 min lessons) - 8 UNIQUE slots
@@ -685,76 +698,76 @@ FROM (VALUES
   ('student-052@test.nl', 'teacher-diana@test.nl', 'DJ / Beats', 4, '11:15',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
 
   -- ========================================================================
-  -- TEACHER 6 (Frank) - Gitaar - 12 UNIQUE slots
+  -- TEACHER 6 (Frank) - Gitaarles - 12 UNIQUE slots
   -- ========================================================================
   -- Wednesday morning 09:00-12:00: 6 slots
-  ('student-053@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '09:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-054@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '09:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-055@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '10:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-056@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '10:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-057@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '11:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-058@test.nl', 'teacher-frank@test.nl', 'Gitaar', 3, '11:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-053@test.nl', 'teacher-frank@test.nl', 'Gitaarles', 3, '09:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-054@test.nl', 'teacher-frank@test.nl', 'Gitaarles', 3, '09:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-055@test.nl', 'teacher-frank@test.nl', 'Gitaarles', 3, '10:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-056@test.nl', 'teacher-frank@test.nl', 'Gitaarles', 3, '10:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-057@test.nl', 'teacher-frank@test.nl', 'Gitaarles', 3, '11:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-058@test.nl', 'teacher-frank@test.nl', 'Gitaarles', 3, '11:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
   -- Friday afternoon 14:00-17:00: 6 slots
-  ('student-059@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '14:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-060@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '14:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-009@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '15:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-010@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '15:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-011@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '16:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-012@test.nl', 'teacher-frank@test.nl', 'Gitaar', 5, '16:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-059@test.nl', 'teacher-frank@test.nl', 'Gitaarles', 5, '14:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-060@test.nl', 'teacher-frank@test.nl', 'Gitaarles', 5, '14:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-009@test.nl', 'teacher-frank@test.nl', 'Gitaarles', 5, '15:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-010@test.nl', 'teacher-frank@test.nl', 'Gitaarles', 5, '15:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-011@test.nl', 'teacher-frank@test.nl', 'Gitaarles', 5, '16:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-012@test.nl', 'teacher-frank@test.nl', 'Gitaarles', 5, '16:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
 
   -- ========================================================================
-  -- TEACHER 7 (Grace) - Drums - 12 UNIQUE slots
+  -- TEACHER 7 (Grace) - Drumles - 12 UNIQUE slots
   -- ========================================================================
   -- Monday late morning 10:00-13:00: 6 slots
-  ('student-013@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '10:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-014@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '10:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-021@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '11:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-022@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '11:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-023@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '12:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-024@test.nl', 'teacher-grace@test.nl', 'Drums', 1, '12:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-013@test.nl', 'teacher-grace@test.nl', 'Drumles', 1, '10:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-014@test.nl', 'teacher-grace@test.nl', 'Drumles', 1, '10:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-021@test.nl', 'teacher-grace@test.nl', 'Drumles', 1, '11:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-022@test.nl', 'teacher-grace@test.nl', 'Drumles', 1, '11:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-023@test.nl', 'teacher-grace@test.nl', 'Drumles', 1, '12:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-024@test.nl', 'teacher-grace@test.nl', 'Drumles', 1, '12:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
   -- Thursday late morning 10:00-13:00: 6 slots
-  ('student-025@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '10:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-026@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '10:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-027@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '11:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-028@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '11:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-029@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '12:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-030@test.nl', 'teacher-grace@test.nl', 'Drums', 4, '12:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-025@test.nl', 'teacher-grace@test.nl', 'Drumles', 4, '10:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-026@test.nl', 'teacher-grace@test.nl', 'Drumles', 4, '10:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-027@test.nl', 'teacher-grace@test.nl', 'Drumles', 4, '11:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-028@test.nl', 'teacher-grace@test.nl', 'Drumles', 4, '11:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-029@test.nl', 'teacher-grace@test.nl', 'Drumles', 4, '12:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-030@test.nl', 'teacher-grace@test.nl', 'Drumles', 4, '12:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
 
   -- ========================================================================
   -- TEACHER 8 (Henry) - Zang - 12 UNIQUE slots
   -- ========================================================================
   -- Tuesday morning 09:00-12:00: 6 slots
-  ('student-031@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '09:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-032@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '09:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-033@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '10:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-034@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '10:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-035@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '11:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-036@test.nl', 'teacher-henry@test.nl', 'Zang', 2, '11:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-031@test.nl', 'teacher-henry@test.nl', 'Zangles', 2, '09:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-032@test.nl', 'teacher-henry@test.nl', 'Zangles', 2, '09:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-033@test.nl', 'teacher-henry@test.nl', 'Zangles', 2, '10:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-034@test.nl', 'teacher-henry@test.nl', 'Zangles', 2, '10:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-035@test.nl', 'teacher-henry@test.nl', 'Zangles', 2, '11:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-036@test.nl', 'teacher-henry@test.nl', 'Zangles', 2, '11:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
   -- Friday late morning 10:00-13:00: 6 slots
-  ('student-037@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '10:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-038@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '10:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-039@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '11:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-040@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '11:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-041@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '12:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-042@test.nl', 'teacher-henry@test.nl', 'Zang', 5, '12:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-037@test.nl', 'teacher-henry@test.nl', 'Zangles', 5, '10:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-038@test.nl', 'teacher-henry@test.nl', 'Zangles', 5, '10:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-039@test.nl', 'teacher-henry@test.nl', 'Zangles', 5, '11:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-040@test.nl', 'teacher-henry@test.nl', 'Zangles', 5, '11:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-041@test.nl', 'teacher-henry@test.nl', 'Zangles', 5, '12:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-042@test.nl', 'teacher-henry@test.nl', 'Zangles', 5, '12:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
 
   -- ========================================================================
   -- TEACHER 9 (Iris) - Bas - 12 UNIQUE slots
   -- ========================================================================
   -- Wednesday late morning 10:00-13:00: 6 slots
-  ('student-043@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '10:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-044@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '10:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-045@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '11:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-046@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '11:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-047@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '12:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-048@test.nl', 'teacher-iris@test.nl', 'Bas', 3, '12:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-043@test.nl', 'teacher-iris@test.nl', 'Basles', 3, '10:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-044@test.nl', 'teacher-iris@test.nl', 'Basles', 3, '10:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-045@test.nl', 'teacher-iris@test.nl', 'Basles', 3, '11:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-046@test.nl', 'teacher-iris@test.nl', 'Basles', 3, '11:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-047@test.nl', 'teacher-iris@test.nl', 'Basles', 3, '12:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-048@test.nl', 'teacher-iris@test.nl', 'Basles', 3, '12:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
   -- Thursday afternoon 14:00-17:00: 6 slots
-  ('student-049@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '14:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-050@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '14:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-051@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '15:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-052@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '15:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-053@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '16:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
-  ('student-054@test.nl', 'teacher-iris@test.nl', 'Bas', 4, '16:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true)
+  ('student-049@test.nl', 'teacher-iris@test.nl', 'Basles', 4, '14:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-050@test.nl', 'teacher-iris@test.nl', 'Basles', 4, '14:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-051@test.nl', 'teacher-iris@test.nl', 'Basles', 4, '15:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-052@test.nl', 'teacher-iris@test.nl', 'Basles', 4, '15:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-053@test.nl', 'teacher-iris@test.nl', 'Basles', 4, '16:00',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true),
+  ('student-054@test.nl', 'teacher-iris@test.nl', 'Basles', 4, '16:30',   CURRENT_DATE - INTERVAL '45 days', CURRENT_DATE + INTERVAL '6 months', true)
 
   -- ========================================================================
   -- NOTE: Teacher 10 (Jack) has NO lesson agreements (no students)
@@ -764,12 +777,12 @@ INNER JOIN (
   VALUES
     ('Bandcoaching', 60, 'biweekly'::public.lesson_frequency, 60.00),
     ('DJ / Beats', 45, 'monthly'::public.lesson_frequency, 45.00),
-    ('Gitaar', 30, 'weekly'::public.lesson_frequency, 30.00),
-    ('Drums', 30, 'weekly'::public.lesson_frequency, 30.00),
-    ('Zang', 30, 'weekly'::public.lesson_frequency, 30.00),
-    ('Bas', 30, 'weekly'::public.lesson_frequency, 30.00),
-    ('Keyboard', 30, 'weekly'::public.lesson_frequency, 30.00),
-    ('Saxofoon', 30, 'weekly'::public.lesson_frequency, 30.00)
+    ('Gitaarles', 30, 'weekly'::public.lesson_frequency, 30.00),
+    ('Drumles', 30, 'weekly'::public.lesson_frequency, 30.00),
+    ('Zangles', 30, 'weekly'::public.lesson_frequency, 30.00),
+    ('Basles', 30, 'weekly'::public.lesson_frequency, 30.00),
+    ('Keyboardles', 30, 'weekly'::public.lesson_frequency, 30.00),
+    ('Saxofoonles', 30, 'weekly'::public.lesson_frequency, 30.00)
 ) AS snap(lesson_type_name, duration_minutes, frequency, price_per_lesson)
   ON snap.lesson_type_name = agreement_data.lesson_type_name
 INNER JOIN public.profiles student_profile ON student_profile.email = agreement_data.student_email
@@ -856,6 +869,283 @@ FROM (
   ) AS t(user_id, date_of_birth)
 ) dob
 WHERE s.user_id = dob.user_id;
+
+-- -----------------------------------------------------------------------------
+-- MANUAL AGENDA EVENTS (for dev menu users)
+-- -----------------------------------------------------------------------------
+-- All users that appear in the Dev Tools login menu get:
+-- - 1 one-off event on Tuesday (to avoid Monday teacher lessons)
+-- - 1 recurring weekly event on Wednesday
+-- - owner_user_id and created_by set to the creating user
+-- Plus shared events with multiple participants (from dev menu) so the same
+-- event appears in multiple users' agendas.
+--
+-- IMPORTANT: Events are scheduled to NOT overlap with teacher lessons:
+-- - Teacher Alice: Monday 09:00-12:00 (Gitaar), 14:00-17:00 (Drums)
+-- - Teacher Eve: Monday 14:00-15:00 (Bandcoaching)
+-- - So all teacher events are scheduled on Tuesday-Friday
+-- -----------------------------------------------------------------------------
+
+-- NOTE: Events are scheduled on Tuesday (n=0) and Wednesday (n=3) to avoid
+-- overlapping with teacher lessons (Alice has Monday 09:00-17:00, Eve has Monday 14:00-15:00)
+WITH
+  dev_users AS (
+    SELECT user_id FROM public.profiles WHERE email IN (
+      'site-admin@test.nl', 'admin-one@test.nl', 'staff-one@test.nl',
+      'teacher-alice@test.nl', 'teacher-jack@test.nl', 'teacher-eve@test.nl',
+      'student-001@test.nl', 'student-009@test.nl', 'student-010@test.nl',
+      'user-001@test.nl', 'user-002@test.nl', 'user-003@test.nl'
+    )
+  ),
+  week_start AS (SELECT date_trunc('week', CURRENT_DATE)::date AS ws),
+  inserted AS (
+    INSERT INTO public.agenda_events (
+      source_type, source_id, owner_user_id, title, description, start_date, start_time, end_date, end_time,
+      is_all_day, recurring, recurring_frequency, recurring_end_date, color, created_by, updated_by
+    )
+    SELECT
+      'manual',
+      NULL,
+      d.user_id,
+      CASE n
+        WHEN 0 THEN 'Persoonlijke afspraak'
+        WHEN 3 THEN 'Terugkerende planning'
+      END,
+      CASE WHEN n >= 2 THEN 'Terugkerende afspraak' END,
+      -- n=0: Tuesday (+1), n=3: Wednesday (+2) - avoids Monday teacher lessons
+      (SELECT ws FROM week_start) + (CASE n WHEN 0 THEN 1 WHEN 3 THEN 2 END)::integer,
+      (CASE n WHEN 0 THEN '10:00' WHEN 3 THEN '15:00' END)::time,
+      (SELECT ws FROM week_start) + (CASE n WHEN 0 THEN 1 WHEN 3 THEN 2 END)::integer,
+      (CASE n WHEN 0 THEN '11:00' WHEN 3 THEN '16:00' END)::time,
+      false,
+      n >= 2,
+      CASE WHEN n >= 2 THEN 'weekly' END,
+      CASE WHEN n >= 2 THEN (CURRENT_DATE + interval '3 months')::date END,
+      CASE n WHEN 0 THEN '#4ade80' WHEN 3 THEN '#86efac' END,
+      d.user_id,
+      d.user_id
+    FROM dev_users d
+    CROSS JOIN (VALUES (0), (3)) AS t(n)
+    RETURNING id, owner_user_id
+  )
+INSERT INTO public.agenda_participants (event_id, user_id)
+SELECT id, owner_user_id FROM inserted;
+
+-- Multi-participant event: Vergadering (site-admin, admin-one, staff-one)
+WITH new_event AS (
+  INSERT INTO public.agenda_events (
+    source_type, source_id, owner_user_id, title, description, start_date, start_time, end_date, end_time,
+    is_all_day, recurring, recurring_frequency, recurring_end_date, color, created_by, updated_by
+  )
+  SELECT
+    'manual', NULL, p.user_id, 'Vergadering', NULL,
+    date_trunc('week', CURRENT_DATE)::date + 1, '14:00'::time,
+    date_trunc('week', CURRENT_DATE)::date + 1, '15:00'::time,
+    false, false, NULL, NULL, '#60a5fa', p.user_id, p.user_id
+  FROM public.profiles p WHERE p.email = 'site-admin@test.nl'
+  RETURNING id
+)
+INSERT INTO public.agenda_participants (event_id, user_id)
+SELECT e.id, p.user_id FROM new_event e
+CROSS JOIN public.profiles p WHERE p.email IN ('site-admin@test.nl', 'admin-one@test.nl', 'staff-one@test.nl');
+
+-- Multi-participant recurring event: Wekelijks overleg (teacher-alice + haar student-012)
+-- Teacher-student pairs can see each other via lesson_agreements RLS
+WITH new_event AS (
+  INSERT INTO public.agenda_events (
+    source_type, source_id, owner_user_id, title, description, start_date, start_time, end_date, end_time,
+    is_all_day, recurring, recurring_frequency, recurring_end_date, color, created_by, updated_by
+  )
+  SELECT
+    'manual', NULL, p.user_id, 'Wekelijks overleg', 'Terugkerende afspraak',
+    date_trunc('week', CURRENT_DATE)::date + 3, '09:00'::time,  -- Thursday (+3)
+    date_trunc('week', CURRENT_DATE)::date + 3, '10:00'::time,
+    false, true, 'weekly', (CURRENT_DATE + interval '3 months')::date, '#facc15', p.user_id, p.user_id
+  FROM public.profiles p WHERE p.email = 'teacher-alice@test.nl'
+  RETURNING id
+)
+INSERT INTO public.agenda_participants (event_id, user_id)
+SELECT e.id, p.user_id FROM new_event e
+CROSS JOIN public.profiles p WHERE p.email IN ('teacher-alice@test.nl', 'student-012@test.nl');
+
+-- Multi-participant recurring event: Team sync (site_admin, admin-one, staff-one)
+WITH new_event AS (
+  INSERT INTO public.agenda_events (
+    source_type, source_id, owner_user_id, title, description, start_date, start_time, end_date, end_time,
+    is_all_day, recurring, recurring_frequency, recurring_end_date, color, created_by, updated_by
+  )
+  SELECT
+    'manual', NULL, p.user_id, 'Team sync', 'Wekelijkse teamsync',
+    date_trunc('week', CURRENT_DATE)::date + 2, '10:00'::time,
+    date_trunc('week', CURRENT_DATE)::date + 2, '11:00'::time,
+    false, true, 'weekly', (CURRENT_DATE + interval '3 months')::date, '#60a5fa', p.user_id, p.user_id
+  FROM public.profiles p WHERE p.email = 'site-admin@test.nl'
+  RETURNING id
+)
+INSERT INTO public.agenda_participants (event_id, user_id)
+SELECT e.id, p.user_id FROM new_event e
+CROSS JOIN public.profiles p WHERE p.email IN ('site-admin@test.nl', 'admin-one@test.nl', 'staff-one@test.nl');
+
+-- Multi-participant event 2: Lesoverleg (teacher-eve + student-001 who have Bandcoaching agreement)
+WITH new_event AS (
+  INSERT INTO public.agenda_events (
+    source_type, source_id, owner_user_id, title, description, start_date, start_time, end_date, end_time,
+    is_all_day, recurring, recurring_frequency, recurring_end_date, color, created_by, updated_by
+  )
+  SELECT
+    'manual', NULL, p.user_id, 'Lesoverleg', 'Overleg docent en leerling',
+    date_trunc('week', CURRENT_DATE)::date + 3, '14:00'::time,
+    date_trunc('week', CURRENT_DATE)::date + 3, '15:00'::time,
+    false, false, NULL, NULL, '#4ade80', p.user_id, p.user_id
+  FROM public.profiles p WHERE p.email = 'teacher-eve@test.nl'
+  RETURNING id
+)
+INSERT INTO public.agenda_participants (event_id, user_id)
+SELECT e.id, p.user_id FROM new_event e
+CROSS JOIN public.profiles p WHERE p.email IN ('teacher-eve@test.nl', 'student-001@test.nl');
+
+-- Multi-participant event 3: Project kick-off (privileged users only)
+WITH new_event AS (
+  INSERT INTO public.agenda_events (
+    source_type, source_id, owner_user_id, title, description, start_date, start_time, end_date, end_time,
+    is_all_day, recurring, recurring_frequency, recurring_end_date, color, created_by, updated_by
+  )
+  SELECT
+    'manual', NULL, p.user_id, 'Project kick-off', 'Gezamenlijke kick-off',
+    date_trunc('week', CURRENT_DATE)::date + 4, '09:00'::time,
+    date_trunc('week', CURRENT_DATE)::date + 4, '10:30'::time,
+    false, false, NULL, NULL, '#facc15', p.user_id, p.user_id
+  FROM public.profiles p WHERE p.email = 'staff-one@test.nl'
+  RETURNING id
+)
+INSERT INTO public.agenda_participants (event_id, user_id)
+SELECT e.id, p.user_id FROM new_event e
+CROSS JOIN public.profiles p WHERE p.email IN ('staff-one@test.nl', 'admin-one@test.nl');
+
+-- -----------------------------------------------------------------------------
+-- EXTRA AGENDA EVENTS FOR SITE_ADMIN (Jan Willem)
+-- More events across past month, current month, and next month
+-- Recurring events that started weeks ago
+-- -----------------------------------------------------------------------------
+
+-- One-off events in the past month for site_admin
+WITH site_admin AS (
+  SELECT user_id FROM public.profiles WHERE email = 'site-admin@test.nl'
+),
+past_events AS (
+  INSERT INTO public.agenda_events (
+    source_type, source_id, owner_user_id, title, description, start_date, start_time, end_date, end_time,
+    is_all_day, recurring, recurring_frequency, recurring_end_date, color, created_by, updated_by
+  )
+  SELECT
+    'manual', NULL, sa.user_id,
+    CASE n
+      WHEN 0 THEN 'Klantgesprek'
+      WHEN 1 THEN 'Review meeting'
+      WHEN 2 THEN 'Training sessie'
+      WHEN 3 THEN 'Presentatie'
+    END,
+    'Afgelopen event',
+    (CURRENT_DATE - interval '3 weeks')::date + n,
+    (CASE n WHEN 0 THEN '09:00' WHEN 1 THEN '11:00' WHEN 2 THEN '14:00' WHEN 3 THEN '16:00' END)::time,
+    (CURRENT_DATE - interval '3 weeks')::date + n,
+    (CASE n WHEN 0 THEN '10:00' WHEN 1 THEN '12:00' WHEN 2 THEN '15:30' WHEN 3 THEN '17:00' END)::time,
+    false, false, NULL, NULL,
+    CASE n WHEN 0 THEN '#94a3b8' WHEN 1 THEN '#a78bfa' WHEN 2 THEN '#fb923c' WHEN 3 THEN '#38bdf8' END,
+    sa.user_id, sa.user_id
+  FROM site_admin sa
+  CROSS JOIN generate_series(0, 3) n
+  RETURNING id, owner_user_id
+)
+INSERT INTO public.agenda_participants (event_id, user_id)
+SELECT id, owner_user_id FROM past_events;
+
+-- One-off events in the next month for site_admin
+WITH site_admin AS (
+  SELECT user_id FROM public.profiles WHERE email = 'site-admin@test.nl'
+),
+future_events AS (
+  INSERT INTO public.agenda_events (
+    source_type, source_id, owner_user_id, title, description, start_date, start_time, end_date, end_time,
+    is_all_day, recurring, recurring_frequency, recurring_end_date, color, created_by, updated_by
+  )
+  SELECT
+    'manual', NULL, sa.user_id,
+    CASE n
+      WHEN 0 THEN 'Strategie sessie'
+      WHEN 1 THEN 'Product launch'
+      WHEN 2 THEN 'Team building'
+      WHEN 3 THEN 'Kwartaal review'
+      WHEN 4 THEN 'Planning Q3'
+    END,
+    'Toekomstig event',
+    (CURRENT_DATE + interval '2 weeks')::date + n * 2,
+    (CASE n WHEN 0 THEN '10:00' WHEN 1 THEN '13:00' WHEN 2 THEN '09:00' WHEN 3 THEN '15:00' WHEN 4 THEN '11:00' END)::time,
+    (CURRENT_DATE + interval '2 weeks')::date + n * 2,
+    (CASE n WHEN 0 THEN '12:00' WHEN 1 THEN '14:30' WHEN 2 THEN '17:00' WHEN 3 THEN '16:30' WHEN 4 THEN '12:30' END)::time,
+    false, false, NULL, NULL,
+    CASE n WHEN 0 THEN '#22c55e' WHEN 1 THEN '#ec4899' WHEN 2 THEN '#14b8a6' WHEN 3 THEN '#f97316' WHEN 4 THEN '#8b5cf6' END,
+    sa.user_id, sa.user_id
+  FROM site_admin sa
+  CROSS JOIN generate_series(0, 4) n
+  RETURNING id, owner_user_id
+)
+INSERT INTO public.agenda_participants (event_id, user_id)
+SELECT id, owner_user_id FROM future_events;
+
+-- Multi-participant recurring event: Standup (site-admin, admin-one, staff-one)
+WITH new_event AS (
+  INSERT INTO public.agenda_events (
+    source_type, source_id, owner_user_id, title, description, start_date, start_time, end_date, end_time,
+    is_all_day, recurring, recurring_frequency, recurring_end_date, color, created_by, updated_by
+  )
+  SELECT
+    'manual', NULL, p.user_id, 'Standup', 'Recurring event gestart 4 weken geleden',
+    (date_trunc('week', CURRENT_DATE) - interval '4 weeks')::date, '09:30'::time,
+    (date_trunc('week', CURRENT_DATE) - interval '4 weeks')::date, '10:00'::time,
+    false, true, 'weekly', (CURRENT_DATE + interval '2 months')::date, '#06b6d4', p.user_id, p.user_id
+  FROM public.profiles p WHERE p.email = 'site-admin@test.nl'
+  RETURNING id
+)
+INSERT INTO public.agenda_participants (event_id, user_id)
+SELECT e.id, p.user_id FROM new_event e
+CROSS JOIN public.profiles p WHERE p.email IN ('site-admin@test.nl', 'admin-one@test.nl', 'staff-one@test.nl');
+
+-- Multi-participant recurring event: Sprint review (privileged users only)
+WITH new_event AS (
+  INSERT INTO public.agenda_events (
+    source_type, source_id, owner_user_id, title, description, start_date, start_time, end_date, end_time,
+    is_all_day, recurring, recurring_frequency, recurring_end_date, color, created_by, updated_by
+  )
+  SELECT
+    'manual', NULL, p.user_id, 'Sprint review', 'Recurring event gestart 4 weken geleden',
+    (date_trunc('week', CURRENT_DATE) - interval '4 weeks')::date + 4, '10:00'::time,
+    (date_trunc('week', CURRENT_DATE) - interval '4 weeks')::date + 4, '11:30'::time,
+    false, true, 'biweekly', (CURRENT_DATE + interval '2 months')::date, '#84cc16', p.user_id, p.user_id
+  FROM public.profiles p WHERE p.email = 'site-admin@test.nl'
+  RETURNING id
+)
+INSERT INTO public.agenda_participants (event_id, user_id)
+SELECT e.id, p.user_id FROM new_event e
+CROSS JOIN public.profiles p WHERE p.email IN ('site-admin@test.nl', 'admin-one@test.nl', 'staff-one@test.nl');
+
+-- Multi-participant recurring event: 1-on-1 (site-admin, admin-one) - biweekly
+WITH new_event AS (
+  INSERT INTO public.agenda_events (
+    source_type, source_id, owner_user_id, title, description, start_date, start_time, end_date, end_time,
+    is_all_day, recurring, recurring_frequency, recurring_end_date, color, created_by, updated_by
+  )
+  SELECT
+    'manual', NULL, p.user_id, '1-on-1', 'Recurring event gestart 4 weken geleden',
+    (date_trunc('week', CURRENT_DATE) - interval '4 weeks')::date + 2, '14:00'::time,
+    (date_trunc('week', CURRENT_DATE) - interval '4 weeks')::date + 2, '15:00'::time,
+    false, true, 'biweekly', (CURRENT_DATE + interval '2 months')::date, '#d946ef', p.user_id, p.user_id
+  FROM public.profiles p WHERE p.email = 'site-admin@test.nl'
+  RETURNING id
+)
+INSERT INTO public.agenda_participants (event_id, user_id)
+SELECT e.id, p.user_id FROM new_event e
+CROSS JOIN public.profiles p WHERE p.email IN ('site-admin@test.nl', 'admin-one@test.nl');
 
 -- =============================================================================
 -- END SEED

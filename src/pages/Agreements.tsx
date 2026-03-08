@@ -20,7 +20,7 @@ import { formatTime } from '@/lib/time/time-format';
 import type { AgreementTableRow, LessonFrequency } from '@/types/lesson-agreements';
 
 export default function Agreements() {
-	const { isAdmin, isSiteAdmin, isStaff, isLoading: authLoading } = useAuth();
+	const { isPrivileged, isLoading: authLoading } = useAuth();
 	const navigate = useNavigate();
 	const [agreements, setAgreements] = useState<AgreementTableRow[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -54,7 +54,7 @@ export default function Agreements() {
 		null,
 	);
 
-	const hasAccess = isAdmin || isSiteAdmin || isStaff;
+	const hasAccess = isPrivileged;
 	const { lessonTypes } = useActiveLessonTypes(hasAccess);
 
 	const loadAgreements = useCallback(async () => {
@@ -360,13 +360,7 @@ export default function Agreements() {
 				className: 'w-32',
 				render: (r) => (
 					<div className="flex items-center gap-2">
-						<LessonTypeBadge
-							name={r.lesson_type.name}
-							icon={r.lesson_type.icon}
-							color={r.lesson_type.color}
-							iconSize="sm"
-							showName={false}
-						/>
+						<LessonTypeBadge lessonType={r.lesson_type} size="sm" showName={false} />
 						<div>
 							<div>
 								<span>{DAY_NAMES[r.day_of_week]?.slice(0, 2)}</span>

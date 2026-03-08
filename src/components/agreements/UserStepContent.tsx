@@ -70,9 +70,11 @@ export function UserStepContent({
 						<Card className="opacity-60">
 							<CardContent className="flex min-w-0 items-center gap-3 p-3">
 								<LessonTypeBadge
-									name={`${selectedLessonType.name} · ${selectedLessonType.duration_minutes} min · ${frequencyLabels[selectedLessonType.frequency]}`}
-									icon={selectedLessonType.icon}
-									color={selectedLessonType.color}
+									lessonType={{
+										name: `${selectedLessonType.name} · ${selectedLessonType.duration_minutes} min · ${frequencyLabels[selectedLessonType.frequency]}`,
+										icon: selectedLessonType.icon,
+										color: selectedLessonType.color,
+									}}
 								/>
 							</CardContent>
 						</Card>

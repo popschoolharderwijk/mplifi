@@ -32,7 +32,7 @@ afterAll(async () => {
  */
 
 // Use a specific lesson type from fixtures for deterministic tests
-const TEST_LESSON_TYPE_ID = fixtures.requireLessonTypeId('Gitaar');
+const TEST_LESSON_TYPE_ID = fixtures.requireLessonTypeId('Gitaarles');
 
 // Helper for INSERT that should fail (blocked by RLS)
 async function expectInsertBlocked(user: TestUser, lessonType: LessonTypeInsert) {
@@ -242,7 +242,7 @@ describe('RLS: lesson_types DELETE - admin permissions', () => {
  * using that lesson type.
  */
 describe('TRIGGER: lesson_types DELETE - blocked when agreements exist', () => {
-	const lessonTypeId = fixtures.requireLessonTypeId('Gitaar');
+	const lessonTypeId = fixtures.requireLessonTypeId('Gitaarles');
 
 	it('admin cannot delete lesson_type when agreements exist for that lesson type', async () => {
 		const db = await createClientAs(TestUsers.ADMIN_ONE);

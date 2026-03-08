@@ -168,13 +168,7 @@ export default function Teachers() {
 					return (
 						<div className="flex items-center gap-1.5">
 							{t.lesson_types.map((lt) => (
-								<LessonTypeBadge
-									key={lt.id}
-									name={lt.name}
-									icon={lt.icon}
-									color={lt.color}
-									showName={false}
-								/>
+								<LessonTypeBadge key={lt.id} lessonType={lt} showName={false} />
 							))}
 						</div>
 					);

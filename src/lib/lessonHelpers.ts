@@ -75,6 +75,41 @@ export function getFirstOccurrenceInRange(
 }
 
 /**
+ * Add n intervals to a date (returns new Date, does not mutate).
+ */
+export function addNIntervals(date: Date, n: number, frequency: LessonFrequency): Date {
+	const result = new Date(date);
+	for (let i = 0; i < n; i++) {
+		addInterval(result, frequency);
+	}
+	return result;
+}
+
+/**
+ * Number of periods between fromDate and toDate for the given frequency.
+ */
+export function getOccurrenceIndex(fromDate: Date, toDate: Date, frequency: LessonFrequency): number {
+	const fromMs = fromDate.getTime();
+	const toMs = toDate.getTime();
+	if (toMs < fromMs) return 0;
+	if (frequency === 'daily') {
+		return Math.round((toMs - fromMs) / (24 * 60 * 60 * 1000));
+	}
+	if (frequency === 'weekly') {
+		return Math.round((toMs - fromMs) / (7 * 24 * 60 * 60 * 1000));
+	}
+	if (frequency === 'biweekly') {
+		return Math.round((toMs - fromMs) / (14 * 24 * 60 * 60 * 1000));
+	}
+	// monthly: approximate
+	const fromYear = fromDate.getFullYear();
+	const fromMonth = fromDate.getMonth();
+	const toYear = toDate.getFullYear();
+	const toMonth = toDate.getMonth();
+	return (toYear - fromYear) * 12 + (toMonth - fromMonth);
+}
+
+/**
  * All occurrence dates for a given day_of_week in [periodStart, periodEnd] with given frequency.
  * @returns Array of YYYY-MM-DD date strings.
  */

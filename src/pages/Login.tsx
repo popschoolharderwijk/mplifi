@@ -152,7 +152,7 @@ export default function Login() {
 
 			{/* Development tools */}
 			<div className="fixed bottom-4 left-4">
-				<DevTools />
+				<DevTools defaultOpen />
 			</div>
 		</div>
 	);

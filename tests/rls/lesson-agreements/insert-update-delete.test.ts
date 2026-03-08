@@ -20,7 +20,7 @@ afterAll(async () => {
 // Use student-009 who has agreement with teacher-alice
 const studentAUserId = fixtures.requireUserId(TestUsers.STUDENT_009);
 const teacherAliceId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
-const lessonTypeId = fixtures.requireLessonTypeId('Gitaar');
+const lessonTypeId = fixtures.requireLessonTypeId('Gitaarles');
 const testAgreementId = fixtures.requireAgreementId(TestUsers.STUDENT_009, TestUsers.TEACHER_ALICE);
 
 /**

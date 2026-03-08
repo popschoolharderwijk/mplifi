@@ -142,6 +142,28 @@
 	}
 }
 
+/* Native scrollbars: match ScrollArea look (thin, themed) so overflow areas look consistent */
+@layer base {
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: hsl(var(--border)) transparent;
+	}
+	*::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+	}
+	*::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	*::-webkit-scrollbar-thumb {
+		background: hsl(var(--border));
+		border-radius: 9999px;
+	}
+	*::-webkit-scrollbar-thumb:hover {
+		background: hsl(var(--muted-foreground) / 0.4);
+	}
+}
+
 /* Animation utilities */
 @layer utilities {
 	.animate-in {

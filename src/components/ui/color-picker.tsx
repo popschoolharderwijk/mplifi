@@ -14,9 +14,20 @@ interface ColorPickerProps {
 	/** Placeholder text when no color is selected */
 	placeholder?: string;
 	className?: string;
+	/** If true, renders as a small color dot instead of a full button */
+	compact?: boolean;
+	/** If true, disables the color picker */
+	disabled?: boolean;
 }
 
-export function ColorPicker({ value, onChange, placeholder = 'Selecteer kleur', className }: ColorPickerProps) {
+export function ColorPicker({
+	value,
+	onChange,
+	placeholder = 'Selecteer kleur',
+	className,
+	compact = false,
+	disabled = false,
+}: ColorPickerProps) {
 	const [open, setOpen] = useState(false);
 	const [hexInput, setHexInput] = useState(value || '');
 
@@ -42,27 +53,42 @@ export function ColorPicker({ value, onChange, placeholder = 'Selecteer kleur', 
 	const displayColor = value && /^#[0-9A-Fa-f]{6}$/.test(value) ? value : undefined;
 
 	return (
-		<Popover open={open} onOpenChange={setOpen} modal>
+		<Popover open={disabled ? false : open} onOpenChange={disabled ? undefined : setOpen} modal>
 			<PopoverTrigger asChild>
-				<Button
-					variant="outline"
-					role="combobox"
-					aria-expanded={open}
-					className={cn('w-full justify-between', className)}
-				>
-					<div className="flex items-center gap-2">
-						{displayColor ? (
-							<div
-								className="h-4 w-4 rounded-full border shrink-0"
-								style={{ backgroundColor: displayColor }}
-							/>
-						) : (
-							<div className="h-4 w-4 shrink-0" />
+				{compact ? (
+					<button
+						type="button"
+						disabled={disabled}
+						className={cn(
+							'h-6 w-6 rounded-full border-2 border-border hover:border-primary transition-colors shrink-0 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+							disabled && 'opacity-50 cursor-not-allowed hover:border-border',
+							className,
 						)}
-						<span className="truncate">{displayColor || placeholder}</span>
-					</div>
-					<LuPipette className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-				</Button>
+						style={{ backgroundColor: displayColor || '#3b82f6' }}
+						aria-label="Kies kleur"
+					/>
+				) : (
+					<Button
+						variant="outline"
+						role="combobox"
+						aria-expanded={open}
+						disabled={disabled}
+						className={cn('w-full justify-between', className)}
+					>
+						<div className="flex items-center gap-2">
+							{displayColor ? (
+								<div
+									className="h-4 w-4 rounded-full border shrink-0"
+									style={{ backgroundColor: displayColor }}
+								/>
+							) : (
+								<div className="h-4 w-4 shrink-0" />
+							)}
+							<span className="truncate">{displayColor || placeholder}</span>
+						</div>
+						<LuPipette className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+					</Button>
+				)}
 			</PopoverTrigger>
 			<PopoverContent className="w-[280px] p-3" align="start">
 				<div className="space-y-3">

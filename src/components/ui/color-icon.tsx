@@ -1,25 +1,6 @@
 import type { IconType } from 'react-icons';
+import { isLightColor } from '@/lib/color/color-utils';
 import { cn } from '@/lib/utils';
-
-/**
- * Determine whether a hex color is "light" by computing its relative luminance.
- * Uses the W3C formula: https://www.w3.org/TR/WCAG20/#relativeluminancedef
- */
-function isLightColor(hex: string): boolean {
-	const cleaned = hex.replace('#', '');
-	if (cleaned.length !== 6) return false;
-
-	const r = Number.parseInt(cleaned.substring(0, 2), 16) / 255;
-	const g = Number.parseInt(cleaned.substring(2, 4), 16) / 255;
-	const b = Number.parseInt(cleaned.substring(4, 6), 16) / 255;
-
-	// Convert to linear RGB
-	const toLinear = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-	const luminance = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
-
-	// Threshold at 0.45 — a bit above midpoint to ensure dark text kicks in early enough
-	return luminance > 0.45;
-}
 
 type ColorIconSize = 'sm' | 'md' | 'lg';
 

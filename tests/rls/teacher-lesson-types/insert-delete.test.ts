@@ -10,13 +10,13 @@ const dbNoRLS = createClientBypassRLS();
 
 const aliceTeacherId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
 const bobTeacherId = fixtures.requireTeacherId(TestUsers.TEACHER_BOB);
-const guitarLessonTypeId = fixtures.requireLessonTypeId('Gitaar');
+const guitarLessonTypeId = fixtures.requireLessonTypeId('Gitaarles');
 // Alice already has Gitaar, Drums, and Zang in seed.sql
 // Bob already has Bas and Keyboard in seed.sql
 // Use Sax for tests - Alice doesn't have it
-const saxLessonTypeId = fixtures.requireLessonTypeId('Saxofoon');
+const saxLessonTypeId = fixtures.requireLessonTypeId('Saxofoonles');
 // Use Drums for Bob - Bob doesn't have it
-const drumsLessonTypeId = fixtures.requireLessonTypeId('Drums');
+const drumsLessonTypeId = fixtures.requireLessonTypeId('Drumles');
 
 /**
  * Teacher Lesson Types INSERT/DELETE permissions:
@@ -238,7 +238,7 @@ describe('RLS: teacher_lesson_types DELETE - admin permissions', () => {
  */
 describe('TRIGGER: teacher_lesson_types DELETE - blocked when agreements exist', () => {
 	const teacherId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
-	const lessonTypeId = fixtures.requireLessonTypeId('Gitaar');
+	const lessonTypeId = fixtures.requireLessonTypeId('Gitaarles');
 
 	it('admin cannot delete teacher_lesson_type when agreement exists for that combination', async () => {
 		const db = await createClientAs(TestUsers.ADMIN_ONE);
@@ -261,7 +261,7 @@ describe('TRIGGER: teacher_lesson_types DELETE - blocked when agreements exist',
 		const db = await createClientAs(TestUsers.ADMIN_ONE);
 
 		// Alice has Zang in seed - no student has an agreement for Zang
-		const lessonTypeId = fixtures.requireLessonTypeId('Zang');
+		const lessonTypeId = fixtures.requireLessonTypeId('Zangles');
 
 		// Try to delete - should succeed because no agreement exists for Zang + Alice
 		const { data, error } = await db
