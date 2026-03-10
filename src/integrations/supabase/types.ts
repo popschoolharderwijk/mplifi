@@ -592,6 +592,10 @@ export type Database = {
 				Args: { _requester_id: string; _target_id: string };
 				Returns: boolean;
 			};
+			can_manage_agenda_event: {
+				Args: { ev_id: string; uid: string };
+				Returns: boolean;
+			};
 			check_rls_enabled: { Args: { p_table_name: string }; Returns: boolean };
 			cleanup_student_if_no_agreements: {
 				Args: { _user_id: string };
@@ -688,6 +692,10 @@ export type Database = {
 				Returns: Json;
 			};
 			is_admin: { Args: { _user_id: string }; Returns: boolean };
+			is_agenda_participant: {
+				Args: { ev_id: string; uid: string };
+				Returns: boolean;
+			};
 			is_privileged: { Args: { _user_id: string }; Returns: boolean };
 			is_site_admin: { Args: { _user_id: string }; Returns: boolean };
 			is_staff: { Args: { _user_id: string }; Returns: boolean };

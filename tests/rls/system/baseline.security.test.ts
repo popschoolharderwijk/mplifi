@@ -34,14 +34,11 @@ const EXPECTED_RLS_TABLES = [
 
 const EXPECTED_POLICIES: Record<string, string[]> = {
 	profiles: [
-		// SELECT policy - combined: users can view own profile, privileged users can view all
+		// SELECT policy - combined: users can view own profile, privileged users can view all,
+		// students can view their teachers' profiles, teachers can view their students' profiles
 		'profiles_select',
 		// UPDATE policy - combined: users can update own profile, admins can update any
 		'profiles_update',
-		// SELECT - students can view profiles of teachers they have a lesson_agreement with
-		'students_select_teacher_profiles',
-		// SELECT - teachers can view profiles of students they have a lesson_agreement with
-		'teachers_select_student_profiles',
 		// Intentionally NO INSERT policy - profiles are only created via handle_new_user() trigger
 		// Intentionally NO DELETE policy - profiles are only removed via CASCADE from auth.users
 	],
@@ -66,10 +63,9 @@ const EXPECTED_POLICIES: Record<string, string[]> = {
 		'lesson_types_delete_admin',
 	],
 	teachers: [
-		// SELECT policy - combined: teachers can view own record, privileged users can view all
+		// SELECT policy - combined: teachers can view own record, privileged users can view all,
+		// students can view teachers they have a lesson_agreement with
 		'teachers_select',
-		// SELECT - students can view teachers they have a lesson_agreement with
-		'students_select_own_teachers',
 		// INSERT policy
 		'teachers_insert_admin',
 		// UPDATE policy - combined: teachers can update own record, admins can update any
@@ -112,10 +108,9 @@ const EXPECTED_POLICIES: Record<string, string[]> = {
 		'lesson_agreements_delete_staff',
 	],
 	students: [
-		// SELECT policy - combined: students can view own record, privileged users can view all
+		// SELECT policy - combined: students can view own record, privileged users can view all,
+		// teachers can view students they have a lesson_agreement with
 		'students_select',
-		// SELECT - teachers can view students they have a lesson_agreement with
-		'teachers_select_own_students',
 		// UPDATE policy - admin can update student notes
 		'students_update_admin',
 		// No INSERT/DELETE policies - students are managed via triggers
@@ -175,6 +170,8 @@ const EXPECTED_FUNCTIONS = [
 	// Agenda system functions and triggers
 	'trigger_lesson_agreement_create_agenda_event',
 	'get_agenda_event_owner',
+	'can_manage_agenda_event',
+	'is_agenda_participant',
 	'enforce_agenda_deviation_immutable_fields',
 	'auto_delete_noop_agenda_deviation',
 	'enforce_agenda_deviation_validity',

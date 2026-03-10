@@ -253,62 +253,73 @@ FOR EACH ROW
 EXECUTE FUNCTION public.check_teacher_lesson_type_has_no_agreements();
 
 -- =============================================================================
--- SECTION 4.5: ADDITIONAL RLS POLICIES FOR STUDENTS TABLE
+-- SECTION 4.5: EXTEND STUDENTS SELECT POLICY
 -- =============================================================================
+-- Drop and recreate students_select to include teacher access to their students.
 -- Teachers can view student records for students they have a lesson_agreement with.
--- (students table and lesson_agreements must both exist; this migration runs after students.)
 
-CREATE POLICY teachers_select_own_students
+DROP POLICY IF EXISTS students_select ON public.students;
+
+CREATE POLICY students_select
 ON public.students FOR SELECT TO authenticated
 USING (
-  EXISTS (
+  user_id = (select auth.uid())
+  OR public.is_privileged((select auth.uid()))
+  -- Teachers can view their own students
+  OR EXISTS (
     SELECT 1 FROM public.lesson_agreements la
     WHERE la.student_user_id = students.user_id
-      AND la.teacher_user_id = public.get_teacher_user_id((SELECT auth.uid()))
+      AND la.teacher_user_id = public.get_teacher_user_id((select auth.uid()))
   )
 );
 
 -- =============================================================================
--- SECTION 4.6: ADDITIONAL RLS POLICIES FOR TEACHERS TABLE
+-- SECTION 4.6: EXTEND TEACHERS SELECT POLICY
 -- =============================================================================
+-- Drop and recreate teachers_select to include student access to their teachers.
 -- Students can view teacher records for teachers they have a lesson_agreement with.
--- (Enables SECURITY INVOKER pagination/joins; protected fields like email can be limited later.)
 
-CREATE POLICY students_select_own_teachers
+DROP POLICY IF EXISTS teachers_select ON public.teachers;
+
+CREATE POLICY teachers_select
 ON public.teachers FOR SELECT TO authenticated
 USING (
-  EXISTS (
+  user_id = (select auth.uid())
+  OR public.is_privileged((select auth.uid()))
+  -- Students can view their own teachers
+  OR EXISTS (
     SELECT 1 FROM public.lesson_agreements la
     WHERE la.teacher_user_id = teachers.user_id
-      AND la.student_user_id = (SELECT auth.uid())
+      AND la.student_user_id = (select auth.uid())
   )
 );
 
 -- =============================================================================
--- SECTION 4.7: ADDITIONAL RLS POLICIES FOR PROFILES TABLE
+-- SECTION 4.7: EXTEND PROFILES SELECT POLICY
 -- =============================================================================
+-- Drop and recreate profiles_select to include cross-viewing for lesson agreements.
 -- Students: can view profiles of teachers they have a lesson_agreement with.
 -- Teachers: can view profiles of students they have a lesson_agreement with.
--- (Required for get_lesson_agreements_paginated INVOKER: JOIN to teacher/student profile.)
 
-CREATE POLICY students_select_teacher_profiles
+DROP POLICY IF EXISTS profiles_select ON public.profiles;
+
+CREATE POLICY profiles_select
 ON public.profiles FOR SELECT TO authenticated
 USING (
-  EXISTS (
+  (select auth.uid()) = user_id
+  OR public.is_privileged((select auth.uid()))
+  -- Students can view their teachers' profiles
+  OR EXISTS (
     SELECT 1 FROM public.teachers t
     INNER JOIN public.lesson_agreements la ON la.teacher_user_id = t.user_id
     WHERE t.user_id = profiles.user_id
-      AND la.student_user_id = (SELECT auth.uid())
+      AND la.student_user_id = (select auth.uid())
   )
-);
-
-CREATE POLICY teachers_select_student_profiles
-ON public.profiles FOR SELECT TO authenticated
-USING (
-  EXISTS (
+  -- Teachers can view their students' profiles
+  OR EXISTS (
     SELECT 1 FROM public.lesson_agreements la
     WHERE la.student_user_id = profiles.user_id
-      AND la.teacher_user_id = public.get_teacher_user_id((SELECT auth.uid()))
+      AND la.teacher_user_id = public.get_teacher_user_id((select auth.uid()))
   )
 );
 
