@@ -59,9 +59,9 @@ describe('RLS: teachers SELECT', () => {
 
 	it('teacher cannot see other teachers', async () => {
 		const db = await createClientAs(TestUsers.TEACHER_ALICE);
-		const bobTeacherId = fixtures.requireTeacherId(TestUsers.TEACHER_BOB);
+		const bobTeacherUserId = fixtures.requireTeacherId(TestUsers.TEACHER_BOB);
 
-		const { data, error } = await db.from('teachers').select('*').eq('id', bobTeacherId);
+		const { data, error } = await db.from('teachers').select('*').eq('user_id', bobTeacherUserId);
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(0);

@@ -187,43 +187,18 @@ describe('RLS: get_users_paginated', () => {
 	it('search filter works', async () => {
 		const db = await createClientAs(TestUsers.SITE_ADMIN);
 
-		// Get all users first
-		const { data: allDataRaw } = await db.rpc('get_users_paginated', {
-			p_limit: 1000,
-			p_offset: 0,
-		});
-
-		const allData = allDataRaw as unknown as PaginatedUsersResponse;
-		expect(allData).not.toBeNull();
-		expect(allData.data.length).toBe(USERS.TOTAL);
-		const firstUser = allData.data[0];
-		const searchTerm = firstUser.email.substring(0, 5);
-
+		// Search for site-admin - unique match in seed
 		const { data: searchDataRaw, error } = await db.rpc('get_users_paginated', {
 			p_limit: 100,
 			p_offset: 0,
-			p_search: searchTerm,
+			p_search: 'site-admin',
 		});
 
 		expect(error).toBeNull();
 		const searchData = searchDataRaw as unknown as PaginatedUsersResponse;
-		expect(searchData.total_count).toBeGreaterThan(0);
-		expect(searchData.total_count).toBeLessThanOrEqual(USERS.TOTAL);
-		// All results should match the search term
-		searchData.data.forEach((user) => {
-			const email = user.email.toLowerCase();
-			const firstName = (user.first_name || '').toLowerCase();
-			const lastName = (user.last_name || '').toLowerCase();
-			const phoneNumber = (user.phone_number || '').toLowerCase();
-			const displayName = `${firstName} ${lastName}`.trim().toLowerCase() || email;
-			const matches =
-				email.includes(searchTerm.toLowerCase()) ||
-				firstName.includes(searchTerm.toLowerCase()) ||
-				lastName.includes(searchTerm.toLowerCase()) ||
-				phoneNumber.includes(searchTerm.toLowerCase()) ||
-				displayName.includes(searchTerm.toLowerCase());
-			expect(matches).toBe(true);
-		});
+		expect(searchData.total_count).toBe(1);
+		expect(searchData.data).toHaveLength(1);
+		expect(searchData.data[0]?.email).toBe(TestUsers.SITE_ADMIN);
 	});
 
 	it('role filter works - site_admin', async () => {
@@ -320,7 +295,7 @@ describe('RLS: get_users_paginated', () => {
 
 		expect(error).toBeNull();
 		const result = data as unknown as PaginatedUsersResponse;
-		expect(result.data.length).toBeGreaterThan(0);
+		expect(result.data).toHaveLength(USERS.TOTAL);
 
 		// Find site admin user
 		const siteAdmin = result.data.find((u) => u.user_id === siteAdminUserId);

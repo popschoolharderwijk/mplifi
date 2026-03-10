@@ -6,8 +6,8 @@ import { TEACHER_AVAILABILITY } from '../seed-data-constants';
 import { TestUsers } from '../test-users';
 
 // Setup: Use seed data (from supabase/seed.sql)
-const aliceTeacherId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
-const bobTeacherId = fixtures.requireTeacherId(TestUsers.TEACHER_BOB);
+const aliceTeacherUserId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
+const bobTeacherUserId = fixtures.requireTeacherId(TestUsers.TEACHER_BOB);
 
 /**
  * Teacher Availability SELECT permissions:
@@ -66,13 +66,16 @@ describe('RLS: teacher_availability SELECT', () => {
 
 		expect(error).toBeNull();
 		expect(data?.length).toBe(TEACHER_AVAILABILITY.TEACHER_ALICE);
-		expect(data?.every((a) => a.teacher_id === aliceTeacherId)).toBe(true);
+		expect(data?.every((a) => a.teacher_user_id === aliceTeacherUserId)).toBe(true);
 	});
 
 	it('teacher cannot see other teachers availability', async () => {
 		const db = await createClientAs(TestUsers.TEACHER_ALICE);
 
-		const { data, error } = await db.from('teacher_availability').select('*').eq('teacher_id', bobTeacherId);
+		const { data, error } = await db
+			.from('teacher_availability')
+			.select('*')
+			.eq('teacher_user_id', bobTeacherUserId);
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(0);

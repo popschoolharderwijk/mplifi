@@ -22,10 +22,11 @@ const dbNoRLS = createClientBypassRLS();
 // User IDs from fixtures for insert tests
 const studentBUserId = fixtures.requireUserId(TestUsers.STUDENT_002);
 const studentCUserId = fixtures.requireUserId(TestUsers.STUDENT_003);
-const user001UserId = fixtures.requireUserId(TestUsers.USER_001);
+// USER_003 for RPC tests - isolated from automatic-management (USER_002) and user-without-role (USER_010)
+const rpcTestUserId = fixtures.requireUserId(TestUsers.USER_003);
 
 // Fixed student ID for UPDATE/DELETE block tests (must exist in seed)
-const testStudentId = fixtures.requireStudentId(TestUsers.STUDENT_001);
+const testStudentUserId = fixtures.requireStudentId(TestUsers.STUDENT_001);
 
 /**
  * Students INSERT/UPDATE/DELETE permissions:
@@ -98,7 +99,7 @@ describe('RLS: students UPDATE - blocked for non-admin roles', () => {
 		const { data, error } = await db
 			.from('students')
 			.update({ updated_at: new Date().toISOString() })
-			.eq('id', testStudentId)
+			.eq('user_id', testStudentUserId)
 			.select();
 
 		// RLS blocks - 0 rows affected
@@ -112,7 +113,7 @@ describe('RLS: students UPDATE - blocked for non-admin roles', () => {
 		const { data, error } = await db
 			.from('students')
 			.update({ updated_at: new Date().toISOString() })
-			.eq('id', testStudentId)
+			.eq('user_id', testStudentUserId)
 			.select();
 
 		expect(error).toBeNull();
@@ -122,7 +123,7 @@ describe('RLS: students UPDATE - blocked for non-admin roles', () => {
 	it('staff cannot update student', async () => {
 		const db = await createClientAs(TestUsers.STAFF_ONE);
 
-		const { data: students } = await db.from('students').select('id').limit(1);
+		const { data: students } = await db.from('students').select('user_id').limit(1);
 		if (!students || students.length === 0) {
 			throw new Error('No students found for test');
 		}
@@ -130,7 +131,7 @@ describe('RLS: students UPDATE - blocked for non-admin roles', () => {
 		const { data, error } = await db
 			.from('students')
 			.update({ updated_at: new Date().toISOString() })
-			.eq('id', students[0].id)
+			.eq('user_id', students[0].user_id)
 			.select();
 
 		expect(error).toBeNull();
@@ -163,12 +164,12 @@ describe('RLS: students UPDATE - admin permissions', () => {
 		const { data, error } = await db
 			.from('students')
 			.update({ updated_at: new Date().toISOString() })
-			.eq('id', originalStudent.id)
+			.eq('user_id', originalStudent.user_id)
 			.select();
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(1);
-		expect(data?.[0]?.id).toBe(originalStudent.id);
+		expect(data?.[0]?.user_id).toBe(originalStudent.user_id);
 	});
 
 	it('site_admin can update student', async () => {
@@ -184,12 +185,12 @@ describe('RLS: students UPDATE - admin permissions', () => {
 		const { data, error } = await db
 			.from('students')
 			.update({ updated_at: new Date().toISOString() })
-			.eq('id', originalStudent.id)
+			.eq('user_id', originalStudent.user_id)
 			.select();
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(1);
-		expect(data?.[0]?.id).toBe(originalStudent.id);
+		expect(data?.[0]?.user_id).toBe(originalStudent.user_id);
 	});
 });
 
@@ -197,7 +198,7 @@ describe('RLS: students DELETE - blocked for all roles', () => {
 	it('user without role cannot delete student', async () => {
 		const db = await createClientAs(TestUsers.STUDENT_001);
 
-		const { data, error } = await db.from('students').delete().eq('id', testStudentId).select();
+		const { data, error } = await db.from('students').delete().eq('user_id', testStudentUserId).select();
 
 		// RLS blocks - 0 rows affected (no DELETE policy)
 		expect(error).toBeNull();
@@ -207,7 +208,7 @@ describe('RLS: students DELETE - blocked for all roles', () => {
 	it('teacher cannot delete student', async () => {
 		const db = await createClientAs(TestUsers.TEACHER_ALICE);
 
-		const { data, error } = await db.from('students').delete().eq('id', testStudentId).select();
+		const { data, error } = await db.from('students').delete().eq('user_id', testStudentUserId).select();
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(0);
@@ -216,12 +217,12 @@ describe('RLS: students DELETE - blocked for all roles', () => {
 	it('staff cannot delete student', async () => {
 		const db = await createClientAs(TestUsers.STAFF_ONE);
 
-		const { data: students } = await db.from('students').select('id').limit(1);
+		const { data: students } = await db.from('students').select('user_id').limit(1);
 		if (!students || students.length === 0) {
 			throw new Error('No students found for test');
 		}
 
-		const { data, error } = await db.from('students').delete().eq('id', students[0].id).select();
+		const { data, error } = await db.from('students').delete().eq('user_id', students[0].user_id).select();
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(0);
@@ -230,7 +231,7 @@ describe('RLS: students DELETE - blocked for all roles', () => {
 	it('admin cannot delete student', async () => {
 		const db = await createClientAs(TestUsers.ADMIN_ONE);
 
-		const { data, error } = await db.from('students').delete().eq('id', testStudentId).select();
+		const { data, error } = await db.from('students').delete().eq('user_id', testStudentUserId).select();
 
 		// RLS blocks - 0 rows affected (no DELETE policy)
 		expect(error).toBeNull();
@@ -240,7 +241,7 @@ describe('RLS: students DELETE - blocked for all roles', () => {
 	it('site_admin cannot delete student', async () => {
 		const db = await createClientAs(TestUsers.SITE_ADMIN);
 
-		const { data, error } = await db.from('students').delete().eq('id', testStudentId).select();
+		const { data, error } = await db.from('students').delete().eq('user_id', testStudentUserId).select();
 
 		// RLS blocks - 0 rows affected (no DELETE policy)
 		expect(error).toBeNull();
@@ -252,27 +253,27 @@ describe('RLS: students INSERT/DELETE via RPC - privileged user allowed', () => 
 	it('staff can create student for another user via ensure_student_exists', async () => {
 		const staffDb = await createClientAs(TestUsers.STAFF_ONE);
 
-		const { data: studentsBefore } = await dbNoRLS.from('students').select('id').eq('user_id', user001UserId);
+		const { data: studentsBefore } = await dbNoRLS.from('students').select('user_id').eq('user_id', rpcTestUserId);
 		expect(studentsBefore).toHaveLength(0);
 
-		unwrap(await staffDb.rpc('ensure_student_exists', { _user_id: user001UserId }));
+		unwrap(await staffDb.rpc('ensure_student_exists', { _user_id: rpcTestUserId }));
 
-		const { data: studentsAfter } = await dbNoRLS.from('students').select('id').eq('user_id', user001UserId);
+		const { data: studentsAfter } = await dbNoRLS.from('students').select('user_id').eq('user_id', rpcTestUserId);
 		expect(studentsAfter).toHaveLength(1);
 
-		await dbNoRLS.from('students').delete().eq('user_id', user001UserId);
+		await dbNoRLS.from('students').delete().eq('user_id', rpcTestUserId);
 	});
 
 	it("staff can delete another user's student via cleanup_student_if_no_agreements when student has no agreements", async () => {
 		const staffDb = await createClientAs(TestUsers.STAFF_ONE);
 
-		unwrap(await staffDb.rpc('ensure_student_exists', { _user_id: user001UserId }));
-		const { data: afterEnsure } = await dbNoRLS.from('students').select('id').eq('user_id', user001UserId);
+		unwrap(await staffDb.rpc('ensure_student_exists', { _user_id: rpcTestUserId }));
+		const { data: afterEnsure } = await dbNoRLS.from('students').select('user_id').eq('user_id', rpcTestUserId);
 		expect(afterEnsure).toHaveLength(1);
 
-		unwrap(await staffDb.rpc('cleanup_student_if_no_agreements', { _user_id: user001UserId }));
+		unwrap(await staffDb.rpc('cleanup_student_if_no_agreements', { _user_id: rpcTestUserId }));
 
-		const { data: afterCleanup } = await dbNoRLS.from('students').select('id').eq('user_id', user001UserId);
+		const { data: afterCleanup } = await dbNoRLS.from('students').select('user_id').eq('user_id', rpcTestUserId);
 		expect(afterCleanup).toHaveLength(0);
 	});
 });
@@ -281,12 +282,12 @@ describe('RLS: students INSERT/DELETE via RPC - trigger-only, unprivileged user 
 	it('unprivileged user (student) cannot create student for another user via ensure_student_exists', async () => {
 		const db = await createClientAs(TestUsers.STUDENT_001);
 
-		const { data: studentsBefore } = await dbNoRLS.from('students').select('id').eq('user_id', user001UserId);
+		const { data: studentsBefore } = await dbNoRLS.from('students').select('user_id').eq('user_id', rpcTestUserId);
 		expect(studentsBefore).toHaveLength(0);
 
-		const ensureResult = await db.rpc('ensure_student_exists', { _user_id: user001UserId });
+		const ensureResult = await db.rpc('ensure_student_exists', { _user_id: rpcTestUserId });
 
-		await dbNoRLS.from('students').delete().eq('user_id', user001UserId);
+		await dbNoRLS.from('students').delete().eq('user_id', rpcTestUserId);
 
 		const error = unwrapError(ensureResult);
 		expect(error.message).toContain('Permission denied');
@@ -296,15 +297,15 @@ describe('RLS: students INSERT/DELETE via RPC - trigger-only, unprivileged user 
 		const staffDb = await createClientAs(TestUsers.STAFF_ONE);
 		const studentDb = await createClientAs(TestUsers.STUDENT_001);
 
-		const { error: ensureError } = await staffDb.rpc('ensure_student_exists', { _user_id: user001UserId });
+		const { error: ensureError } = await staffDb.rpc('ensure_student_exists', { _user_id: rpcTestUserId });
 		expect(ensureError).toBeNull();
 
-		const { data: afterEnsure } = await dbNoRLS.from('students').select('id').eq('user_id', user001UserId);
+		const { data: afterEnsure } = await dbNoRLS.from('students').select('user_id').eq('user_id', rpcTestUserId);
 		expect(afterEnsure).toHaveLength(1);
 
-		const cleanupResult = await studentDb.rpc('cleanup_student_if_no_agreements', { _user_id: user001UserId });
+		const cleanupResult = await studentDb.rpc('cleanup_student_if_no_agreements', { _user_id: rpcTestUserId });
 
-		await dbNoRLS.from('students').delete().eq('user_id', user001UserId);
+		await dbNoRLS.from('students').delete().eq('user_id', rpcTestUserId);
 
 		const error = unwrapError(cleanupResult);
 		expect(error.message).toContain('Permission denied');

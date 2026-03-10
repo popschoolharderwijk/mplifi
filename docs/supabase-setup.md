@@ -59,8 +59,8 @@ Dit past toe:
 - `20260116160000_add_security_introspection.sql` - Security helper functies voor testing
 - `20260117000000_create_avatars_storage.sql` - Storage bucket RLS policies
 - `20260206000000_lesson_types.sql` - Lestypes tabel met RLS policies
-- `20260207000000_students.sql` - Students tabel, helper functions (`is_student`, `get_student_id`)
-- `20260207000001_teachers.sql` - Teachers tabel, helper functions (`is_teacher`, `get_teacher_id`)
+- `20260207000000_students.sql` - Students tabel, helper functions (`is_student`)
+- `20260207000001_teachers.sql` - Teachers tabel, helper functions (`is_teacher`, `get_teacher_user_id`)
 - `20260207000002_lesson_agreements.sql` - Lesovereenkomsten tabel met RLS policies
 - `20260210000000_shared_pagination_views.sql` - Gedeelde paginatie-views
 - `20260210000001_students_paginated_function.sql` t/m `20260210000004_users_paginated_function.sql` - Paginated functies

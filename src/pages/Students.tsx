@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { type LessonAgreement, LessonAgreementItem } from '@/components/students/LessonAgreementItem';
+import { LessonAgreementItem } from '@/components/students/LessonAgreementItem';
 import { StudentFormDialog } from '@/components/students/StudentFormDialog';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
@@ -13,24 +13,15 @@ import { useAuth } from '@/hooks/useAuth';
 import { useServerTableState } from '@/hooks/useServerTableState';
 import { useLessonTypeFilter, useStatusFilter } from '@/hooks/useTableFilters';
 import { supabase } from '@/integrations/supabase/client';
-import type { StudentWithProfile as StudentWithProfileBase } from '@/types/students';
-
-/** Student row + profile from Supabase types, plus RPC-only fields from get_students_paginated */
-type StudentWithProfile = StudentWithProfileBase & {
-	active_agreements_count: number;
-	agreements: LessonAgreement[];
-};
-
-interface PaginatedStudentsResponse {
-	data: StudentWithProfile[];
-	total_count: number;
-	limit: number;
-	offset: number;
-}
+import {
+	flattenStudentWithAgreements,
+	type PaginatedStudentsResponseRaw,
+	type StudentWithAgreements,
+} from '@/types/students';
 
 export default function Students() {
 	const { isAdmin, isSiteAdmin, isPrivileged, isLoading: authLoading } = useAuth();
-	const [students, setStudents] = useState<StudentWithProfile[]>([]);
+	const [students, setStudents] = useState<StudentWithAgreements[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [totalCount, setTotalCount] = useState(0);
 
@@ -60,12 +51,12 @@ export default function Students() {
 
 	const [deleteDialog, setDeleteDialog] = useState<{
 		open: boolean;
-		student: StudentWithProfile | null;
+		student: StudentWithAgreements | null;
 		deleteUser: boolean;
 	} | null>(null);
 	const [studentFormDialog, setStudentFormDialog] = useState<{
 		open: boolean;
-		student: StudentWithProfile | null;
+		student: StudentWithAgreements | null;
 	}>({ open: false, student: null });
 
 	// Check access - only admin, site_admin and staff can view this page
@@ -108,8 +99,8 @@ export default function Students() {
 				return;
 			}
 
-			const result = data as unknown as PaginatedStudentsResponse;
-			setStudents(result.data ?? []);
+			const result = data as unknown as PaginatedStudentsResponseRaw;
+			setStudents((result.data ?? []).map(flattenStudentWithAgreements));
 			setTotalCount(result.total_count ?? 0);
 			setLoading(false);
 		} catch (error) {
@@ -151,20 +142,20 @@ export default function Students() {
 		return groups;
 	}, [statusFilterGroup, lessonTypeFilterGroup]);
 
-	const columns: DataTableColumn<StudentWithProfile>[] = useMemo(
+	const columns: DataTableColumn<StudentWithAgreements>[] = useMemo(
 		() => [
 			{
 				key: 'student',
 				label: 'Leerling',
 				sortable: true, // Server-side sorting
 				className: 'w-64 max-w-64',
-				render: (s) => <UserDisplay profile={s.profile} showEmail />,
+				render: (s) => <UserDisplay profile={s} showEmail />,
 			},
 			{
 				key: 'phone_number',
 				label: 'Telefoon',
 				sortable: true,
-				render: (s) => <span className="text-muted-foreground">{s.profile.phone_number || '-'}</span>,
+				render: (s) => <span className="text-muted-foreground">{s.phone_number || '-'}</span>,
 				className: 'text-muted-foreground w-32',
 			},
 			{
@@ -204,11 +195,11 @@ export default function Students() {
 		[],
 	);
 
-	const handleEdit = useCallback((student: StudentWithProfile) => {
+	const handleEdit = useCallback((student: StudentWithAgreements) => {
 		setStudentFormDialog({ open: true, student });
 	}, []);
 
-	const handleDelete = useCallback((student: StudentWithProfile) => {
+	const handleDelete = useCallback((student: StudentWithAgreements) => {
 		setDeleteDialog({ open: true, student, deleteUser: false });
 	}, []);
 
@@ -283,7 +274,7 @@ export default function Students() {
 				searchQuery={searchQuery}
 				onSearchChange={handleSearchChange}
 				loading={loading}
-				getRowKey={(s) => s.id}
+				getRowKey={(s) => s.user_id}
 				emptyMessage="Geen leerlingen gevonden"
 				quickFilter={quickFilterGroups}
 				serverPagination={{
@@ -320,7 +311,7 @@ export default function Students() {
 						<>
 							Weet je zeker dat je{' '}
 							<strong>
-								{deleteDialog.student ? getDisplayName(deleteDialog.student.profile) : 'deze leerling'}
+								{deleteDialog.student ? getDisplayName(deleteDialog.student) : 'deze leerling'}
 							</strong>{' '}
 							wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
 						</>

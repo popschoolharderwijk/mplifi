@@ -29,7 +29,7 @@ type Availability = Tables<'teacher_availability'>;
 const dayNames = DAY_NAMES;
 
 export default function MyAvailability() {
-	const { isTeacher, teacherId, isLoading: authLoading } = useAuth();
+	const { isTeacher, teacherUserId, isLoading: authLoading } = useAuth();
 	const [availability, setAvailability] = useState<Availability[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -41,14 +41,14 @@ export default function MyAvailability() {
 	});
 
 	const loadAvailability = useCallback(async () => {
-		if (!isTeacher || !teacherId) return;
+		if (!isTeacher || !teacherUserId) return;
 
 		setLoading(true);
 
 		const { data, error } = await supabase
 			.from('teacher_availability')
 			.select('*')
-			.eq('teacher_id', teacherId)
+			.eq('teacher_user_id', teacherUserId)
 			.order('day_of_week', { ascending: true })
 			.order('start_time', { ascending: true });
 
@@ -61,7 +61,7 @@ export default function MyAvailability() {
 
 		setAvailability((data as Availability[]) ?? []);
 		setLoading(false);
-	}, [isTeacher, teacherId]);
+	}, [isTeacher, teacherUserId]);
 
 	useEffect(() => {
 		if (!authLoading && isTeacher) {
@@ -75,7 +75,7 @@ export default function MyAvailability() {
 	}
 
 	const handleAdd = async () => {
-		if (!teacherId) return;
+		if (!teacherUserId) return;
 
 		if (form.start_time >= form.end_time) {
 			toast.error('Eindtijd moet na starttijd zijn');
@@ -85,7 +85,7 @@ export default function MyAvailability() {
 		const { error } = await supabase
 			.from('teacher_availability')
 			.insert({
-				teacher_id: teacherId,
+				teacher_user_id: teacherUserId,
 				day_of_week: form.day_of_week,
 				start_time: form.start_time,
 				end_time: form.end_time,

@@ -16,33 +16,14 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { UserSelector } from '@/components/ui/user-selector';
 import { supabase } from '@/integrations/supabase/client';
-
-interface StudentData {
-	id: string;
-	user_id: string;
-	date_of_birth: string | null;
-	parent_name: string | null;
-	parent_email: string | null;
-	parent_phone_number: string | null;
-	debtor_info_same_as_student: boolean;
-	debtor_name: string | null;
-	debtor_address: string | null;
-	debtor_postal_code: string | null;
-	debtor_city: string | null;
-	profile: {
-		email: string;
-		first_name: string | null;
-		last_name: string | null;
-		phone_number: string | null;
-	};
-}
+import type { Student } from '@/types/students';
 
 interface StudentFormDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onSuccess: () => void;
 	/** Student data for edit mode. If undefined, dialog is in create mode. */
-	student?: StudentData;
+	student?: Student;
 }
 
 interface FormState {
@@ -91,10 +72,10 @@ export function StudentFormDialog({ open, onOpenChange, onSuccess, student }: St
 		if (open) {
 			if (student) {
 				setForm({
-					email: student.profile.email,
-					first_name: student.profile.first_name ?? '',
-					last_name: student.profile.last_name ?? '',
-					phone_number: student.profile.phone_number ?? '',
+					email: student.email ?? '',
+					first_name: student.first_name ?? '',
+					last_name: student.last_name ?? '',
+					phone_number: student.phone_number ?? '',
 					date_of_birth: student.date_of_birth ?? null,
 					parent_name: student.parent_name ?? '',
 					parent_email: student.parent_email ?? '',
@@ -325,7 +306,7 @@ export function StudentFormDialog({ open, onOpenChange, onSuccess, student }: St
 				debtor_postal_code: form.debtor_info_same_as_student ? null : form.debtor_postal_code || null,
 				debtor_city: form.debtor_info_same_as_student ? null : form.debtor_city || null,
 			})
-			.eq('id', student.id);
+			.eq('user_id', student.user_id);
 
 		if (studentError) {
 			toast.error('Fout bij bijwerken leerling', {

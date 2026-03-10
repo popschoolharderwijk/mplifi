@@ -124,7 +124,7 @@ describe('RLS: users without role/teacher/student - INSERT/UPDATE/DELETE', () =>
 
 			// Get valid IDs using bypass RLS (lesson_agreements uses student_user_id, not student id)
 			const { data: student } = await dbNoRLS.from('students').select('user_id').limit(1).single();
-			const { data: teacher } = await dbNoRLS.from('teachers').select('id').limit(1).single();
+			const { data: teacher } = await dbNoRLS.from('teachers').select('user_id').limit(1).single();
 			const { data: lessonType } = await dbNoRLS.from('lesson_types').select('id').limit(1).single();
 
 			if (!student || !teacher || !lessonType) {
@@ -135,7 +135,7 @@ describe('RLS: users without role/teacher/student - INSERT/UPDATE/DELETE', () =>
 				.from('lesson_agreements')
 				.insert({
 					student_user_id: student.user_id,
-					teacher_id: teacher.id,
+					teacher_user_id: teacher.user_id,
 					lesson_type_id: lessonType.id,
 					day_of_week: 1,
 					start_time: '14:00',

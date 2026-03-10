@@ -24,11 +24,11 @@ interface LessonTypeOption {
 }
 
 interface TeacherLessonTypesSectionProps {
-	teacherId: string;
+	teacherUserId: string;
 	canEdit: boolean;
 }
 
-export function TeacherLessonTypesSection({ teacherId, canEdit }: TeacherLessonTypesSectionProps) {
+export function TeacherLessonTypesSection({ teacherUserId, canEdit }: TeacherLessonTypesSectionProps) {
 	const [lessonTypes, setLessonTypes] = useState<LessonType[]>([]);
 	const [allLessonTypes, setAllLessonTypes] = useState<LessonTypeOption[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -60,14 +60,14 @@ export function TeacherLessonTypesSection({ teacherId, canEdit }: TeacherLessonT
 
 	// Load lesson types assigned to this teacher
 	const loadLessonTypes = useCallback(async () => {
-		if (!teacherId) return;
+		if (!teacherUserId) return;
 
 		setLoading(true);
 
 		const { data, error } = await supabase
 			.from('teacher_lesson_types')
 			.select('lesson_type_id, lesson_types(id, name, icon, color)')
-			.eq('teacher_id', teacherId);
+			.eq('teacher_user_id', teacherUserId);
 
 		if (error) {
 			console.error('Error loading lesson types:', error);
@@ -93,7 +93,7 @@ export function TeacherLessonTypesSection({ teacherId, canEdit }: TeacherLessonT
 
 		setLessonTypes(types);
 		setLoading(false);
-	}, [teacherId]);
+	}, [teacherUserId]);
 
 	// Initial load
 	useEffect(() => {
@@ -120,7 +120,7 @@ export function TeacherLessonTypesSection({ teacherId, canEdit }: TeacherLessonT
 			setAddPopoverOpen(false);
 
 			const { error } = await supabase.from('teacher_lesson_types').insert({
-				teacher_id: teacherId,
+				teacher_user_id: teacherUserId,
 				lesson_type_id: lessonTypeId,
 			});
 
@@ -135,7 +135,7 @@ export function TeacherLessonTypesSection({ teacherId, canEdit }: TeacherLessonT
 			await loadLessonTypes();
 			setSaving(false);
 		},
-		[canEdit, teacherId, loadLessonTypes],
+		[canEdit, teacherUserId, loadLessonTypes],
 	);
 
 	// Handle removing a lesson type
@@ -148,7 +148,7 @@ export function TeacherLessonTypesSection({ teacherId, canEdit }: TeacherLessonT
 			const { error } = await supabase
 				.from('teacher_lesson_types')
 				.delete()
-				.eq('teacher_id', teacherId)
+				.eq('teacher_user_id', teacherUserId)
 				.eq('lesson_type_id', lessonTypeId);
 
 			if (error) {
@@ -169,7 +169,7 @@ export function TeacherLessonTypesSection({ teacherId, canEdit }: TeacherLessonT
 			await loadLessonTypes();
 			setSaving(false);
 		},
-		[canEdit, teacherId, loadLessonTypes],
+		[canEdit, teacherUserId, loadLessonTypes],
 	);
 
 	if (loading) {

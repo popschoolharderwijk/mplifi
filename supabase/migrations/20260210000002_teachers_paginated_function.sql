@@ -50,7 +50,6 @@ BEGIN
     WITH     teacher_base AS (
       -- Get base teacher data with profile. RLS on teachers filters by role (teacher=own, staff=all).
       SELECT
-        t.id,
         t.user_id,
         t.bio,
         t.is_active,
@@ -76,7 +75,7 @@ BEGIN
     teacher_lesson_types_data AS (
       -- Get lesson types for all teachers
       SELECT
-        tlt.teacher_id,
+        tlt.teacher_user_id,
         JSON_AGG(
           JSON_BUILD_OBJECT(
             'id', lt.id,
@@ -88,8 +87,8 @@ BEGIN
         ) AS lesson_types
       FROM teacher_lesson_types tlt
       INNER JOIN lesson_types lt ON tlt.lesson_type_id = lt.id
-      INNER JOIN teacher_base tb ON tlt.teacher_id = tb.id
-      GROUP BY tlt.teacher_id
+      INNER JOIN teacher_base tb ON tlt.teacher_user_id = tb.user_id
+      GROUP BY tlt.teacher_user_id
     ),
     filtered_teachers AS (
       -- Apply status and lesson type filters
@@ -97,7 +96,7 @@ BEGIN
         tb.*,
         COALESCE(tlt.lesson_types, '[]'::JSON) AS lesson_types_json
       FROM teacher_base tb
-      LEFT JOIN teacher_lesson_types_data tlt ON tb.id = tlt.teacher_id
+      LEFT JOIN teacher_lesson_types_data tlt ON tb.user_id = tlt.teacher_user_id
       WHERE (
         -- Status filter
         $2 = 'all'
@@ -109,7 +108,7 @@ BEGIN
         $3 IS NULL
         OR EXISTS (
           SELECT 1 FROM teacher_lesson_types tlt2
-          WHERE tlt2.teacher_id = tb.id
+          WHERE tlt2.teacher_user_id = tb.user_id
           AND tlt2.lesson_type_id = $3
         )
       )
@@ -120,7 +119,7 @@ BEGIN
         ft.*,
         COUNT(*) OVER () AS total_count
       FROM filtered_teachers ft
-      ORDER BY %I %s NULLS LAST, display_name ASC, id ASC
+      ORDER BY %I %s NULLS LAST, display_name ASC, user_id ASC
       LIMIT $4
       OFFSET $5
     )
@@ -128,7 +127,7 @@ BEGIN
       'data', COALESCE(
         (SELECT JSON_AGG(
           JSON_BUILD_OBJECT(
-            'id', pt.id,
+            'id', pt.user_id,
             'user_id', pt.user_id,
             'bio', pt.bio,
             'is_active', pt.is_active,

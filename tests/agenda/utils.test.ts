@@ -7,9 +7,9 @@ import { describe, expect, it } from 'bun:test';
 import { agendaMessages, getEventStyle } from '../../src/components/agenda/agenda-calendar-config';
 import type { CalendarEvent, CalendarEventResource } from '../../src/components/agenda/types';
 import {
-	buildStudentInfo,
+	buildParticipantInfo,
 	buildTooltipText,
-	formatStudentName,
+	formatUserName,
 	generateRecurringEvents,
 	getActualDateInOriginalWeek,
 } from '../../src/components/agenda/utils';
@@ -19,6 +19,7 @@ import type {
 	LessonAppointmentDeviationWithAgreement,
 } from '../../src/types/lesson-agreements';
 import { expectNonNull } from '../utils';
+import { AGENDA_UTILS_TEST } from './agenda-test-constants';
 
 describe('agenda utils: getDateForDayOfWeek', () => {
 	it('returns same day when reference is already that weekday', () => {
@@ -173,7 +174,7 @@ describe('agenda utils: generateRecurringEvents', () => {
 			undefined,
 			eventIdByAgreementId,
 		);
-		expect(events.length).toBe(5);
+		expect(events.length).toBe(AGENDA_UTILS_TEST.DAILY_EVENTS_FEB_10_14);
 	});
 
 	it('uses exact deviation when present for that date', () => {
@@ -225,7 +226,7 @@ describe('agenda utils: generateRecurringEvents', () => {
 			eventIdMap,
 		);
 		const recurringEvents = events.filter((e: CalendarEvent) => e.resource.isRecurring === true);
-		expect(recurringEvents.length).toBeGreaterThan(0);
+		expect(recurringEvents).toHaveLength(AGENDA_UTILS_TEST.RECURRING_DEVIATION_EVENTS_FEB_MAR_APR);
 		expect(recurringEvents.every((e: CalendarEvent) => e.resource.deviationId === 'dev-recurring')).toBe(true);
 	});
 
@@ -300,10 +301,10 @@ describe('agenda utils: generateRecurringEvents', () => {
 		const deviationEvents = events.filter(
 			(e: CalendarEvent) => e.resource.deviationId === 'dev-recurring' && e.resource.isRecurring === true,
 		);
-		expect(deviationEvents.length).toBeGreaterThan(0);
+		expect(deviationEvents).toHaveLength(AGENDA_UTILS_TEST.DEVIATION_EVENTS_UNTIL_2025_03_02);
 		const lastDeviationEvent = deviationEvents[deviationEvents.length - 1];
 		const lastDateStr = lastDeviationEvent.start ? formatDateToDb(lastDeviationEvent.start) : '';
-		expect(lastDateStr >= '2025-02-17' && lastDateStr <= '2025-03-02').toBe(true);
+		expect(lastDateStr).toBe('2025-02-27');
 		expect(lastDeviationEvent.resource.type).toBe('deviation');
 	});
 
@@ -352,7 +353,7 @@ describe('agenda utils: generateRecurringEvents', () => {
 			undefined,
 			eventIdByAgreementId,
 		);
-		expect(events.length).toBe(4);
+		expect(events.length).toBe(AGENDA_UTILS_TEST.MONTHLY_EVENTS_JAN_6_APR_30);
 	});
 
 	it('cancelled deviation shows isCancelled flag', () => {
@@ -375,45 +376,45 @@ describe('agenda utils: generateRecurringEvents', () => {
 	});
 });
 
-describe('agenda utils: formatStudentName', () => {
+describe('agenda utils: formatUserName', () => {
 	it('returns full name when first and last name are present', () => {
 		const profile = { first_name: 'Jan', last_name: 'Jansen', email: 'jan@example.com' };
-		expect(formatStudentName(profile)).toBe('Jan Jansen');
+		expect(formatUserName(profile)).toBe('Jan Jansen');
 	});
 
 	it('returns first name only when last name is missing', () => {
 		const profile = { first_name: 'Jan', last_name: null, email: 'jan@example.com' };
-		expect(formatStudentName(profile)).toBe('Jan');
+		expect(formatUserName(profile)).toBe('Jan');
 	});
 
 	it('returns email when names are missing', () => {
 		const profile = { first_name: null, last_name: null, email: 'jan@example.com' };
-		expect(formatStudentName(profile)).toBe('jan@example.com');
+		expect(formatUserName(profile)).toBe('jan@example.com');
 	});
 
 	it('returns "Onbekend" when profile is null', () => {
-		expect(formatStudentName(null)).toBe('Onbekend');
+		expect(formatUserName(null)).toBe('Onbekend');
 	});
 
 	it('returns "Onbekend" when profile is undefined', () => {
-		expect(formatStudentName(undefined)).toBe('Onbekend');
+		expect(formatUserName(undefined)).toBe('Onbekend');
 	});
 
 	it('returns "Onbekend" when all fields are null', () => {
 		const profile = { first_name: null, last_name: null, email: null };
-		expect(formatStudentName(profile)).toBe('Onbekend');
+		expect(formatUserName(profile)).toBe('Onbekend');
 	});
 });
 
-describe('agenda utils: buildStudentInfo', () => {
-	it('returns StudentEventInfo when profile has email', () => {
+describe('agenda utils: buildParticipantInfo', () => {
+	it('returns User when profile has email', () => {
 		const profile = {
 			first_name: 'Jan',
 			last_name: 'Jansen',
 			email: 'jan@example.com',
 			avatar_url: 'http://avatar.jpg',
 		};
-		const result = buildStudentInfo(profile, 'user-123');
+		const result = buildParticipantInfo(profile, 'user-123');
 		expectNonNull(result);
 		expect(result.user_id).toBe('user-123');
 		expect(result.first_name).toBe('Jan');
@@ -423,17 +424,17 @@ describe('agenda utils: buildStudentInfo', () => {
 	});
 
 	it('returns undefined when profile is null', () => {
-		expect(buildStudentInfo(null, 'user-123')).toBeUndefined();
+		expect(buildParticipantInfo(null, 'user-123')).toBeUndefined();
 	});
 
 	it('returns undefined when profile has no email', () => {
 		const profile = { first_name: 'Jan', last_name: 'Jansen', email: null };
-		expect(buildStudentInfo(profile, 'user-123')).toBeUndefined();
+		expect(buildParticipantInfo(profile, 'user-123')).toBeUndefined();
 	});
 
 	it('returns null avatar_url when not provided', () => {
 		const profile = { first_name: 'Jan', last_name: 'Jansen', email: 'jan@example.com' };
-		const result = buildStudentInfo(profile, 'user-123');
+		const result = buildParticipantInfo(profile, 'user-123');
 		expectNonNull(result);
 		expect(result.avatar_url).toBeNull();
 	});

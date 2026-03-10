@@ -10,7 +10,6 @@ import { DAY_NAMES } from '@/lib/date/day-index';
 import { formatTime } from '@/lib/time/time-format';
 
 interface Teacher {
-	id: string;
 	user_id: string;
 	profile: {
 		first_name: string | null;
@@ -21,7 +20,7 @@ interface Teacher {
 
 interface Availability {
 	id: string;
-	teacher_id: string;
+	teacher_user_id: string;
 	day_of_week: number;
 	start_time: string;
 	end_time: string;
@@ -34,7 +33,7 @@ export default function TeacherAvailability() {
 	const [teachers, setTeachers] = useState<Teacher[]>([]);
 	const [availability, setAvailability] = useState<Availability[]>([]);
 	const [loading, setLoading] = useState(true);
-	const [selectedTeacherId, setSelectedTeacherId] = useState<string | 'all'>('all');
+	const [selectedTeacherUserId, setSelectedTeacherUserId] = useState<string | 'all'>('all');
 
 	// Check access - staff, admin and site_admin can view this page
 	const hasAccess = isPrivileged;
@@ -47,7 +46,7 @@ export default function TeacherAvailability() {
 		// Load teachers
 		const { data: teachersData, error: teachersError } = await supabase
 			.from('teachers')
-			.select('id, user_id')
+			.select('user_id')
 			.eq('is_active', true)
 			.order('created_at', { ascending: false });
 
@@ -81,7 +80,6 @@ export default function TeacherAvailability() {
 		// Combine the data
 		const profileMap = new Map(profilesData?.map((p) => [p.user_id, p]) ?? []);
 		const transformedTeachers: Teacher[] = teachersData.map((teacher) => ({
-			id: teacher.id,
 			user_id: teacher.user_id,
 			profile: profileMap.get(teacher.user_id) ?? {
 				first_name: null,
@@ -126,7 +124,9 @@ export default function TeacherAvailability() {
 	};
 
 	const filteredAvailability =
-		selectedTeacherId === 'all' ? availability : availability.filter((a) => a.teacher_id === selectedTeacherId);
+		selectedTeacherUserId === 'all'
+			? availability
+			: availability.filter((a) => a.teacher_user_id === selectedTeacherUserId);
 
 	// Group availability by day
 	const availabilityByDay: Record<number, Availability[]> = {};
@@ -156,18 +156,18 @@ export default function TeacherAvailability() {
 					{/* Filter */}
 					<div className="flex items-center gap-2">
 						<Button
-							variant={selectedTeacherId === 'all' ? 'default' : 'outline'}
+							variant={selectedTeacherUserId === 'all' ? 'default' : 'outline'}
 							size="sm"
-							onClick={() => setSelectedTeacherId('all')}
+							onClick={() => setSelectedTeacherUserId('all')}
 						>
 							Alle docenten
 						</Button>
 						{teachers.map((teacher) => (
 							<Button
-								key={teacher.id}
-								variant={selectedTeacherId === teacher.id ? 'default' : 'outline'}
+								key={teacher.user_id}
+								variant={selectedTeacherUserId === teacher.user_id ? 'default' : 'outline'}
 								size="sm"
-								onClick={() => setSelectedTeacherId(teacher.id)}
+								onClick={() => setSelectedTeacherUserId(teacher.user_id)}
 							>
 								{getTeacherName(teacher)}
 							</Button>
@@ -193,7 +193,9 @@ export default function TeacherAvailability() {
 										) : (
 											<div className="space-y-2">
 												{dayAvailability.map((avail) => {
-													const teacher = teachers.find((t) => t.id === avail.teacher_id);
+													const teacher = teachers.find(
+														(t) => t.user_id === avail.teacher_user_id,
+													);
 													return (
 														<div
 															key={avail.id}
@@ -203,7 +205,7 @@ export default function TeacherAvailability() {
 																{formatTime(avail.start_time)} -{' '}
 																{formatTime(avail.end_time)}
 															</div>
-															{selectedTeacherId === 'all' && teacher && (
+															{selectedTeacherUserId === 'all' && teacher && (
 																<div className="text-xs text-muted-foreground">
 																	{getTeacherName(teacher)}
 																</div>

@@ -9,35 +9,36 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDbDateToUi } from '@/lib/date/date-format';
 import { cn } from '@/lib/utils';
-import type { FullStudentData, StudentInfoModalData } from '@/types/students';
+import type { Student } from '@/types/students';
+import type { User } from '@/types/users';
 
-export type { StudentInfoModalData };
+export type { Student };
 
 interface StudentInfoModalProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	/** Initial student data (name/email/avatar) - modal will load full details */
-	student: StudentInfoModalData | null;
+	student: User | null;
 }
 
-function getDisplayName(profile: StudentInfoModalData['profile']): string {
-	if (profile.first_name && profile.last_name) {
-		return `${profile.first_name} ${profile.last_name}`;
+function getDisplayName(student: User): string {
+	if (student.first_name && student.last_name) {
+		return `${student.first_name} ${student.last_name}`;
 	}
-	if (profile.first_name) {
-		return profile.first_name;
+	if (student.first_name) {
+		return student.first_name;
 	}
-	return profile.email;
+	return student.email;
 }
 
-function getInitials(profile: StudentInfoModalData['profile']): string {
-	if (profile.first_name && profile.last_name) {
-		return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
+function getInitials(student: User): string {
+	if (student.first_name && student.last_name) {
+		return `${student.first_name[0]}${student.last_name[0]}`.toUpperCase();
 	}
-	if (profile.first_name) {
-		return profile.first_name.slice(0, 2).toUpperCase();
+	if (student.first_name) {
+		return student.first_name.slice(0, 2).toUpperCase();
 	}
-	return profile.email.slice(0, 2).toUpperCase();
+	return student.email.slice(0, 2).toUpperCase();
 }
 
 function formatPhoneNumber(phone: string | null): string {
@@ -88,7 +89,7 @@ function InfoSection({ title, icon, children, className }: InfoSectionProps) {
 
 export function StudentInfoModal({ open, onOpenChange, student }: StudentInfoModalProps) {
 	const { isPrivileged } = useAuth();
-	const [fullData, setFullData] = useState<FullStudentData | null>(null);
+	const [fullData, setFullData] = useState<Student | null>(null);
 	const [loading, setLoading] = useState(false);
 
 	// Only privileged users can see full student data
@@ -119,7 +120,7 @@ export function StudentInfoModal({ open, onOpenChange, student }: StudentInfoMod
 			// Load profile data (phone might not have been passed in initial data)
 			const { data: profileData, error: profileError } = await supabase
 				.from('profiles')
-				.select('email, first_name, last_name, avatar_url, phone_number')
+				.select('user_id, email, first_name, last_name, avatar_url, phone_number')
 				.eq('user_id', student.user_id)
 				.single();
 
@@ -131,8 +132,8 @@ export function StudentInfoModal({ open, onOpenChange, student }: StudentInfoMod
 
 			setFullData({
 				...studentData,
-				profile: profileData,
-			});
+				...profileData,
+			} as Student);
 		} catch (error) {
 			console.error('Error loading student data:', error);
 		} finally {
@@ -151,11 +152,10 @@ export function StudentInfoModal({ open, onOpenChange, student }: StudentInfoMod
 
 	if (!student) return null;
 
-	const displayName = getDisplayName(student.profile);
-	const initials = getInitials(student.profile);
-
 	// Use full data if available, otherwise use initial data
-	const profile = fullData?.profile ?? student.profile;
+	const display = fullData ?? student;
+	const displayName = getDisplayName(display);
+	const initials = getInitials(display);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -163,14 +163,14 @@ export function StudentInfoModal({ open, onOpenChange, student }: StudentInfoMod
 				<DialogHeader className="pb-2">
 					<div className="flex items-center gap-4">
 						<Avatar className="h-16 w-16">
-							<AvatarImage src={profile.avatar_url ?? undefined} alt={displayName} />
+							<AvatarImage src={display.avatar_url ?? undefined} alt={displayName} />
 							<AvatarFallback className="bg-primary/10 text-primary text-xl font-medium">
 								{initials}
 							</AvatarFallback>
 						</Avatar>
 						<div className="flex-1 min-w-0">
 							<DialogTitle className="text-xl">{displayName}</DialogTitle>
-							<DialogDescription className="text-sm">{profile.email}</DialogDescription>
+							<DialogDescription className="text-sm">{display.email}</DialogDescription>
 						</div>
 					</div>
 				</DialogHeader>
@@ -252,10 +252,10 @@ export function StudentInfoModal({ open, onOpenChange, student }: StudentInfoMod
 					<div className="space-y-5 py-2">
 						{/* Contact Information */}
 						<InfoSection title="Contactgegevens" icon={<LuUser className="h-4 w-4" />}>
-							<InfoRow label="Email" value={profile.email} icon={<LuMail className="h-4 w-4" />} />
+							<InfoRow label="Email" value={display.email} icon={<LuMail className="h-4 w-4" />} />
 							<InfoRow
 								label="Telefoonnummer"
-								value={formatPhoneNumber(profile.phone_number)}
+								value={formatPhoneNumber(display.phone_number)}
 								icon={<LuPhone className="h-4 w-4" />}
 							/>
 							{fullData?.date_of_birth && (

@@ -101,7 +101,7 @@ export const fixtures = {
 		if (!student) {
 			throw new Error(`Student record not found for ${user}`);
 		}
-		return student.id;
+		return student.user_id;
 	},
 
 	requireTeacherId: (user: TestUser) => {
@@ -113,7 +113,7 @@ export const fixtures = {
 		if (!teacher) {
 			throw new Error(`Teacher record not found for ${user}`);
 		}
-		return teacher.id;
+		return teacher.user_id;
 	},
 
 	requireLessonTypeId: (name: string) => {
@@ -126,9 +126,9 @@ export const fixtures = {
 
 	requireAgreementId: (studentUser: TestUser, teacherUser: TestUser) => {
 		const studentUserId = fixtures.requireUserId(studentUser);
-		const teacherId = fixtures.requireTeacherId(teacherUser);
+		const teacherUserId = fixtures.requireTeacherId(teacherUser);
 		const agreement = allLessonAgreements.find(
-			(a) => a.student_user_id === studentUserId && a.teacher_id === teacherId,
+			(a) => a.student_user_id === studentUserId && a.teacher_user_id === teacherUserId,
 		);
 		if (!agreement) {
 			throw new Error(`Lesson agreement not found for ${studentUser} with ${teacherUser}`);

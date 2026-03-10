@@ -82,23 +82,20 @@ When you need custom types that extend Supabase types (e.g., joined relations, c
 ```typescript
 // src/types/students.ts
 import type { Tables } from '@/integrations/supabase/types';
+import type { UserCardFields } from '@/types/users';
 
 type StudentRow = Tables<'students'>;
-type ProfileRow = Tables<'profiles'>;
 
-// Define field subsets
-export type StudentCardProfileFields = Pick<ProfileRow, 'email' | 'first_name' | 'last_name' | 'avatar_url'>;
-
-// Define combined types
+// User display types (UserCardFields, UserDisplayInfo, UserModalFields) live in src/types/user.ts
 export type StudentWithProfile = StudentRow & {
-  profile: StudentCardProfileFields;
+  profile: UserCardFields;
 };
 
 // Define component data interfaces
 export interface StudentInfoCardData {
   id: string;
   user_id: string;
-  profile: StudentCardProfileFields;
+  profile: UserCardFields;
 }
 ```
 

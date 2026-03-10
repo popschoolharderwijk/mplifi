@@ -34,7 +34,7 @@ import { formatDurationMinutes } from '@/lib/time/time-format';
 // --- Types ---
 
 interface ReportRow {
-	teacher_id: string;
+	teacher_user_id: string;
 	teacher_name: string;
 	lesson_type_id: string;
 	lesson_type_name: string;
@@ -249,7 +249,7 @@ function ReportsDataTable({
 			searchPlaceholder="Zoeken op docent of lessoort..."
 			searchFields={[(r) => r.teacher_name, (r) => r.lesson_type_name, (r) => AGE_LABELS[r.age_category]]}
 			loading={loading}
-			getRowKey={(row) => `${row.teacher_id}-${row.lesson_type_id}-${row.age_category}`}
+			getRowKey={(row) => `${row.teacher_user_id}-${row.lesson_type_id}-${row.age_category}`}
 			emptyMessage="Geen gegevens gevonden voor de geselecteerde periode en filters."
 			initialSortColumn="total_minutes"
 			initialSortDirection="desc"
@@ -273,7 +273,7 @@ export default function Reports() {
 	const [endDate, setEndDate] = useState(initialDates.end);
 
 	// Filter state (API: teacher filter for privileged)
-	const [selectedTeacherId, setSelectedTeacherId] = useState<string>('all');
+	const [selectedTeacherUserId, setSelectedTeacherUserId] = useState<string>('all');
 
 	// Table: search + quick filters (client-side)
 	const [tableSearchQuery, setTableSearchQuery] = useState('');
@@ -316,7 +316,7 @@ export default function Reports() {
 					const p = profileMap.get(t.user_id);
 					if (!p) return null;
 					return {
-						id: t.id,
+						id: t.user_id,
 						user_id: t.user_id,
 						profile: {
 							user_id: p.user_id,
@@ -355,12 +355,12 @@ export default function Reports() {
 		if (!hasAccess || !startDate || !endDate) return;
 
 		setLoading(true);
-		const params: { p_start_date: string; p_end_date: string; p_teacher_id?: string } = {
+		const params: { p_start_date: string; p_end_date: string; p_teacher_user_id?: string } = {
 			p_start_date: startDate,
 			p_end_date: endDate,
 		};
-		if (isPrivileged && selectedTeacherId !== 'all') {
-			params.p_teacher_id = selectedTeacherId;
+		if (isPrivileged && selectedTeacherUserId !== 'all') {
+			params.p_teacher_user_id = selectedTeacherUserId;
 		}
 
 		const { data: result, error } = await supabase.rpc('get_hours_report', params);
@@ -375,7 +375,7 @@ export default function Reports() {
 		const parsed = result as unknown as { data: ReportRow[] };
 		setData(parsed?.data || []);
 		setLoading(false);
-	}, [hasAccess, startDate, endDate, isPrivileged, selectedTeacherId]);
+	}, [hasAccess, startDate, endDate, isPrivileged, selectedTeacherUserId]);
 
 	useEffect(() => {
 		if (!authLoading && hasAccess) {
@@ -490,28 +490,19 @@ export default function Reports() {
 						<Label>Docent</Label>
 						<div className="flex items-center gap-2">
 							<UsersSelect
-								value={
-									selectedTeacherId === 'all'
-										? null
-										: (teachers.find((t) => t.id === selectedTeacherId)?.user_id ?? null)
-								}
+								value={selectedTeacherUserId === 'all' ? null : selectedTeacherUserId}
 								onChange={(userId) => {
-									if (userId == null) {
-										setSelectedTeacherId('all');
-										return;
-									}
-									const teacher = teachers.find((t) => t.user_id === userId);
-									setSelectedTeacherId(teacher?.id ?? 'all');
+									setSelectedTeacherUserId(userId ?? 'all');
 								}}
 								options={teachers.map((t) => t.profile)}
 								placeholder="Alle docenten"
 							/>
-							{selectedTeacherId !== 'all' && (
+							{selectedTeacherUserId !== 'all' && (
 								<Button
 									type="button"
 									variant="outline"
 									size="icon"
-									onClick={() => setSelectedTeacherId('all')}
+									onClick={() => setSelectedTeacherUserId('all')}
 									className="h-10 w-10 flex-shrink-0"
 									title="Selectie wissen"
 								>

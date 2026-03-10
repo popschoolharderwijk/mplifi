@@ -1,4 +1,4 @@
-import type { Database } from '../src/integrations/supabase/types';
+import type { Database, Tables, TablesInsert } from '../src/integrations/supabase/types';
 
 /**
  * Centralized Supabase type definitions for tests.
@@ -6,23 +6,23 @@ import type { Database } from '../src/integrations/supabase/types';
  */
 
 // Row types
-export type AgendaEventRow = Database['public']['Tables']['agenda_events']['Row'];
-export type AgendaEventDeviationRow = Database['public']['Tables']['agenda_event_deviations']['Row'];
-export type AgendaParticipantRow = Database['public']['Tables']['agenda_participants']['Row'];
+export type AgendaEventRow = Tables<'agenda_events'>;
+export type AgendaEventDeviationRow = Tables<'agenda_event_deviations'>;
+export type AgendaParticipantRow = Tables<'agenda_participants'>;
 
 // Insert types
-export type AgendaEventInsert = Database['public']['Tables']['agenda_events']['Insert'];
-export type AgendaEventDeviationInsert = Database['public']['Tables']['agenda_event_deviations']['Insert'];
-export type AgendaParticipantInsert = Database['public']['Tables']['agenda_participants']['Insert'];
-export type LessonAgreementInsert = Database['public']['Tables']['lesson_agreements']['Insert'];
-export type LessonTypeInsert = Database['public']['Tables']['lesson_types']['Insert'];
-export type LessonTypeOptionInsert = Database['public']['Tables']['lesson_type_options']['Insert'];
-export type ProfileInsert = Database['public']['Tables']['profiles']['Insert'];
-export type StudentInsert = Database['public']['Tables']['students']['Insert'];
-export type TeacherInsert = Database['public']['Tables']['teachers']['Insert'];
-export type TeacherAvailabilityInsert = Database['public']['Tables']['teacher_availability']['Insert'];
-export type TeacherLessonTypeInsert = Database['public']['Tables']['teacher_lesson_types']['Insert'];
-export type UserRoleInsert = Database['public']['Tables']['user_roles']['Insert'];
+export type AgendaEventInsert = TablesInsert<'agenda_events'>;
+export type AgendaEventDeviationInsert = TablesInsert<'agenda_event_deviations'>;
+export type AgendaParticipantInsert = TablesInsert<'agenda_participants'>;
+export type LessonAgreementInsert = TablesInsert<'lesson_agreements'>;
+export type LessonTypeInsert = TablesInsert<'lesson_types'>;
+export type LessonTypeOptionInsert = TablesInsert<'lesson_type_options'>;
+export type ProfileInsert = TablesInsert<'profiles'>;
+export type StudentInsert = TablesInsert<'students'>;
+export type TeacherInsert = TablesInsert<'teachers'>;
+export type TeacherAvailabilityInsert = TablesInsert<'teacher_availability'>;
+export type TeacherLessonTypeInsert = TablesInsert<'teacher_lesson_types'>;
+export type UserRoleInsert = TablesInsert<'user_roles'>;
 
-// RPC function types
+// RPC function types (no helper available)
 export type DatabaseRpcFunction = keyof Database['public']['Functions'];

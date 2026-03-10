@@ -28,7 +28,7 @@ interface TeacherProfile {
 }
 
 export default function MyProfile() {
-	const { isTeacher, teacherId, user, isLoading: authLoading } = useAuth();
+	const { isTeacher, teacherUserId, user, isLoading: authLoading } = useAuth();
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
 	const [teacherProfile, setTeacherProfile] = useState<TeacherProfile | null>(null);
@@ -38,15 +38,15 @@ export default function MyProfile() {
 	});
 
 	const loadProfile = useCallback(async () => {
-		if (!isTeacher || !teacherId || !user) return;
+		if (!isTeacher || !teacherUserId || !user) return;
 
 		setLoading(true);
 
 		// Get teacher data
 		const { data: teacherData, error: teacherError } = await supabase
 			.from('teachers')
-			.select('id, bio, user_id, teacher_lesson_types (lesson_type_id, lesson_types (name))')
-			.eq('id', teacherId)
+			.select('user_id, bio, teacher_lesson_types (lesson_type_id, lesson_types (name))')
+			.eq('user_id', teacherUserId)
 			.single();
 
 		if (teacherError) {
@@ -71,7 +71,7 @@ export default function MyProfile() {
 		}
 
 		setTeacherProfile({
-			id: teacherData.id,
+			id: teacherData.user_id,
 			bio: teacherData.bio,
 			profile: profileData,
 			lesson_types: (teacherData.teacher_lesson_types || []).map(
@@ -86,7 +86,7 @@ export default function MyProfile() {
 			phone_number: profileData.phone_number || '',
 		});
 		setLoading(false);
-	}, [isTeacher, teacherId, user]);
+	}, [isTeacher, teacherUserId, user]);
 
 	useEffect(() => {
 		if (!authLoading && isTeacher) {
@@ -100,7 +100,7 @@ export default function MyProfile() {
 	}
 
 	const handleSave = async () => {
-		if (!teacherId || !user) return;
+		if (!teacherUserId || !user) return;
 
 		setSaving(true);
 
@@ -108,7 +108,7 @@ export default function MyProfile() {
 		const { error: teacherError } = await supabase
 			.from('teachers')
 			.update({ bio: form.bio || null })
-			.eq('id', teacherId);
+			.eq('user_id', teacherUserId);
 
 		if (teacherError) {
 			console.error('Error updating teacher:', teacherError);

@@ -3,18 +3,18 @@
  * Based on Supabase generated types.
  */
 
-import type { Database } from '@/integrations/supabase/types';
+import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
-export type AgendaEventRow = Database['public']['Tables']['agenda_events']['Row'];
-export type AgendaEventInsert = Database['public']['Tables']['agenda_events']['Insert'];
-export type AgendaEventUpdate = Database['public']['Tables']['agenda_events']['Update'];
+export type AgendaEventRow = Tables<'agenda_events'>;
+export type AgendaEventInsert = TablesInsert<'agenda_events'>;
+export type AgendaEventUpdate = TablesUpdate<'agenda_events'>;
 
-export type AgendaParticipantRow = Database['public']['Tables']['agenda_participants']['Row'];
-export type AgendaParticipantInsert = Database['public']['Tables']['agenda_participants']['Insert'];
+export type AgendaParticipantRow = Tables<'agenda_participants'>;
+export type AgendaParticipantInsert = TablesInsert<'agenda_participants'>;
 
-export type AgendaEventDeviationRow = Database['public']['Tables']['agenda_event_deviations']['Row'];
-export type AgendaEventDeviationInsert = Database['public']['Tables']['agenda_event_deviations']['Insert'];
-export type AgendaEventDeviationUpdate = Database['public']['Tables']['agenda_event_deviations']['Update'];
+export type AgendaEventDeviationRow = Tables<'agenda_event_deviations'>;
+export type AgendaEventDeviationInsert = TablesInsert<'agenda_event_deviations'>;
+export type AgendaEventDeviationUpdate = TablesUpdate<'agenda_event_deviations'>;
 
 /** Source type for agenda_events */
 export type AgendaEventSourceType = 'manual' | 'lesson_agreement';

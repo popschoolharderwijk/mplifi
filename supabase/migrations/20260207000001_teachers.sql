@@ -20,15 +20,9 @@
 -- SECTION 2: TABLES
 -- =============================================================================
 
--- Teachers table - links users to teacher records
+-- Teachers table - links users to teacher records (user_id is PK)
 CREATE TABLE IF NOT EXISTS public.teachers (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
-  -- User reference
-  -- Note: References both auth.users and profiles to ensure data integrity
-  -- Every user has a profile (created via handle_new_user trigger)
-  -- Teachers can only exist if a profile exists
-  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
 
   -- Teacher profile information
   bio TEXT,
@@ -40,7 +34,6 @@ CREATE TABLE IF NOT EXISTS public.teachers (
 );
 
 -- Add foreign key to profiles (ensures teacher always has a profile)
--- This enables Supabase PostgREST automatic joins via profiles!teachers_user_id_fkey
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -57,7 +50,6 @@ BEGIN
 END $$;
 
 -- Indexes
-CREATE INDEX IF NOT EXISTS idx_teachers_user_id ON public.teachers(user_id);
 CREATE INDEX IF NOT EXISTS idx_teachers_is_active ON public.teachers(is_active);
 
 -- Teacher availability table - defines when teachers are available
@@ -65,7 +57,7 @@ CREATE TABLE IF NOT EXISTS public.teacher_availability (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
   -- Teacher reference
-  teacher_id UUID NOT NULL REFERENCES public.teachers(id) ON DELETE CASCADE,
+  teacher_user_id UUID NOT NULL REFERENCES public.teachers(user_id) ON DELETE CASCADE,
 
   -- Availability schedule
   day_of_week INTEGER NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
@@ -81,20 +73,20 @@ CREATE TABLE IF NOT EXISTS public.teacher_availability (
 );
 
 -- Indexes for teacher_availability
-CREATE INDEX IF NOT EXISTS idx_teacher_availability_teacher_id ON public.teacher_availability(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_teacher_availability_teacher_user_id ON public.teacher_availability(teacher_user_id);
 CREATE INDEX IF NOT EXISTS idx_teacher_availability_day_of_week ON public.teacher_availability(day_of_week);
 
 -- Teacher lesson types junction table - links teachers to lesson types they can teach
 CREATE TABLE IF NOT EXISTS public.teacher_lesson_types (
-  teacher_id UUID NOT NULL REFERENCES public.teachers(id) ON DELETE CASCADE,
+  teacher_user_id UUID NOT NULL REFERENCES public.teachers(user_id) ON DELETE CASCADE,
   lesson_type_id UUID NOT NULL REFERENCES public.lesson_types(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-  PRIMARY KEY (teacher_id, lesson_type_id)
+  PRIMARY KEY (teacher_user_id, lesson_type_id)
 );
 
 -- Indexes for teacher_lesson_types
-CREATE INDEX IF NOT EXISTS idx_teacher_lesson_types_teacher_id ON public.teacher_lesson_types(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_teacher_lesson_types_teacher_user_id ON public.teacher_lesson_types(teacher_user_id);
 CREATE INDEX IF NOT EXISTS idx_teacher_lesson_types_lesson_type_id ON public.teacher_lesson_types(lesson_type_id);
 
 -- =============================================================================
@@ -142,7 +134,7 @@ ALTER FUNCTION public.is_teacher(UUID) OWNER TO postgres;
 
 -- Helper function to get teacher ID for a user
 -- Uses SECURITY DEFINER to bypass RLS on teachers table
-CREATE OR REPLACE FUNCTION public.get_teacher_id(_user_id UUID)
+CREATE OR REPLACE FUNCTION public.get_teacher_user_id(_user_id UUID)
 RETURNS UUID
 LANGUAGE sql
 STABLE
@@ -150,17 +142,17 @@ SECURITY DEFINER
 SET search_path = public
 SET row_security = off
 AS $$
-  SELECT id
+  SELECT user_id
   FROM public.teachers
   WHERE user_id = _user_id
   LIMIT 1;
 $$;
 
 -- Revoke public access, grant only to authenticated users
-REVOKE ALL ON FUNCTION public.get_teacher_id(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_teacher_id(UUID) FROM anon;
-GRANT EXECUTE ON FUNCTION public.get_teacher_id(UUID) TO authenticated;
-ALTER FUNCTION public.get_teacher_id(UUID) OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.get_teacher_user_id(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_teacher_user_id(UUID) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_teacher_user_id(UUID) TO authenticated;
+ALTER FUNCTION public.get_teacher_user_id(UUID) OWNER TO postgres;
 
 -- =============================================================================
 -- SECTION 5: RLS POLICIES
@@ -204,7 +196,7 @@ USING (public.is_admin((select auth.uid())) OR public.is_site_admin((select auth
 CREATE POLICY teacher_availability_select
 ON public.teacher_availability FOR SELECT TO authenticated
 USING (
-  teacher_id = public.get_teacher_id((select auth.uid()))
+  teacher_user_id = public.get_teacher_user_id((select auth.uid()))
   OR public.is_privileged((select auth.uid()))
 );
 
@@ -212,7 +204,7 @@ USING (
 CREATE POLICY teacher_availability_insert
 ON public.teacher_availability FOR INSERT TO authenticated
 WITH CHECK (
-  teacher_id = public.get_teacher_id((select auth.uid()))
+  teacher_user_id = public.get_teacher_user_id((select auth.uid()))
   OR public.is_admin((select auth.uid())) OR public.is_site_admin((select auth.uid()))
 );
 
@@ -220,11 +212,11 @@ WITH CHECK (
 CREATE POLICY teacher_availability_update
 ON public.teacher_availability FOR UPDATE TO authenticated
 USING (
-  teacher_id = public.get_teacher_id((select auth.uid()))
+  teacher_user_id = public.get_teacher_user_id((select auth.uid()))
   OR public.is_admin((select auth.uid())) OR public.is_site_admin((select auth.uid()))
 )
 WITH CHECK (
-  teacher_id = public.get_teacher_id((select auth.uid()))
+  teacher_user_id = public.get_teacher_user_id((select auth.uid()))
   OR public.is_admin((select auth.uid())) OR public.is_site_admin((select auth.uid()))
 );
 
@@ -232,7 +224,7 @@ WITH CHECK (
 CREATE POLICY teacher_availability_delete
 ON public.teacher_availability FOR DELETE TO authenticated
 USING (
-  teacher_id = public.get_teacher_id((select auth.uid()))
+  teacher_user_id = public.get_teacher_user_id((select auth.uid()))
   OR public.is_admin((select auth.uid())) OR public.is_site_admin((select auth.uid()))
 );
 
@@ -244,7 +236,7 @@ USING (
 CREATE POLICY teacher_lesson_types_select
 ON public.teacher_lesson_types FOR SELECT TO authenticated
 USING (
-  teacher_id = public.get_teacher_id((select auth.uid()))
+  teacher_user_id = public.get_teacher_user_id((select auth.uid()))
   OR public.is_privileged((select auth.uid()))
 );
 

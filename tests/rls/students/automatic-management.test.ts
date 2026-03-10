@@ -19,10 +19,9 @@ afterAll(async () => {
 const dbNoRLS = createClientBypassRLS();
 
 // User IDs for testing
-// Use a student that doesn't exist in seed data, or use a user without role
-// We'll use USER_001 which has no student record initially
-const studentCUserId = fixtures.requireUserId(TestUsers.USER_001);
-const teacherAliceId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
+// Use USER_002 (no student in seed) - distinct from USER_001 used in insert-update-delete RPC tests
+const studentCUserId = fixtures.requireUserId(TestUsers.USER_002);
+const teacherAliceUserId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
 const lessonTypeId = fixtures.requireLessonTypeId('Gitaarles');
 
 /**
@@ -43,7 +42,7 @@ describe('RLS: students automatic management via lesson agreements', () => {
 		// Insert lesson agreement
 		const newAgreement: LessonAgreementInsert = {
 			student_user_id: studentCUserId,
-			teacher_id: teacherAliceId,
+			teacher_user_id: teacherAliceUserId,
 			lesson_type_id: lessonTypeId,
 			day_of_week: 1,
 			start_time: '10:00',
@@ -91,7 +90,7 @@ describe('RLS: students automatic management via lesson agreements', () => {
 		// Create first lesson agreement (will create the student)
 		const agreement1: LessonAgreementInsert = {
 			student_user_id: studentCUserId,
-			teacher_id: teacherAliceId,
+			teacher_user_id: teacherAliceUserId,
 			lesson_type_id: lessonTypeId,
 			day_of_week: 3,
 			start_time: '12:00',
@@ -117,7 +116,7 @@ describe('RLS: students automatic management via lesson agreements', () => {
 		// Create second lesson agreement
 		const agreement2: LessonAgreementInsert = {
 			student_user_id: studentCUserId,
-			teacher_id: teacherAliceId,
+			teacher_user_id: teacherAliceUserId,
 			lesson_type_id: lessonTypeId,
 			day_of_week: 4,
 			start_time: '13:00',
@@ -189,7 +188,7 @@ describe('RLS: students automatic management via lesson agreements', () => {
 		// Create an expired agreement
 		const expiredAgreement: LessonAgreementInsert = {
 			student_user_id: studentCUserId,
-			teacher_id: teacherAliceId,
+			teacher_user_id: teacherAliceUserId,
 			lesson_type_id: lessonTypeId,
 			day_of_week: 5,
 			start_time: '14:00',
@@ -232,7 +231,7 @@ describe('RLS: students automatic management via lesson agreements', () => {
 		// Create multiple agreements for the same student
 		const agreement1: LessonAgreementInsert = {
 			student_user_id: studentCUserId,
-			teacher_id: teacherAliceId,
+			teacher_user_id: teacherAliceUserId,
 			lesson_type_id: lessonTypeId,
 			day_of_week: 1,
 			start_time: '10:00',
@@ -245,7 +244,7 @@ describe('RLS: students automatic management via lesson agreements', () => {
 
 		const agreement2: LessonAgreementInsert = {
 			student_user_id: studentCUserId,
-			teacher_id: teacherAliceId,
+			teacher_user_id: teacherAliceUserId,
 			lesson_type_id: lessonTypeId,
 			day_of_week: 2,
 			start_time: '11:00',

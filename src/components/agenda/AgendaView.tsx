@@ -3,7 +3,7 @@ import { Calendar, type View } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import { toast } from 'sonner';
 import { AgendaEventFormDialog, type DeleteScope, type DeviationInfo } from '@/components/agenda/AgendaEventFormDialog';
-import { StudentInfoModal, type StudentInfoModalData } from '@/components/students/StudentInfoModal';
+import { StudentInfoModal } from '@/components/students/StudentInfoModal';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { type LessonAgreementWithTeacher, useAgendaData } from '@/hooks/useAgendaData';
@@ -15,6 +15,7 @@ import { calendarLocalizer } from '@/lib/calendar';
 import { addDaysToDateStr, formatDateToDb, now } from '@/lib/date/date-format';
 import { formatTimeFromDate, normalizeTime, normalizeTimeFromDate } from '@/lib/time/time-format';
 import type { AgendaEventRow } from '@/types/agenda-events';
+import type { User } from '@/types/users';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { AgendaEvent } from '@/components/agenda/AgendaEvent';
@@ -40,7 +41,7 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 	const canEdit = canEditProp ?? !!user;
 	const isOwnAgenda = !viewUserId;
 
-	const { agendaEvents, deviations, agreementsMap, loading, loadData, getEnrichedEvents } =
+	const { agendaEvents, deviations, deviationsByEventId, agreementsMap, loading, loadData, getEnrichedEvents } =
 		useAgendaData(effectiveUserId);
 
 	const [currentView, setCurrentView] = useState<View>('week');
@@ -63,7 +64,7 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 	} | null>(null);
 	const [studentInfoModal, setStudentInfoModal] = useState<{
 		open: boolean;
-		student: StudentInfoModalData | null;
+		student: User | null;
 	}>({ open: false, student: null });
 
 	useEffect(() => {
@@ -581,6 +582,17 @@ export function AgendaView({ userId: viewUserId, canEdit: canEditProp }: AgendaV
 						: undefined
 				}
 				occurrenceDate={selectedEvent ? formatDateToDb(selectedEvent.start) : null}
+				occurrenceParticipantIds={
+					selectedEvent?.resource.eventId && selectedEvent?.resource.originalDate && editingEvent?.id
+						? (() => {
+								const d = deviationsByEventId
+									.get(selectedEvent.resource.eventId)
+									?.get(selectedEvent.resource.originalDate);
+								const pids = d?.participant_ids;
+								return pids && pids.length > 0 ? pids : null;
+							})()
+						: null
+				}
 				occurrenceStartTime={
 					selectedEvent?.resource.isDeviation && selectedEvent.start
 						? formatTimeFromDate(selectedEvent.start)

@@ -26,18 +26,18 @@ export function RecurrenceChoiceDialog({
 	const isDelete = action === 'delete';
 	const isCancel = action === 'cancel';
 	const isEdit = action === 'edit';
-	const showSingleOption = !isEdit;
+	const showSingleOption = true;
 	const showFutureOption = !hideFutureOption;
 	const showAllOption = isDelete || isEdit;
 
-	const defaultScope: RecurrenceScope = isEdit && !hideFutureOption ? 'thisAndFuture' : 'single';
+	const defaultScope: RecurrenceScope = 'single';
 	const [selected, setSelected] = useState<RecurrenceScope>(defaultScope);
 
 	useEffect(() => {
 		if (open) {
 			setSelected(defaultScope);
 		}
-	}, [open, defaultScope]);
+	}, [open]);
 
 	const getTitle = () => {
 		if (isDelete) return 'Terugkerende afspraak verwijderen';

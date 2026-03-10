@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { createClientAs } from '../../db';
 import { fixtures } from '../fixtures';
+import { LESSON_AGREEMENTS } from '../seed-data-constants';
 import { TestUsers } from '../test-users';
 
 const { allProfiles } = fixtures;
@@ -52,8 +53,8 @@ describe('RLS: view_profiles_with_display_name SELECT', () => {
 			const { data, error } = await db.from('view_profiles_with_display_name').select('*');
 
 			expect(error).toBeNull();
-			// Teacher sees own profile + profiles of students they have a lesson_agreement with (Alice has 12 students in seed)
-			expect(data?.length).toBeGreaterThanOrEqual(1);
+			// Teacher sees own profile + profiles of students (Alice has 12 students in seed = 13 total)
+			expect(data).toHaveLength(LESSON_AGREEMENTS.TEACHER_ALICE + 1);
 			expect(data?.some((p) => p.email === TestUsers.TEACHER_ALICE)).toBe(true);
 		});
 

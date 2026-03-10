@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { createClientAs } from '../../db';
 import { type DatabaseState, setupDatabaseStateVerification } from '../db-state';
 import { fixtures } from '../fixtures';
-import { STUDENTS } from '../seed-data-constants';
+import { LESSON_AGREEMENTS, PAGINATION, STUDENTS } from '../seed-data-constants';
 import { TestUsers } from '../test-users';
 
 interface PaginatedStudentsResponse {
@@ -35,7 +35,7 @@ interface PaginatedStudentsResponse {
  *
  * Expected behavior:
  * - STUDENTS: Can see only their own record
- * - TEACHERS: Automatically see only their own students (teacher_id is determined from logged-in user, cannot be spoofed)
+ * - TEACHERS: Automatically see only their own students (teacher_user_id is determined from logged-in user, cannot be spoofed)
  * - STAFF/ADMIN/SITE_ADMIN: Can see all students
  */
 describe('RLS: get_students_paginated', () => {
@@ -127,10 +127,10 @@ describe('RLS: get_students_paginated', () => {
 		expect(data).not.toBeNull();
 		const result = data as unknown as PaginatedStudentsResponse;
 		expect(result.data).toBeInstanceOf(Array);
-		// Teachers automatically see their own students (teacher_id is determined from logged-in user)
-		// Teacher Alice should see her students (she has students in seed data)
-		expect(result.total_count).toBeGreaterThan(0);
-		expect(result.data.length).toBeGreaterThan(0);
+		// Teachers automatically see their own students (teacher_user_id is determined from logged-in user)
+		// Teacher Alice has LESSON_AGREEMENTS.TEACHER_ALICE students in seed
+		expect(result.total_count).toBe(LESSON_AGREEMENTS.TEACHER_ALICE);
+		expect(result.data).toHaveLength(LESSON_AGREEMENTS.TEACHER_ALICE);
 		// All returned students should have agreements with Teacher Alice
 		result.data.forEach((student) => {
 			const hasAgreementWithAlice = student.agreements?.some(
@@ -140,7 +140,7 @@ describe('RLS: get_students_paginated', () => {
 		});
 	});
 
-	it('teacher cannot see other teachers students (security: teacher_id is automatically determined)', async () => {
+	it('teacher cannot see other teachers students (security: teacher_user_id is automatically determined)', async () => {
 		const db = await createClientAs(TestUsers.TEACHER_ALICE);
 
 		const { data, error } = await db.rpc('get_students_paginated', {
@@ -153,7 +153,7 @@ describe('RLS: get_students_paginated', () => {
 		const result = data as unknown as PaginatedStudentsResponse;
 		expect(result.data).toBeInstanceOf(Array);
 		// Teacher Alice should only see her own students, not Teacher Bob's students
-		// Security: teacher_id is automatically determined from logged-in user, cannot be spoofed
+		// Security: teacher_user_id is automatically determined from logged-in user, cannot be spoofed
 		result.data.forEach((student) => {
 			const hasAgreementWithAlice = student.agreements?.some(
 				(agreement) => agreement.teacher?.first_name === 'Alice',
@@ -201,28 +201,28 @@ describe('RLS: get_students_paginated', () => {
 
 		// Get first page
 		const { data: page1Data, error: error1 } = await db.rpc('get_students_paginated', {
-			p_limit: 10,
+			p_limit: PAGINATION.PAGE_SIZE,
 			p_offset: 0,
 		});
 
 		expect(error1).toBeNull();
 		const page1 = page1Data as unknown as PaginatedStudentsResponse;
-		expect(page1.data.length).toBe(10);
-		expect(page1.limit).toBe(10);
+		expect(page1.data).toHaveLength(PAGINATION.PAGE_SIZE);
+		expect(page1.limit).toBe(PAGINATION.PAGE_SIZE);
 		expect(page1.offset).toBe(0);
 		expect(page1.total_count).toBe(STUDENTS.TOTAL);
 
 		// Get second page
 		const { data: page2Data, error: error2 } = await db.rpc('get_students_paginated', {
-			p_limit: 10,
-			p_offset: 10,
+			p_limit: PAGINATION.PAGE_SIZE,
+			p_offset: PAGINATION.PAGE_SIZE,
 		});
 
 		expect(error2).toBeNull();
 		const page2 = page2Data as unknown as PaginatedStudentsResponse;
-		expect(page2.data.length).toBe(10);
-		expect(page2.limit).toBe(10);
-		expect(page2.offset).toBe(10);
+		expect(page2.data).toHaveLength(PAGINATION.PAGE_SIZE);
+		expect(page2.limit).toBe(PAGINATION.PAGE_SIZE);
+		expect(page2.offset).toBe(PAGINATION.PAGE_SIZE);
 		expect(page2.total_count).toBe(STUDENTS.TOTAL);
 
 		// Total count should be the same
@@ -238,37 +238,18 @@ describe('RLS: get_students_paginated', () => {
 	it('search filter works', async () => {
 		const db = await createClientAs(TestUsers.SITE_ADMIN);
 
-		// Get all students first
-		const { data: allDataRaw } = await db.rpc('get_students_paginated', {
-			p_limit: 1000,
-			p_offset: 0,
-		});
-
-		const allData = allDataRaw as unknown as PaginatedStudentsResponse;
-		expect(allData).not.toBeNull();
-		expect(allData.data.length).toBe(STUDENTS.TOTAL);
-		const firstStudent = allData.data[0];
-		const searchTerm = firstStudent.profile.email.substring(0, 5);
-
+		// Search "student-001" - unique match in seed
 		const { data: searchDataRaw, error } = await db.rpc('get_students_paginated', {
 			p_limit: 100,
 			p_offset: 0,
-			p_search: searchTerm,
+			p_search: 'student-001',
 		});
 
 		expect(error).toBeNull();
 		const searchData = searchDataRaw as unknown as PaginatedStudentsResponse;
-		expect(searchData.total_count).toBeGreaterThan(0);
-		expect(searchData.total_count).toBeLessThanOrEqual(STUDENTS.TOTAL);
-		// All results should match the search term
-		searchData.data.forEach((student) => {
-			const email = student.profile.email.toLowerCase();
-			const matches =
-				email.includes(searchTerm.toLowerCase()) ||
-				student.profile.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				student.profile.last_name?.toLowerCase().includes(searchTerm.toLowerCase());
-			expect(matches).toBe(true);
-		});
+		expect(searchData.total_count).toBe(1);
+		expect(searchData.data).toHaveLength(1);
+		expect(searchData.data[0]?.profile.email).toBe(TestUsers.STUDENT_001);
 	});
 
 	it('staff/admin can see all students (no teacher filter applied)', async () => {

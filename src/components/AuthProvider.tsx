@@ -13,7 +13,7 @@ interface AuthContextType {
 	isStaff: boolean;
 	isTeacher: boolean;
 	isPrivileged: boolean;
-	teacherId: string | null;
+	teacherUserId: string | null;
 	signOut: () => Promise<void>;
 	refreshRole: () => Promise<void>;
 }
@@ -28,7 +28,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 	const [user, setUser] = useState<User | null>(null);
 	const [session, setSession] = useState<Session | null>(null);
 	const [role, setRole] = useState<AppRole | null>(null);
-	const [teacherId, setTeacherId] = useState<string | null>(null);
+	const [teacherUserId, setTeacherUserId] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 
 	const fetchRole = useCallback(async (userId: string) => {
@@ -43,13 +43,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 	}, []);
 
 	const fetchTeacher = useCallback(async (userId: string) => {
-		const { data, error } = await supabase.from('teachers').select('id').eq('user_id', userId).maybeSingle();
+		const { data, error } = await supabase.from('teachers').select('user_id').eq('user_id', userId).maybeSingle();
 
 		if (error) {
 			console.error('Error fetching teacher:', error);
-			setTeacherId(null);
+			setTeacherUserId(null);
 		} else {
-			setTeacherId(data?.id ?? null);
+			setTeacherUserId(data?.user_id ?? null);
 		}
 	}, []);
 
@@ -85,7 +85,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 				});
 			} else {
 				setRole(null);
-				setTeacherId(null);
+				setTeacherUserId(null);
 				setIsLoading(false);
 			}
 		});
@@ -100,7 +100,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 	const isAdmin = role === 'admin';
 	const isSiteAdmin = role === 'site_admin';
 	const isStaff = role === 'staff';
-	const isTeacher = teacherId !== null;
+	const isTeacher = teacherUserId !== null;
 	const isPrivileged = isAdmin || isSiteAdmin || isStaff;
 
 	return (
@@ -115,7 +115,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 				isStaff,
 				isTeacher,
 				isPrivileged,
-				teacherId,
+				teacherUserId,
 				signOut,
 				refreshRole,
 			}}

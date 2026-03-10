@@ -24,8 +24,7 @@ CREATE TYPE public.app_role AS ENUM (
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS public.profiles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
   first_name TEXT,
   last_name TEXT,

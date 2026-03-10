@@ -1,9 +1,9 @@
 import type { ComponentType } from 'react';
 import { LuShieldCheck, LuStar, LuUser, LuUserCog } from 'react-icons/lu';
-import type { Database } from '@/integrations/supabase/types';
+import type { Enums } from '@/integrations/supabase/types';
 
 /** Application role type from Supabase database */
-export type AppRole = Database['public']['Enums']['app_role'];
+export type AppRole = Enums<'app_role'>;
 
 /** All available roles in the system */
 export const allRoles: AppRole[] = ['site_admin', 'admin', 'staff'];

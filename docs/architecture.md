@@ -138,8 +138,7 @@ De applicatie gebruikt een role-based access control (RBAC) systeem met de volge
 | `is_staff(uuid)` | Check of gebruiker staff is | `SECURITY DEFINER` |
 | `is_student(uuid)` | Check of gebruiker een student-record heeft | `SECURITY DEFINER` |
 | `is_teacher(uuid)` | Check of gebruiker een teacher-record heeft | `SECURITY DEFINER` |
-| `get_student_id(uuid)` | Haal student ID op basis van user_id | `SECURITY DEFINER` |
-| `get_teacher_id(uuid)` | Haal teacher ID op basis van user_id | `SECURITY DEFINER` |
+| `get_teacher_user_id(uuid)` | Haal teacher user_id op basis van user_id | `SECURITY DEFINER` |
 | `can_delete_user(uuid, uuid)` | Check of gebruiker een ander account mag verwijderen | `SECURITY DEFINER` |
 
 > Alle helper functions gebruiken `SECURITY DEFINER` met vaste `search_path` om search_path injection te voorkomen. Toegang is beperkt tot `authenticated` gebruikers.

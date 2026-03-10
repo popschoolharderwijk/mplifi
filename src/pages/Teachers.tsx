@@ -16,12 +16,16 @@ import { useServerTableState } from '@/hooks/useServerTableState';
 import { useLessonTypeFilter, useStatusFilter } from '@/hooks/useTableFilters';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDateTimeShort } from '@/lib/date/date-format';
-import type { PaginatedTeachersResponse, TeacherWithProfileAndLessonTypes } from '@/types/teachers';
+import {
+	flattenTeacherWithLessonTypes,
+	type PaginatedTeachersResponseRaw,
+	type TeacherWithLessonTypes,
+} from '@/types/teachers';
 
 export default function Teachers() {
 	const { isAdmin, isSiteAdmin, isLoading: authLoading } = useAuth();
 	const navigate = useNavigate();
-	const [teachers, setTeachers] = useState<TeacherWithProfileAndLessonTypes[]>([]);
+	const [teachers, setTeachers] = useState<TeacherWithLessonTypes[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [totalCount, setTotalCount] = useState(0);
 
@@ -51,11 +55,11 @@ export default function Teachers() {
 
 	const [deleteDialog, setDeleteDialog] = useState<{
 		open: boolean;
-		teacher: TeacherWithProfileAndLessonTypes | null;
+		teacher: TeacherWithLessonTypes | null;
 	} | null>(null);
 	const [teacherFormDialog, setTeacherFormDialog] = useState<{
 		open: boolean;
-		teacher: TeacherWithProfileAndLessonTypes | null;
+		teacher: TeacherWithLessonTypes | null;
 	}>({ open: false, teacher: null });
 
 	// Check access - only admin and site_admin can view this page
@@ -98,8 +102,8 @@ export default function Teachers() {
 				return;
 			}
 
-			const result = data as unknown as PaginatedTeachersResponse;
-			setTeachers(result.data ?? []);
+			const result = data as unknown as PaginatedTeachersResponseRaw;
+			setTeachers((result.data ?? []).map(flattenTeacherWithLessonTypes));
 			setTotalCount(result.total_count ?? 0);
 			setLoading(false);
 		} catch (error) {
@@ -141,19 +145,19 @@ export default function Teachers() {
 		return groups;
 	}, [statusFilterGroup, lessonTypeFilterGroup]);
 
-	const columns: DataTableColumn<TeacherWithProfileAndLessonTypes>[] = useMemo(
+	const columns: DataTableColumn<TeacherWithLessonTypes>[] = useMemo(
 		() => [
 			{
 				key: 'teacher',
 				label: 'Docent',
 				sortable: true, // Server-side sorting
-				render: (t) => <UserDisplay profile={t.profile} showEmail />,
+				render: (t) => <UserDisplay profile={t} showEmail />,
 			},
 			{
 				key: 'phone_number',
 				label: 'Telefoonnummer',
 				sortable: true,
-				render: (t) => <span className="text-muted-foreground">{t.profile.phone_number || '-'}</span>,
+				render: (t) => <span className="text-muted-foreground">{t.phone_number || '-'}</span>,
 				className: 'text-muted-foreground',
 			},
 			{
@@ -196,8 +200,8 @@ export default function Teachers() {
 	);
 
 	const handleEdit = useCallback(
-		(teacher: TeacherWithProfileAndLessonTypes) => {
-			navigate(`/teachers/${teacher.id}`);
+		(teacher: TeacherWithLessonTypes) => {
+			navigate(`/teachers/${teacher.user_id}`);
 		},
 		[navigate],
 	);
@@ -206,7 +210,7 @@ export default function Teachers() {
 		setTeacherFormDialog({ open: true, teacher: null });
 	}, []);
 
-	const handleDelete = useCallback((teacher: TeacherWithProfileAndLessonTypes) => {
+	const handleDelete = useCallback((teacher: TeacherWithLessonTypes) => {
 		setDeleteDialog({ open: true, teacher });
 	}, []);
 
@@ -214,7 +218,7 @@ export default function Teachers() {
 		if (!deleteDialog?.teacher) return;
 
 		try {
-			const { error } = await supabase.from('teachers').delete().eq('id', deleteDialog.teacher.id);
+			const { error } = await supabase.from('teachers').delete().eq('user_id', deleteDialog.teacher.user_id);
 
 			if (error) {
 				console.error('Error deleting teacher:', error);
@@ -225,7 +229,7 @@ export default function Teachers() {
 			}
 
 			toast.success('Docent verwijderd', {
-				description: `${getDisplayName(deleteDialog.teacher.profile)} is verwijderd.`,
+				description: `${getDisplayName(deleteDialog.teacher)} is verwijderd.`,
 			});
 
 			// Reload teachers to get updated data
@@ -255,7 +259,7 @@ export default function Teachers() {
 				searchQuery={searchQuery}
 				onSearchChange={handleSearchChange}
 				loading={loading}
-				getRowKey={(t) => t.id}
+				getRowKey={(t) => t.user_id}
 				emptyMessage="Geen docenten gevonden"
 				quickFilter={quickFilterGroups}
 				serverPagination={{
@@ -284,10 +288,10 @@ export default function Teachers() {
 			<TeacherFormDialog
 				open={teacherFormDialog.open}
 				onOpenChange={(open) => setTeacherFormDialog({ ...teacherFormDialog, open })}
-				onSuccess={(teacherId) => {
+				onSuccess={(teacherUserId) => {
 					loadTeachers();
-					if (teacherId) {
-						navigate(`/teachers/${teacherId}`);
+					if (teacherUserId) {
+						navigate(`/teachers/${teacherUserId}`);
 					}
 				}}
 				teacher={teacherFormDialog.teacher ?? undefined}
@@ -301,7 +305,7 @@ export default function Teachers() {
 					title="Docent verwijderen"
 					description={
 						<>
-							Weet je zeker dat je <strong>{getDisplayName(deleteDialog.teacher.profile)}</strong> wilt
+							Weet je zeker dat je <strong>{getDisplayName(deleteDialog.teacher)}</strong> wilt
 							verwijderen? Deze actie kan niet ongedaan worden gemaakt.
 							<p className="mt-2 text-muted-foreground">
 								Alle gegevens van deze docent worden permanent verwijderd, inclusief beschikbaarheid en

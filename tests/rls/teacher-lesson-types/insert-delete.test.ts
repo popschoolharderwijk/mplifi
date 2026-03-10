@@ -8,8 +8,8 @@ import { TestUsers } from '../test-users';
 
 const dbNoRLS = createClientBypassRLS();
 
-const aliceTeacherId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
-const bobTeacherId = fixtures.requireTeacherId(TestUsers.TEACHER_BOB);
+const aliceTeacherUserId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
+const bobTeacherUserId = fixtures.requireTeacherId(TestUsers.TEACHER_BOB);
 const guitarLessonTypeId = fixtures.requireLessonTypeId('Gitaarles');
 // Alice already has Gitaar, Drums, and Zang in seed.sql
 // Bob already has Bas and Keyboard in seed.sql
@@ -35,7 +35,7 @@ const drumsLessonTypeId = fixtures.requireLessonTypeId('Drumles');
  */
 describe('RLS: teacher_lesson_types INSERT - blocked for non-admin roles', () => {
 	const newLink: TeacherLessonTypeInsert = {
-		teacher_id: aliceTeacherId,
+		teacher_user_id: aliceTeacherUserId,
 		lesson_type_id: saxLessonTypeId,
 	};
 
@@ -77,7 +77,7 @@ describe('RLS: teacher_lesson_types INSERT - admin permissions', () => {
 		const db = await createClientAs(TestUsers.ADMIN_ONE);
 
 		const newLink: TeacherLessonTypeInsert = {
-			teacher_id: aliceTeacherId,
+			teacher_user_id: aliceTeacherUserId,
 			lesson_type_id: saxLessonTypeId,
 		};
 
@@ -85,7 +85,7 @@ describe('RLS: teacher_lesson_types INSERT - admin permissions', () => {
 
 		expectNoError(data, error);
 		expect(data).toHaveLength(1);
-		expect(data[0]?.teacher_id).toBe(aliceTeacherId);
+		expect(data[0]?.teacher_user_id).toBe(aliceTeacherUserId);
 		expect(data[0]?.lesson_type_id).toBe(saxLessonTypeId);
 
 		// Cleanup
@@ -93,7 +93,7 @@ describe('RLS: teacher_lesson_types INSERT - admin permissions', () => {
 			await dbNoRLS
 				.from('teacher_lesson_types')
 				.delete()
-				.eq('teacher_id', data[0].teacher_id)
+				.eq('teacher_user_id', data[0].teacher_user_id)
 				.eq('lesson_type_id', data[0].lesson_type_id);
 		}
 	});
@@ -102,7 +102,7 @@ describe('RLS: teacher_lesson_types INSERT - admin permissions', () => {
 		const db = await createClientAs(TestUsers.SITE_ADMIN);
 
 		const newLink: TeacherLessonTypeInsert = {
-			teacher_id: bobTeacherId,
+			teacher_user_id: bobTeacherUserId,
 			lesson_type_id: drumsLessonTypeId, // Use Drums - not in seed for Bob
 		};
 
@@ -115,7 +115,7 @@ describe('RLS: teacher_lesson_types INSERT - admin permissions', () => {
 		await dbNoRLS
 			.from('teacher_lesson_types')
 			.delete()
-			.eq('teacher_id', data[0].teacher_id)
+			.eq('teacher_user_id', data[0].teacher_user_id)
 			.eq('lesson_type_id', data[0].lesson_type_id);
 	});
 });
@@ -127,7 +127,7 @@ describe('RLS: teacher_lesson_types DELETE - blocked for non-admin roles', () =>
 		const { data, error } = await db
 			.from('teacher_lesson_types')
 			.delete()
-			.eq('teacher_id', aliceTeacherId)
+			.eq('teacher_user_id', aliceTeacherUserId)
 			.eq('lesson_type_id', guitarLessonTypeId)
 			.select();
 
@@ -141,7 +141,7 @@ describe('RLS: teacher_lesson_types DELETE - blocked for non-admin roles', () =>
 		const { data, error } = await db
 			.from('teacher_lesson_types')
 			.delete()
-			.eq('teacher_id', aliceTeacherId)
+			.eq('teacher_user_id', aliceTeacherUserId)
 			.eq('lesson_type_id', guitarLessonTypeId)
 			.select();
 
@@ -155,7 +155,7 @@ describe('RLS: teacher_lesson_types DELETE - blocked for non-admin roles', () =>
 		const { data, error } = await db
 			.from('teacher_lesson_types')
 			.delete()
-			.eq('teacher_id', aliceTeacherId)
+			.eq('teacher_user_id', aliceTeacherUserId)
 			.eq('lesson_type_id', guitarLessonTypeId)
 			.select();
 
@@ -183,7 +183,7 @@ describe('RLS: teacher_lesson_types DELETE - admin permissions', () => {
 		const insertResult = await dbNoRLS
 			.from('teacher_lesson_types')
 			.insert({
-				teacher_id: aliceTeacherId,
+				teacher_user_id: aliceTeacherUserId,
 				lesson_type_id: saxLessonTypeId,
 			})
 			.select();
@@ -195,7 +195,7 @@ describe('RLS: teacher_lesson_types DELETE - admin permissions', () => {
 		const { data, error } = await db
 			.from('teacher_lesson_types')
 			.delete()
-			.eq('teacher_id', aliceTeacherId)
+			.eq('teacher_user_id', aliceTeacherUserId)
 			.eq('lesson_type_id', saxLessonTypeId)
 			.select();
 
@@ -210,7 +210,7 @@ describe('RLS: teacher_lesson_types DELETE - admin permissions', () => {
 		const insertResult = await dbNoRLS
 			.from('teacher_lesson_types')
 			.insert({
-				teacher_id: bobTeacherId,
+				teacher_user_id: bobTeacherUserId,
 				lesson_type_id: drumsLessonTypeId,
 			})
 			.select();
@@ -222,7 +222,7 @@ describe('RLS: teacher_lesson_types DELETE - admin permissions', () => {
 		const { data, error } = await db
 			.from('teacher_lesson_types')
 			.delete()
-			.eq('teacher_id', bobTeacherId)
+			.eq('teacher_user_id', bobTeacherUserId)
 			.eq('lesson_type_id', drumsLessonTypeId)
 			.select();
 
@@ -237,7 +237,7 @@ describe('RLS: teacher_lesson_types DELETE - admin permissions', () => {
  * using that teacher + lesson_type combination.
  */
 describe('TRIGGER: teacher_lesson_types DELETE - blocked when agreements exist', () => {
-	const teacherId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
+	const teacherUserId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
 	const lessonTypeId = fixtures.requireLessonTypeId('Gitaarles');
 
 	it('admin cannot delete teacher_lesson_type when agreement exists for that combination', async () => {
@@ -248,7 +248,7 @@ describe('TRIGGER: teacher_lesson_types DELETE - blocked when agreements exist',
 		const { data, error } = await db
 			.from('teacher_lesson_types')
 			.delete()
-			.eq('teacher_id', teacherId)
+			.eq('teacher_user_id', teacherUserId)
 			.eq('lesson_type_id', lessonTypeId)
 			.select();
 
@@ -267,7 +267,7 @@ describe('TRIGGER: teacher_lesson_types DELETE - blocked when agreements exist',
 		const { data, error } = await db
 			.from('teacher_lesson_types')
 			.delete()
-			.eq('teacher_id', teacherId)
+			.eq('teacher_user_id', teacherUserId)
 			.eq('lesson_type_id', lessonTypeId)
 			.select();
 
@@ -276,7 +276,7 @@ describe('TRIGGER: teacher_lesson_types DELETE - blocked when agreements exist',
 
 		// Restore the link
 		await dbNoRLS.from('teacher_lesson_types').insert({
-			teacher_id: teacherId,
+			teacher_user_id: teacherUserId,
 			lesson_type_id: lessonTypeId,
 		});
 	});

@@ -51,7 +51,6 @@ BEGIN
     WITH     student_base AS (
       -- Get base student data with profile. RLS on students filters by role (student=own, teacher=own students, staff=all).
       SELECT DISTINCT
-        s.id,
         s.user_id,
         s.parent_name,
         s.parent_email,
@@ -86,7 +85,7 @@ BEGIN
       SELECT
         la.student_user_id,
         la.id AS agreement_id,
-        la.teacher_id,
+        la.teacher_user_id,
         la.day_of_week,
         la.start_time,
         la.start_date,
@@ -105,7 +104,7 @@ BEGIN
         tp.avatar_url AS teacher_avatar_url
       FROM lesson_agreements la
       INNER JOIN student_base sb ON la.student_user_id = sb.user_id
-      INNER JOIN teachers t ON la.teacher_id = t.id
+      INNER JOIN teachers t ON la.teacher_user_id = t.user_id
       INNER JOIN view_profiles_with_display_name tp ON t.user_id = tp.user_id
       INNER JOIN lesson_types lt ON la.lesson_type_id = lt.id
       -- RLS on lesson_agreements restricts to own (student) / own (teacher) / all (staff)
@@ -147,13 +146,12 @@ BEGIN
         fs.*,
         COUNT(*) OVER () AS total_count
       FROM filtered_students fs
-      ORDER BY %I %s NULLS LAST, display_name ASC, id ASC
+      ORDER BY %I %s NULLS LAST, display_name ASC, user_id ASC
       LIMIT $4
       OFFSET $5
     ),
     students_with_agreements AS (
       SELECT
-        ps.id,
         ps.user_id,
         ps.parent_name,
         ps.parent_email,
@@ -213,7 +211,7 @@ BEGIN
       'data', COALESCE(
         (SELECT JSON_AGG(
           JSON_BUILD_OBJECT(
-            'id', swa.id,
+            'id', swa.user_id,
             'user_id', swa.user_id,
             'parent_name', swa.parent_name,
             'parent_email', swa.parent_email,

@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
 interface TeacherProfileSectionProps {
-	teacherId: string;
+	teacherUserId: string;
 	user_id: string;
 	canEdit: boolean;
 	onUpdate?: () => void;
@@ -22,7 +22,7 @@ interface TeacherProfileSectionProps {
 }
 
 export function TeacherProfileSection({
-	teacherId,
+	teacherUserId,
 	user_id,
 	canEdit,
 	onUpdate,
@@ -40,7 +40,7 @@ export function TeacherProfileSection({
 	const [saving, setSaving] = useState(false);
 
 	const loadProfile = useCallback(async () => {
-		if (!teacherId || !user_id) return;
+		if (!teacherUserId || !user_id) return;
 
 		setLoading(true);
 
@@ -48,7 +48,7 @@ export function TeacherProfileSection({
 		const { data: teacherData, error: teacherError } = await supabase
 			.from('teachers')
 			.select('bio')
-			.eq('id', teacherId)
+			.eq('user_id', teacherUserId)
 			.single();
 
 		if (teacherError) {
@@ -77,7 +77,7 @@ export function TeacherProfileSection({
 		setLastName(profileData?.last_name || '');
 		setPhoneNumber(profileData?.phone_number || '');
 		setLoading(false);
-	}, [teacherId, user_id]);
+	}, [teacherUserId, user_id]);
 
 	// Only load profile if no initial data was provided
 	useEffect(() => {
@@ -95,7 +95,7 @@ export function TeacherProfileSection({
 	}, [initialBio, initialFirstName, initialLastName, initialPhoneNumber]);
 
 	const handleSave = async () => {
-		if (!teacherId || !user_id || !canEdit || !user) return;
+		if (!teacherUserId || !user_id || !canEdit || !user) return;
 
 		setSaving(true);
 
@@ -103,7 +103,7 @@ export function TeacherProfileSection({
 		const { error: bioError } = await supabase
 			.from('teachers')
 			.update({ bio: bio || null })
-			.eq('id', teacherId);
+			.eq('user_id', teacherUserId);
 
 		if (bioError) {
 			console.error('Error updating bio:', bioError);

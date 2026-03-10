@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { type LessonAgreement, LessonAgreementItem } from '@/components/students/LessonAgreementItem';
+import { LessonAgreementItem } from '@/components/students/LessonAgreementItem';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -9,39 +9,14 @@ import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { NAV_LABELS } from '@/config/nav-labels';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-
-interface StudentProfile {
-	email: string;
-	first_name: string | null;
-	last_name: string | null;
-	phone_number: string | null;
-	avatar_url: string | null;
-}
-
-interface StudentWithAgreements {
-	id: string;
-	user_id: string;
-	created_at: string;
-	updated_at: string;
-	profile: StudentProfile;
-	active_agreements_count: number;
-	lesson_types: Array<{
-		name: string;
-		icon: string | null;
-		color: string | null;
-	}>;
-	agreements: LessonAgreement[];
-}
-
-interface PaginatedStudentsResponse {
-	data: StudentWithAgreements[];
-	total_count: number;
-	limit: number;
-	offset: number;
-}
+import {
+	flattenStudentWithAgreements,
+	type PaginatedStudentsResponseRaw,
+	type StudentWithAgreements,
+} from '@/types/students';
 
 export default function MyStudents() {
-	const { isTeacher, teacherId, isLoading: authLoading } = useAuth();
+	const { isTeacher, teacherUserId, isLoading: authLoading } = useAuth();
 	const [students, setStudents] = useState<StudentWithAgreements[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [totalCount, setTotalCount] = useState(0);
@@ -55,7 +30,7 @@ export default function MyStudents() {
 	const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
 	const loadStudents = useCallback(async () => {
-		if (!isTeacher || !teacherId) return;
+		if (!isTeacher || !teacherUserId) return;
 
 		setLoading(true);
 
@@ -79,8 +54,8 @@ export default function MyStudents() {
 				return;
 			}
 
-			const result = data as unknown as PaginatedStudentsResponse;
-			setStudents(result.data ?? []);
+			const result = data as unknown as PaginatedStudentsResponseRaw;
+			setStudents((result.data ?? []).map(flattenStudentWithAgreements));
 			setTotalCount(result.total_count ?? 0);
 			setLoading(false);
 		} catch (error) {
@@ -88,7 +63,7 @@ export default function MyStudents() {
 			toast.error('Fout bij laden leerlingen');
 			setLoading(false);
 		}
-	}, [isTeacher, teacherId, currentPage, rowsPerPage, debouncedSearchQuery]);
+	}, [isTeacher, teacherUserId, currentPage, rowsPerPage, debouncedSearchQuery]);
 
 	// Load students when dependencies change
 	useEffect(() => {
@@ -131,26 +106,24 @@ export default function MyStudents() {
 	}, []);
 
 	// Helper functions
-	const getUserInitials = useCallback((s: StudentWithAgreements) => {
-		const profile = s.profile;
-		if (profile.first_name && profile.last_name) {
-			return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
+	const getUserInitials = useCallback((s: StudentWithAgreements): string => {
+		if (s.first_name && s.last_name) {
+			return `${s.first_name[0]}${s.last_name[0]}`.toUpperCase();
 		}
-		if (profile.first_name) {
-			return profile.first_name.slice(0, 2).toUpperCase();
+		if (s.first_name) {
+			return s.first_name.slice(0, 2).toUpperCase();
 		}
-		return profile.email.slice(0, 2).toUpperCase();
+		return (s.email ?? '??').slice(0, 2).toUpperCase();
 	}, []);
 
-	const getDisplayName = useCallback((s: StudentWithAgreements) => {
-		const profile = s.profile;
-		if (profile.first_name && profile.last_name) {
-			return `${profile.first_name} ${profile.last_name}`;
+	const getDisplayName = useCallback((s: StudentWithAgreements): string => {
+		if (s.first_name && s.last_name) {
+			return `${s.first_name} ${s.last_name}`;
 		}
-		if (profile.first_name) {
-			return profile.first_name;
+		if (s.first_name) {
+			return s.first_name;
 		}
-		return profile.email;
+		return s.email ?? 'Onbekend';
 	}, []);
 
 	// Extract lesson types from agreements
@@ -178,14 +151,14 @@ export default function MyStudents() {
 				render: (s) => (
 					<div className="flex items-center gap-3">
 						<Avatar className="h-9 w-9 flex-shrink-0">
-							<AvatarImage src={s.profile.avatar_url ?? undefined} alt={getDisplayName(s)} />
+							<AvatarImage src={s.avatar_url ?? undefined} alt={getDisplayName(s)} />
 							<AvatarFallback className="bg-primary/10 text-primary text-sm">
 								{getUserInitials(s)}
 							</AvatarFallback>
 						</Avatar>
 						<div className="min-w-0 flex-1">
 							<p className="font-medium break-words">{getDisplayName(s)}</p>
-							<p className="text-xs text-muted-foreground break-words">{s.profile.email}</p>
+							<p className="text-xs text-muted-foreground break-words">{s.email}</p>
 						</div>
 					</div>
 				),
@@ -194,7 +167,7 @@ export default function MyStudents() {
 				key: 'phone_number',
 				label: 'Telefoon',
 				sortable: false,
-				render: (s) => <span className="text-muted-foreground">{s.profile.phone_number || '-'}</span>,
+				render: (s) => <span className="text-muted-foreground">{s.phone_number || '-'}</span>,
 				className: 'text-muted-foreground',
 			},
 			{
@@ -262,7 +235,7 @@ export default function MyStudents() {
 				searchQuery={searchQuery}
 				onSearchChange={handleSearchChange}
 				loading={loading}
-				getRowKey={(s) => s.id}
+				getRowKey={(s) => s.user_id}
 				emptyMessage="Geen leerlingen gevonden"
 				serverPagination={{
 					totalCount,

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { createClientAs } from '../../db';
 import { type DatabaseState, setupDatabaseStateVerification } from '../db-state';
 import { fixtures } from '../fixtures';
-import { LESSON_AGREEMENTS } from '../seed-data-constants';
+import { LESSON_AGREEMENTS, STUDENTS } from '../seed-data-constants';
 import { TestUsers } from '../test-users';
 
 let initialState: DatabaseState;
@@ -38,7 +38,7 @@ describe('RLS: students SELECT', () => {
 		const { data, error } = await db.from('students').select('*');
 
 		expect(error).toBeNull();
-		expect(data).toHaveLength(fixtures.allStudents.length);
+		expect(data).toHaveLength(STUDENTS.TOTAL);
 	});
 
 	it('admin sees all students', async () => {
@@ -47,7 +47,7 @@ describe('RLS: students SELECT', () => {
 		const { data, error } = await db.from('students').select('*');
 
 		expect(error).toBeNull();
-		expect(data).toHaveLength(fixtures.allStudents.length);
+		expect(data).toHaveLength(STUDENTS.TOTAL);
 	});
 
 	it('staff sees all students', async () => {
@@ -56,7 +56,7 @@ describe('RLS: students SELECT', () => {
 		const { data, error } = await db.from('students').select('*');
 
 		expect(error).toBeNull();
-		expect(data).toHaveLength(fixtures.allStudents.length);
+		expect(data).toHaveLength(STUDENTS.TOTAL);
 	});
 
 	it('student can see only their own record', async () => {
@@ -72,9 +72,9 @@ describe('RLS: students SELECT', () => {
 
 	it('student cannot see other students', async () => {
 		const db = await createClientAs(TestUsers.STUDENT_001);
-		const studentBId = fixtures.requireStudentId(TestUsers.STUDENT_002);
+		const studentBUserId = fixtures.requireStudentId(TestUsers.STUDENT_002);
 
-		const { data, error } = await db.from('students').select('*').eq('id', studentBId);
+		const { data, error } = await db.from('students').select('*').eq('user_id', studentBUserId);
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(0);
@@ -83,9 +83,11 @@ describe('RLS: students SELECT', () => {
 	it('teacher sees only their own students (with lesson_agreement)', async () => {
 		const db = await createClientAs(TestUsers.TEACHER_ALICE);
 
-		const aliceTeacherId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
+		const aliceTeacherUserId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
 		const allowedStudentUserIds = new Set(
-			fixtures.allLessonAgreements.filter((a) => a.teacher_id === aliceTeacherId).map((a) => a.student_user_id),
+			fixtures.allLessonAgreements
+				.filter((a) => a.teacher_user_id === aliceTeacherUserId)
+				.map((a) => a.student_user_id),
 		);
 
 		const { data, error } = await db.from('students').select('*');
@@ -100,7 +102,8 @@ describe('RLS: students SELECT', () => {
 	});
 
 	it('user without role cannot see any students', async () => {
-		const db = await createClientAs(TestUsers.USER_001);
+		// Use USER_010 (no role) - never used by other tests that create students
+		const db = await createClientAs(TestUsers.USER_010);
 
 		const { data, error } = await db.from('students').select('*');
 

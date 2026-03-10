@@ -15,21 +15,18 @@ import type {
 	LessonAppointmentDeviationWithAgreement,
 	LessonFrequency,
 } from '@/types/lesson-agreements';
-import type { ProfileDisplayInfo, StudentEventInfo } from '@/types/students';
+import type { User, UserOptional } from '@/types/users';
 import type { CalendarEvent } from './types';
 
-/** Extract display name from profile. */
-export function formatStudentName(profile: ProfileDisplayInfo | null | undefined): string {
+/** Extract display name from profile (first_name, last_name, optionally email). */
+export function formatUserName(profile?: UserOptional | null): string {
 	if (!profile) return 'Onbekend';
 	if (profile.first_name && profile.last_name) return `${profile.first_name} ${profile.last_name}`;
-	return profile.first_name || profile.email || 'Onbekend';
+	return profile.first_name ?? profile.last_name ?? profile.email ?? 'Onbekend';
 }
 
-/** Build StudentEventInfo from profile and user_id. */
-export function buildStudentInfo(
-	profile: ProfileDisplayInfo | null | undefined,
-	userId: string,
-): StudentEventInfo | undefined {
+/** Build User from profile and user_id. */
+export function buildParticipantInfo(profile: UserOptional | null | undefined, userId: string): User | undefined {
 	if (!profile || !profile.email) return undefined;
 	return {
 		user_id: userId,
@@ -37,6 +34,7 @@ export function buildStudentInfo(
 		last_name: profile.last_name ?? null,
 		email: profile.email,
 		avatar_url: profile.avatar_url ?? null,
+		phone_number: profile.phone_number ?? null,
 	};
 }
 
@@ -142,7 +140,7 @@ export function generateRecurringEvents(
 		const durationMinutes = firstAgreement.duration_minutes;
 		const eventId = getEventId(firstAgreement.id);
 
-		const studentNames = group.map((a) => formatStudentName(a.profiles));
+		const studentNames = group.map((a) => formatUserName(a.profiles));
 
 		const earliestStartDate = new Date(Math.min(...group.map((a) => new Date(a.start_date).getTime())));
 		const latestEndDate = group.some((a) => !a.end_date)
@@ -177,10 +175,10 @@ export function generateRecurringEvents(
 							actualTimeNormalized === agreementTimeNormalized;
 
 						const lesson = deviation.lesson_agreement ?? firstAgreement;
-						const deviationProfileDisplayInfo = lesson.profiles as ProfileDisplayInfo | null;
-						const deviationStudentName = formatStudentName(deviationProfileDisplayInfo);
-						const deviationStudentInfo = buildStudentInfo(
-							deviationProfileDisplayInfo,
+						const deviationUserOptional = lesson.profiles as UserOptional | null;
+						const deviationStudentName = formatUserName(deviationUserOptional);
+						const deviationUserInfo = buildParticipantInfo(
+							deviationUserOptional,
 							'student_user_id' in lesson ? lesson.student_user_id : firstAgreement.student_user_id,
 						);
 						const lessonTypeName =
@@ -200,7 +198,7 @@ export function generateRecurringEvents(
 								eventId,
 								deviationId: deviation.id,
 								studentName: deviationStudentName,
-								studentInfo: deviationStudentInfo,
+								user: deviationUserInfo,
 								lessonTypeName,
 								lessonTypeColor,
 								lessonTypeIcon,
@@ -229,10 +227,10 @@ export function generateRecurringEvents(
 						eventDate.setHours(Number.parseInt(hours, 10), Number.parseInt(minutes, 10), 0, 0);
 
 						const recLesson = recurringDeviation.lesson_agreement ?? firstAgreement;
-						const recurringProfileDisplayInfo = recLesson.profiles as ProfileDisplayInfo | null;
-						const recurringStudentName = formatStudentName(recurringProfileDisplayInfo);
-						const recurringStudentInfo = buildStudentInfo(
-							recurringProfileDisplayInfo,
+						const recurringUserOptional = recLesson.profiles as UserOptional | null;
+						const recurringStudentName = formatUserName(recurringUserOptional);
+						const recurringUserInfo = buildParticipantInfo(
+							recurringUserOptional,
 							'student_user_id' in recLesson ? recLesson.student_user_id : firstAgreement.student_user_id,
 						);
 						const recTypeName =
@@ -252,7 +250,7 @@ export function generateRecurringEvents(
 								eventId,
 								deviationId: recurringDeviation.id,
 								studentName: recurringStudentName,
-								studentInfo: recurringStudentInfo,
+								user: recurringUserInfo,
 								lessonTypeName: recTypeName,
 								lessonTypeColor: recTypeColor,
 								lessonTypeIcon: recTypeIcon,
@@ -278,9 +276,9 @@ export function generateRecurringEvents(
 					? `${firstAgreement.lesson_types.name} (${group.length} deelnemers)`
 					: `${firstAgreement.lesson_types.name} - ${studentNames[0]}`;
 
-				const studentInfoList = group
-					.map((a) => buildStudentInfo(a.profiles as ProfileDisplayInfo | null, a.student_user_id))
-					.filter((info): info is StudentEventInfo => info !== undefined);
+				const users = group
+					.map((a) => buildParticipantInfo(a.profiles as UserOptional | null, a.student_user_id))
+					.filter((info): info is User => info !== undefined);
 
 				events.push({
 					title,
@@ -291,8 +289,8 @@ export function generateRecurringEvents(
 						agreementId: firstAgreement.id,
 						eventId: eventId ?? undefined,
 						studentName: isGroupLesson ? studentNames.join(', ') : studentNames[0],
-						studentInfo: !isGroupLesson && studentInfoList.length > 0 ? studentInfoList[0] : undefined,
-						studentInfoList: isGroupLesson ? studentInfoList : undefined,
+						user: !isGroupLesson && users.length > 0 ? users[0] : undefined,
+						users: isGroupLesson ? users : undefined,
 						lessonTypeName: firstAgreement.lesson_types.name,
 						lessonTypeColor: firstAgreement.lesson_types.color,
 						lessonTypeIcon: firstAgreement.lesson_types.icon,
@@ -468,9 +466,11 @@ export function generateAgendaEvents(
 
 			const resourceOriginalDate = effective?.recurring ? dateStr : effective?.original_date;
 			const resourceOriginalStartTime = effective?.recurring ? baseStartTime : effective?.original_start_time;
+			const displayTitle = effective?.title ?? ev.title;
+			const displayColor = effective?.color ?? ev.color ?? null;
 
 			events.push({
-				title: ev.title,
+				title: displayTitle,
 				start,
 				end,
 				resource: {
@@ -478,9 +478,9 @@ export function generateAgendaEvents(
 					agreementId: ev.source_id ?? ev.id,
 					eventId: ev.id,
 					deviationId: effective?.id,
-					studentName: ev.title,
-					lessonTypeName: ev.title,
-					lessonTypeColor: ev.color ?? null,
+					studentName: displayTitle,
+					lessonTypeName: displayTitle,
+					lessonTypeColor: displayColor,
 					lessonTypeIcon: null,
 					isDeviation: !!effective && !effective.is_cancelled,
 					isCancelled,
@@ -490,7 +490,7 @@ export function generateAgendaEvents(
 					reason: effective?.reason ?? null,
 					isRecurring: ev.recurring || (effective?.recurring ?? false),
 					sourceType: ev.source_type as 'manual' | 'lesson_agreement',
-					color: ev.color ?? null,
+					color: displayColor,
 					isLesson: isLessonEvent,
 				},
 			});

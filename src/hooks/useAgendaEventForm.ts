@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { RecurrenceScope } from '@/components/agenda/RecurrenceChoiceDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { addDaysToDateStr, formatDateToDb, now } from '@/lib/date/date-format';
-import { formatTimeFromDate } from '@/lib/time/time-format';
+import { formatTime, formatTimeFromDate, normalizeTime } from '@/lib/time/time-format';
 import type { AgendaEventInsert, AgendaEventRow } from '@/types/agenda-events';
 import type { LessonFrequency } from '@/types/lesson-agreements';
 
@@ -15,6 +15,7 @@ export interface UseAgendaEventFormOptions {
 	occurrenceDate?: string | null;
 	occurrenceStartTime?: string | null;
 	occurrenceEndTime?: string | null;
+	occurrenceParticipantIds?: string[] | null;
 	readonlyParticipantIds?: string[];
 	onSuccess?: () => void;
 	onOpenChange: (open: boolean) => void;
@@ -26,6 +27,40 @@ export interface ParticipantProfile {
 	email: string | null;
 }
 
+/** Comparable snapshot of form fields for dirty-checking. */
+interface FormSnapshot {
+	title: string;
+	description: string;
+	startDate: string;
+	startTime: string;
+	endDate: string;
+	endTime: string;
+	isAllDay: boolean;
+	recurring: boolean;
+	recurringFrequency: string;
+	recurringEndDate: string | null;
+	color: string | null;
+	participantIds: string[];
+}
+
+function formSnapshotsEqual(a: FormSnapshot, b: FormSnapshot): boolean {
+	return (
+		a.title === b.title &&
+		a.description === b.description &&
+		a.startDate === b.startDate &&
+		a.startTime === b.startTime &&
+		a.endDate === b.endDate &&
+		a.endTime === b.endTime &&
+		a.isAllDay === b.isAllDay &&
+		a.recurring === b.recurring &&
+		a.recurringFrequency === b.recurringFrequency &&
+		a.recurringEndDate === b.recurringEndDate &&
+		a.color === b.color &&
+		a.participantIds.length === b.participantIds.length &&
+		a.participantIds.every((id, i) => id === b.participantIds[i])
+	);
+}
+
 export function useAgendaEventForm({
 	open,
 	event,
@@ -34,6 +69,7 @@ export function useAgendaEventForm({
 	occurrenceDate,
 	occurrenceStartTime,
 	occurrenceEndTime,
+	occurrenceParticipantIds,
 	readonlyParticipantIds = [],
 	onSuccess,
 	onOpenChange,
@@ -50,6 +86,7 @@ export function useAgendaEventForm({
 	const [recurringEndDate, setRecurringEndDate] = useState<string | null>(null);
 	const [color, setColor] = useState<string | null>(null);
 	const [participantIds, setParticipantIds] = useState<string[]>([]);
+	const [initialParticipantIds, setInitialParticipantIds] = useState<string[]>([]);
 	const [participantAddId, setParticipantAddId] = useState<string | null>(null);
 	const [participantProfiles, setParticipantProfiles] = useState<Record<string, ParticipantProfile>>({});
 	const [showDescription, setShowDescription] = useState(false);
@@ -92,18 +129,28 @@ export function useAgendaEventForm({
 			setRecurringEndDate(null);
 			setColor(null);
 			setParticipantIds(userId ? [userId] : []);
+			setInitialParticipantIds([]);
 		}
 	}, [open, event, userId, initialSlot, occurrenceDate, occurrenceStartTime, occurrenceEndTime]);
 
 	useEffect(() => {
 		const eventId = event?.id;
 		if (!open || !eventId) return;
+		if (occurrenceParticipantIds && occurrenceParticipantIds.length > 0) {
+			setParticipantIds(occurrenceParticipantIds);
+			setInitialParticipantIds(occurrenceParticipantIds);
+			return;
+		}
 		async function loadParticipants() {
 			const { data } = await supabase.from('agenda_participants').select('user_id').eq('event_id', eventId);
-			if (data) setParticipantIds(data.map((p) => p.user_id));
+			if (data) {
+				const ids = data.map((p) => p.user_id);
+				setParticipantIds(ids);
+				setInitialParticipantIds(ids);
+			}
 		}
 		loadParticipants();
-	}, [open, event?.id]);
+	}, [open, event?.id, occurrenceParticipantIds]);
 
 	useEffect(() => {
 		if (!open || participantIds.length === 0) {
@@ -145,6 +192,62 @@ export function useAgendaEventForm({
 		[readonlyParticipantIds],
 	);
 
+	const initialSnapshot = useMemo((): FormSnapshot | null => {
+		if (!event) return null;
+		const origStart = (occurrenceStartTime ?? event.start_time).toString();
+		const origEnd = (occurrenceEndTime ?? event.end_time ?? event.start_time)?.toString() ?? '10:00';
+		return {
+			title: event.title,
+			description: event.description ?? '',
+			startDate: occurrenceDate ?? event.start_date,
+			startTime: normalizeTime(formatTime(origStart)),
+			endDate: occurrenceDate ?? event.end_date ?? event.start_date,
+			endTime: normalizeTime(formatTime(origEnd)),
+			isAllDay: event.is_all_day,
+			recurring: event.recurring,
+			recurringFrequency: (event.recurring_frequency as string) ?? 'weekly',
+			recurringEndDate: event.recurring_end_date ?? null,
+			color: event.color ?? null,
+			participantIds: [...initialParticipantIds].sort(),
+		};
+	}, [event, occurrenceDate, occurrenceStartTime, occurrenceEndTime, initialParticipantIds]);
+
+	const currentSnapshot = useMemo(
+		(): FormSnapshot => ({
+			title: title.trim(),
+			description: description ?? '',
+			startDate: startDate ?? '',
+			startTime: normalizeTime(startTime),
+			endDate: endDate ?? startDate ?? '',
+			endTime: normalizeTime(endTime),
+			isAllDay,
+			recurring,
+			recurringFrequency: recurringFrequency as string,
+			recurringEndDate: recurring ? recurringEndDate : null,
+			color: color ?? null,
+			participantIds: [...participantIds].sort(),
+		}),
+		[
+			title,
+			description,
+			startDate,
+			startTime,
+			endDate,
+			endTime,
+			isAllDay,
+			recurring,
+			recurringFrequency,
+			recurringEndDate,
+			color,
+			participantIds,
+		],
+	);
+
+	const hasChanges = useMemo(
+		() => !initialSnapshot || !formSnapshotsEqual(initialSnapshot, currentSnapshot),
+		[initialSnapshot, currentSnapshot],
+	);
+
 	const performSave = useCallback(
 		async (scope: RecurrenceScope = 'all') => {
 			if (!userId || !startDate || !startTime) return;
@@ -170,7 +273,54 @@ export function useAgendaEventForm({
 			setSaving(true);
 			try {
 				if (event?.id) {
-					if (scope === 'thisAndFuture' && occurrenceDate) {
+					if (scope === 'single' && occurrenceDate) {
+						const originalStartTime = normalizeTime(
+							(occurrenceStartTime ?? event.start_time).toString().slice(0, 5),
+						);
+						const actualStartTime = normalizeTime(startTime);
+						const actualDate = startDate ?? occurrenceDate;
+						const hasDateOrTimeChange =
+							actualDate !== occurrenceDate || actualStartTime !== originalStartTime;
+						const hasTitleChange = title.trim() !== event.title;
+						const hasDescriptionChange = (description ?? '') !== (event.description ?? '');
+						const hasColorChange = (color ?? null) !== (event.color ?? null);
+						const sortedCurrent = [...participantIds].sort();
+						const sortedInitial = [...initialParticipantIds].sort();
+						const hasParticipantChange =
+							sortedCurrent.length !== sortedInitial.length ||
+							sortedCurrent.some((id, i) => id !== sortedInitial[i]);
+						const hasAnyChange =
+							hasDateOrTimeChange ||
+							hasTitleChange ||
+							hasDescriptionChange ||
+							hasColorChange ||
+							hasParticipantChange;
+						if (!hasAnyChange) {
+							toast.error('Er zijn geen wijzigingen om op te slaan.');
+							return;
+						}
+						const deviationPayload = {
+							event_id: event.id,
+							original_date: occurrenceDate,
+							original_start_time: originalStartTime,
+							actual_date: actualDate,
+							actual_start_time: actualStartTime,
+							recurring: false,
+							is_cancelled: false,
+							title: hasTitleChange ? title.trim() : null,
+							description: hasDescriptionChange ? description?.trim() || null : null,
+							color: hasColorChange ? (color ?? null) : null,
+							participant_ids: hasParticipantChange ? participantIds : null,
+							created_by: userId,
+							updated_by: userId,
+						};
+						const { error: deviationError } = await supabase
+							.from('agenda_event_deviations')
+							.upsert(deviationPayload, { onConflict: 'event_id,original_date' });
+						if (deviationError) throw deviationError;
+						onSuccess?.();
+						onOpenChange(false);
+					} else if (scope === 'thisAndFuture' && occurrenceDate) {
 						const newEndDate = addDaysToDateStr(occurrenceDate, -1);
 						const { error: endErr } = await supabase
 							.from('agenda_events')
@@ -253,11 +403,12 @@ export function useAgendaEventForm({
 				onOpenChange(false);
 			} catch (err: unknown) {
 				let message = 'Opslaan mislukt';
-				if (err instanceof Error) {
-					if (err.message.includes('row-level security')) {
+				const errMessage = err instanceof Error ? err.message : (err as { message?: string })?.message;
+				if (errMessage) {
+					if (errMessage.includes('row-level security')) {
 						message = 'Je hebt geen toestemming om deze deelnemer toe te voegen';
 					} else {
-						message = err.message;
+						message = errMessage;
 					}
 				}
 				toast.error(message);
@@ -279,8 +430,10 @@ export function useAgendaEventForm({
 			title,
 			description,
 			participantIds,
+			initialParticipantIds,
 			event,
 			occurrenceDate,
+			occurrenceStartTime,
 			onSuccess,
 			onOpenChange,
 		],
@@ -323,5 +476,6 @@ export function useAgendaEventForm({
 			performSave,
 		},
 		saving,
+		hasChanges,
 	};
 }

@@ -37,6 +37,7 @@ interface AgendaEventFormDialogProps {
 	occurrenceDate?: string | null;
 	occurrenceStartTime?: string | null;
 	occurrenceEndTime?: string | null;
+	occurrenceParticipantIds?: string[] | null;
 	readonlyParticipantIds?: string[];
 	canAddParticipants?: boolean;
 	lessonType?: { name: string; icon?: string | null; color?: string | null } | null;
@@ -54,12 +55,13 @@ export function AgendaEventFormDialog({
 	occurrenceDate,
 	occurrenceStartTime,
 	occurrenceEndTime,
+	occurrenceParticipantIds,
 	readonlyParticipantIds = [],
 	canAddParticipants = true,
 	lessonType,
 }: AgendaEventFormDialogProps) {
 	const { user } = useAuth();
-	const { formState, handlers, saving } = useAgendaEventForm({
+	const { formState, handlers, saving, hasChanges } = useAgendaEventForm({
 		open,
 		event,
 		initialSlot,
@@ -67,6 +69,7 @@ export function AgendaEventFormDialog({
 		occurrenceDate,
 		occurrenceStartTime,
 		occurrenceEndTime,
+		occurrenceParticipantIds,
 		readonlyParticipantIds,
 		onSuccess,
 		onOpenChange,
@@ -374,7 +377,7 @@ export function AgendaEventFormDialog({
 								{isCancelledEvent ? 'Sluiten' : 'Annuleren'}
 							</Button>
 							{!isCancelledEvent && (
-								<Button type="submit" disabled={saving || reverting}>
+								<Button type="submit" disabled={saving || reverting || (!!event && !hasChanges)}>
 									{saving ? 'Opslaan...' : event ? 'Bijwerken' : 'Aanmaken'}
 								</Button>
 							)}

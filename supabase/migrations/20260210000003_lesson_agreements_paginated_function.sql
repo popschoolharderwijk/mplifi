@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION get_lesson_agreements_paginated(
   p_offset INT DEFAULT 0,
   p_search TEXT DEFAULT NULL,
   p_student_user_id UUID DEFAULT NULL,
-  p_teacher_id UUID DEFAULT NULL,
+  p_teacher_user_id UUID DEFAULT NULL,
   p_lesson_type_id UUID DEFAULT NULL,
   p_is_active BOOLEAN DEFAULT NULL,
   p_sort_column TEXT DEFAULT 'start_date',
@@ -57,7 +57,7 @@ BEGIN
       SELECT
         la.id,
         la.student_user_id,
-        la.teacher_id,
+        la.teacher_user_id,
         la.lesson_type_id,
         la.day_of_week,
         la.start_time,
@@ -86,7 +86,7 @@ BEGIN
         lt.color AS lesson_type_color
       FROM lesson_agreements la
       INNER JOIN view_profiles_with_display_name sp ON la.student_user_id = sp.user_id
-      INNER JOIN teachers t ON la.teacher_id = t.id
+      INNER JOIN teachers t ON la.teacher_user_id = t.user_id
       INNER JOIN view_profiles_with_display_name tp ON t.user_id = tp.user_id
       INNER JOIN lesson_types lt ON la.lesson_type_id = lt.id
       WHERE (
@@ -105,7 +105,7 @@ BEGIN
       AND (
         -- Teacher filter
         $3 IS NULL
-        OR la.teacher_id = $3
+        OR la.teacher_user_id = $3
       )
       AND (
         -- Lesson type filter
@@ -134,7 +134,7 @@ BEGIN
           JSON_BUILD_OBJECT(
             'id', pa.id,
             'student_user_id', pa.student_user_id,
-            'teacher_id', pa.teacher_id,
+            'teacher_user_id', pa.teacher_user_id,
             'lesson_type_id', pa.lesson_type_id,
             'day_of_week', pa.day_of_week,
             'start_time', pa.start_time,
@@ -178,7 +178,7 @@ BEGIN
   -- Execute with parameters
   EXECUTE v_query
   INTO v_result
-  USING v_search_pattern, p_student_user_id, p_teacher_id, p_lesson_type_id, p_is_active, p_limit, p_offset;
+  USING v_search_pattern, p_student_user_id, p_teacher_user_id, p_lesson_type_id, p_is_active, p_limit, p_offset;
 
   RETURN v_result;
 END;

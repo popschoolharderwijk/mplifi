@@ -31,7 +31,7 @@ const agreementStudent026TeacherBob = fixtures.requireAgreementId(TestUsers.STUD
  * - Can only view their own lesson agreements (where student_user_id matches their user_id)
  *
  * TEACHERS:
- * - Can only view lesson agreements where they are the teacher (where teacher_id matches their teacher record)
+ * - Can only view lesson agreements where they are the teacher (where teacher_user_id matches their teacher record)
  *
  * STAFF/ADMIN/SITE_ADMIN:
  * - Can view all lesson agreements

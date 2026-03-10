@@ -102,6 +102,10 @@ CREATE TABLE IF NOT EXISTS public.agenda_event_deviations (
   recurring BOOLEAN NOT NULL DEFAULT false,
   recurring_end_date DATE,
   reason TEXT,
+  title TEXT,
+  description TEXT,
+  color TEXT,
+  participant_ids UUID[],
   created_by UUID NOT NULL REFERENCES auth.users(id),
   updated_by UUID NOT NULL REFERENCES auth.users(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -138,12 +142,11 @@ DECLARE
   v_end_time TIME;
   v_agenda_event_id UUID;
 BEGIN
-  SELECT t.user_id INTO v_teacher_user_id
-  FROM public.teachers t
-  WHERE t.id = NEW.teacher_id;
+  -- teacher_user_id references teachers(user_id), so it is the teacher's user_id
+  v_teacher_user_id := NEW.teacher_user_id;
 
   IF v_teacher_user_id IS NULL THEN
-    RAISE EXCEPTION 'Teacher not found for teacher_id %', NEW.teacher_id;
+    RAISE EXCEPTION 'Teacher not found for teacher_user_id %', NEW.teacher_user_id;
   END IF;
 
   SELECT COALESCE(lt.name, 'Lesson') INTO v_title
@@ -212,13 +215,16 @@ ALTER TABLE public.agenda_event_deviations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.agenda_event_deviations FORCE ROW LEVEL SECURITY;
 
 -- =============================================================================
--- SECTION 5b: HELPER FOR RLS (avoid recursion: agenda_events <-> agenda_participants)
+-- SECTION 5b: HELPERS FOR RLS (avoid recursion: agenda_events <-> agenda_participants)
 -- =============================================================================
+
+-- Helper to get event owner (bypasses RLS)
 CREATE OR REPLACE FUNCTION public.get_agenda_event_owner(ev_id uuid)
 RETURNS uuid
 LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public
+SET row_security = off
 STABLE
 AS $$
   SELECT owner_user_id FROM public.agenda_events WHERE id = ev_id LIMIT 1;
@@ -227,60 +233,95 @@ ALTER FUNCTION public.get_agenda_event_owner(uuid) OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.get_agenda_event_owner(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_agenda_event_owner(uuid) TO authenticated;
 
+-- Helper to check if user can manage event (is owner or privileged) - bypasses RLS
+CREATE OR REPLACE FUNCTION public.can_manage_agenda_event(ev_id uuid, uid uuid)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+SET row_security = off
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.agenda_events
+    WHERE id = ev_id AND (owner_user_id = uid OR public.is_privileged(uid))
+  );
+$$;
+ALTER FUNCTION public.can_manage_agenda_event(uuid, uuid) OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.can_manage_agenda_event(uuid, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.can_manage_agenda_event(uuid, uuid) TO authenticated;
+
+-- Helper to check if user is participant of event - bypasses RLS
+CREATE OR REPLACE FUNCTION public.is_agenda_participant(ev_id uuid, uid uuid)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+SET row_security = off
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.agenda_participants
+    WHERE event_id = ev_id AND user_id = uid
+  );
+$$;
+ALTER FUNCTION public.is_agenda_participant(uuid, uuid) OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.is_agenda_participant(uuid, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_agenda_participant(uuid, uuid) TO authenticated;
+
 -- =============================================================================
 -- SECTION 6: RLS POLICIES
 -- =============================================================================
 
 -- agenda_events: SELECT if owner, participant, or privileged
+-- Uses helper function to check participant to avoid recursion with agenda_participants RLS
 CREATE POLICY agenda_events_select
 ON public.agenda_events FOR SELECT TO authenticated
 USING (
-  owner_user_id = auth.uid()
-  OR EXISTS (
-    SELECT 1 FROM public.agenda_participants ap
-    WHERE ap.event_id = agenda_events.id AND ap.user_id = auth.uid()
-  )
-  OR public.is_privileged(auth.uid())
+  owner_user_id = (select auth.uid())
+  OR public.is_agenda_participant(agenda_events.id, (select auth.uid()))
+  OR public.is_privileged((select auth.uid()))
 );
 
 -- agenda_events: INSERT for authenticated (owner_user_id/created_by set by caller)
 -- Restrict: user can only insert events where they are owner, or privileged
 CREATE POLICY agenda_events_insert
 ON public.agenda_events FOR INSERT TO authenticated
-WITH CHECK (owner_user_id = auth.uid() OR public.is_privileged(auth.uid()));
+WITH CHECK (owner_user_id = (select auth.uid()) OR public.is_privileged((select auth.uid())));
 
 -- agenda_events: UPDATE/DELETE only owner or privileged
 CREATE POLICY agenda_events_update
 ON public.agenda_events FOR UPDATE TO authenticated
-USING (owner_user_id = auth.uid() OR public.is_privileged(auth.uid()))
-WITH CHECK (owner_user_id = auth.uid() OR public.is_privileged(auth.uid()));
+USING (owner_user_id = (select auth.uid()) OR public.is_privileged((select auth.uid())))
+WITH CHECK (owner_user_id = (select auth.uid()) OR public.is_privileged((select auth.uid())));
 
 CREATE POLICY agenda_events_delete
 ON public.agenda_events FOR DELETE TO authenticated
-USING (owner_user_id = auth.uid() OR public.is_privileged(auth.uid()));
+USING (owner_user_id = (select auth.uid()) OR public.is_privileged((select auth.uid())));
 
 -- agenda_participants: SELECT own rows, or event owner, or privileged (use helper to avoid RLS recursion)
 CREATE POLICY agenda_participants_select
 ON public.agenda_participants FOR SELECT TO authenticated
 USING (
-  user_id = auth.uid()
-  OR public.is_privileged(auth.uid())
-  OR public.get_agenda_event_owner(event_id) = auth.uid()
+  user_id = (select auth.uid())
+  OR public.is_privileged((select auth.uid()))
+  OR public.get_agenda_event_owner(event_id) = (select auth.uid())
 );
 
 -- agenda_participants: INSERT only event owner or privileged
 -- Additional restriction: non-privileged users cannot add teachers as participants (except themselves)
+-- Uses helper function to avoid recursion with agenda_events RLS
 CREATE POLICY agenda_participants_insert
 ON public.agenda_participants FOR INSERT TO authenticated
 WITH CHECK (
   -- Privileged users can add anyone
-  public.is_privileged(auth.uid())
+  public.is_privileged((select auth.uid()))
   OR (
     -- Event owner can add participants...
-    EXISTS (SELECT 1 FROM public.agenda_events ae WHERE ae.id = event_id AND ae.owner_user_id = auth.uid())
+    public.get_agenda_event_owner(event_id) = (select auth.uid())
     AND (
       -- ...owner can always add themselves
-      user_id = auth.uid()
+      user_id = (select auth.uid())
       -- ...or add non-teachers
       OR NOT public.is_teacher(user_id)
     )
@@ -289,53 +330,40 @@ WITH CHECK (
 
 CREATE POLICY agenda_participants_update
 ON public.agenda_participants FOR UPDATE TO authenticated
-USING (
-  EXISTS (SELECT 1 FROM public.agenda_events ae WHERE ae.id = event_id AND (ae.owner_user_id = auth.uid() OR public.is_privileged(auth.uid())))
-)
-WITH CHECK (
-  EXISTS (SELECT 1 FROM public.agenda_events ae WHERE ae.id = event_id AND (ae.owner_user_id = auth.uid() OR public.is_privileged(auth.uid())))
-);
+USING (public.can_manage_agenda_event(event_id, (select auth.uid())))
+WITH CHECK (public.can_manage_agenda_event(event_id, (select auth.uid())));
 
 CREATE POLICY agenda_participants_delete
 ON public.agenda_participants FOR DELETE TO authenticated
-USING (
-  EXISTS (SELECT 1 FROM public.agenda_events ae WHERE ae.id = event_id AND (ae.owner_user_id = auth.uid() OR public.is_privileged(auth.uid())))
-);
+USING (public.can_manage_agenda_event(event_id, (select auth.uid())));
 
 -- agenda_event_deviations: SELECT if participant of event or privileged
+-- Uses helper function to avoid recursion
 CREATE POLICY agenda_event_deviations_select
 ON public.agenda_event_deviations FOR SELECT TO authenticated
 USING (
-  EXISTS (
-    SELECT 1 FROM public.agenda_participants ap
-    WHERE ap.event_id = agenda_event_deviations.event_id AND ap.user_id = auth.uid()
-  )
-  OR public.is_privileged(auth.uid())
+  public.is_agenda_participant(agenda_event_deviations.event_id, (select auth.uid()))
+  OR public.is_privileged((select auth.uid()))
 );
 
 -- agenda_event_deviations: INSERT/UPDATE/DELETE only event owner or privileged
+-- Uses helper function to avoid recursion
 CREATE POLICY agenda_event_deviations_insert
 ON public.agenda_event_deviations FOR INSERT TO authenticated
 WITH CHECK (
-  EXISTS (SELECT 1 FROM public.agenda_events ae WHERE ae.id = event_id AND (ae.owner_user_id = auth.uid() OR public.is_privileged(auth.uid())))
-  AND created_by = auth.uid()
-  AND updated_by = auth.uid()
+  public.can_manage_agenda_event(event_id, (select auth.uid()))
+  AND created_by = (select auth.uid())
+  AND updated_by = (select auth.uid())
 );
 
 CREATE POLICY agenda_event_deviations_update
 ON public.agenda_event_deviations FOR UPDATE TO authenticated
-USING (
-  EXISTS (SELECT 1 FROM public.agenda_events ae WHERE ae.id = event_id AND (ae.owner_user_id = auth.uid() OR public.is_privileged(auth.uid())))
-)
-WITH CHECK (
-  updated_by = auth.uid()
-);
+USING (public.can_manage_agenda_event(event_id, (select auth.uid())))
+WITH CHECK (updated_by = (select auth.uid()));
 
 CREATE POLICY agenda_event_deviations_delete
 ON public.agenda_event_deviations FOR DELETE TO authenticated
-USING (
-  EXISTS (SELECT 1 FROM public.agenda_events ae WHERE ae.id = event_id AND (ae.owner_user_id = auth.uid() OR public.is_privileged(auth.uid())))
-);
+USING (public.can_manage_agenda_event(event_id, (select auth.uid())));
 
 -- =============================================================================
 -- SECTION 7: UPDATED_AT TRIGGERS
@@ -394,7 +422,11 @@ AS $$
 BEGIN
   IF NEW.actual_date = NEW.original_date
      AND NEW.actual_start_time = NEW.original_start_time
-     AND NEW.is_cancelled = false THEN
+     AND NEW.is_cancelled = false
+     AND NEW.title IS NULL
+     AND NEW.description IS NULL
+     AND NEW.color IS NULL
+     AND (NEW.participant_ids IS NULL OR array_length(NEW.participant_ids, 1) IS NULL) THEN
     DELETE FROM public.agenda_event_deviations WHERE id = NEW.id;
     RETURN NULL;
   END IF;
@@ -423,6 +455,12 @@ BEGIN
     RETURN NEW;
   END IF;
   IF NEW.is_cancelled = true THEN
+    RETURN NEW;
+  END IF;
+  IF NEW.title IS NOT NULL OR NEW.description IS NOT NULL OR NEW.color IS NOT NULL THEN
+    RETURN NEW;
+  END IF;
+  IF NEW.participant_ids IS NOT NULL AND array_length(NEW.participant_ids, 1) > 0 THEN
     RETURN NEW;
   END IF;
   SELECT EXISTS (

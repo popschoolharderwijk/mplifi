@@ -14,7 +14,7 @@ interface Statistics {
 }
 
 export default function MyStatistics() {
-	const { isTeacher, teacherId, isLoading: authLoading } = useAuth();
+	const { isTeacher, teacherUserId, isLoading: authLoading } = useAuth();
 	const [loading, setLoading] = useState(true);
 	const [stats, setStats] = useState<Statistics>({
 		studentCount: 0,
@@ -24,7 +24,7 @@ export default function MyStatistics() {
 	});
 
 	const loadStatistics = useCallback(async () => {
-		if (!isTeacher || !teacherId) return;
+		if (!isTeacher || !teacherUserId) return;
 
 		setLoading(true);
 
@@ -32,7 +32,7 @@ export default function MyStatistics() {
 		const { data: agreements, error: agreementsError } = await supabase
 			.from('lesson_agreements')
 			.select('student_user_id, lesson_type_id, is_active, lesson_types!inner(is_group_lesson)')
-			.eq('teacher_id', teacherId)
+			.eq('teacher_user_id', teacherUserId)
 			.eq('is_active', true);
 
 		if (agreementsError) {
@@ -64,7 +64,7 @@ export default function MyStatistics() {
 		});
 
 		setLoading(false);
-	}, [isTeacher, teacherId]);
+	}, [isTeacher, teacherUserId]);
 
 	useEffect(() => {
 		if (!authLoading && isTeacher) {

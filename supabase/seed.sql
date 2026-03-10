@@ -465,9 +465,9 @@ ON CONFLICT (user_id) DO NOTHING;
 --
 -- Result: All 8 types covered, some by multiple teachers
 -- -----------------------------------------------------------------------------
-INSERT INTO public.teacher_lesson_types (teacher_id, lesson_type_id)
+INSERT INTO public.teacher_lesson_types (teacher_user_id, lesson_type_id)
 SELECT
-  t.id AS teacher_id,
+  t.user_id AS teacher_user_id,
   lt.id AS lesson_type_id
 FROM (VALUES
   -- Teacher 1 (Alice): 3 types
@@ -507,7 +507,7 @@ INNER JOIN public.teachers t ON t.user_id = p.user_id
 INNER JOIN public.lesson_types lt ON lt.name = teacher_lesson_data.lesson_type_name
 WHERE NOT EXISTS (
   SELECT 1 FROM public.teacher_lesson_types tlt
-  WHERE tlt.teacher_id = t.id
+  WHERE tlt.teacher_user_id = t.user_id
     AND tlt.lesson_type_id = lt.id
 );
 
@@ -530,9 +530,9 @@ WHERE NOT EXISTS (
 --   Teacher 9 (Iris): Wed 09:00-15:00, Thu 12:00-19:00, Tue 14:00-17:00 (extra)
 --   Teacher 10 (Jack): Tue 10:00-14:00, Thu 10:00-14:00 (has availability but no students)
 -- -----------------------------------------------------------------------------
-INSERT INTO public.teacher_availability (teacher_id, day_of_week, start_time, end_time)
+INSERT INTO public.teacher_availability (teacher_user_id, day_of_week, start_time, end_time)
 SELECT
-  t.id AS teacher_id,
+  t.user_id AS teacher_user_id,
   availability_data.day_of_week,
   availability_data.start_time::TIME,
   availability_data.end_time::TIME
@@ -589,7 +589,7 @@ INNER JOIN public.profiles p ON p.email = availability_data.teacher_email
 INNER JOIN public.teachers t ON t.user_id = p.user_id
 WHERE NOT EXISTS (
   SELECT 1 FROM public.teacher_availability ta
-  WHERE ta.teacher_id = t.id
+  WHERE ta.teacher_user_id = t.user_id
     AND ta.day_of_week = availability_data.day_of_week
     AND ta.start_time = availability_data.start_time::TIME
     AND ta.end_time = availability_data.end_time::TIME
@@ -601,10 +601,10 @@ WHERE NOT EXISTS (
 -- Snapshot (duration_minutes, frequency, price_per_lesson) per agreement:
 --   Bandcoaching: 60 min, biweekly, 60; DJ / Beats: 45 min, monthly, 45; others: 30 min, weekly, 30.
 -- -----------------------------------------------------------------------------
-INSERT INTO public.lesson_agreements (student_user_id, teacher_id, lesson_type_id, duration_minutes, frequency, price_per_lesson, day_of_week, start_time, start_date, end_date, is_active)
+INSERT INTO public.lesson_agreements (student_user_id, teacher_user_id, lesson_type_id, duration_minutes, frequency, price_per_lesson, day_of_week, start_time, start_date, end_date, is_active)
 SELECT
   student_profile.user_id AS student_user_id,
-  t.id AS teacher_id,
+  t.user_id AS teacher_user_id,
   lt.id AS lesson_type_id,
   snap.duration_minutes,
   snap.frequency,
@@ -792,7 +792,7 @@ INNER JOIN public.lesson_types lt ON lt.name = agreement_data.lesson_type_name
 WHERE NOT EXISTS (
   SELECT 1 FROM public.lesson_agreements la
   WHERE la.student_user_id = student_profile.user_id
-    AND la.teacher_id = t.id
+    AND la.teacher_user_id = t.user_id
     AND la.lesson_type_id = lt.id
     AND la.day_of_week = agreement_data.day_of_week
     AND la.start_time = agreement_data.start_time::TIME
@@ -811,15 +811,14 @@ WHERE NOT EXISTS (
 -- -----------------------------------------------------------------------------
 DO $$
 DECLARE
-  v_eve_teacher_id UUID;
-  v_eve_user_id UUID;
+  v_eve_teacher_user_id UUID;
   v_bandcoaching_lt_id UUID;
   v_consolidated_event_id UUID;
   v_first_start_date DATE;
   v_last_end_date DATE;
 BEGIN
-  -- Get Eve's teacher and user IDs
-  SELECT t.id, t.user_id INTO v_eve_teacher_id, v_eve_user_id
+  -- Get Eve's teacher user_id (teachers table uses user_id as PK)
+  SELECT t.user_id INTO v_eve_teacher_user_id
   FROM public.teachers t
   JOIN public.profiles p ON p.user_id = t.user_id
   WHERE p.email = 'teacher-eve@test.nl';
@@ -832,7 +831,7 @@ BEGIN
   -- Note: Bandcoaching is on Monday (day_of_week = 1), so we need to find the first Monday
   SELECT MIN(start_date), MAX(end_date) INTO v_first_start_date, v_last_end_date
   FROM public.lesson_agreements
-  WHERE teacher_id = v_eve_teacher_id AND lesson_type_id = v_bandcoaching_lt_id;
+  WHERE teacher_user_id = v_eve_teacher_user_id AND lesson_type_id = v_bandcoaching_lt_id;
 
   -- Adjust start_date to be a Monday (day_of_week = 1)
   -- If v_first_start_date is not a Monday, find the next Monday after it
@@ -852,7 +851,7 @@ BEGIN
   WHERE source_type = 'lesson_agreement'
     AND source_id IN (
       SELECT id FROM public.lesson_agreements
-      WHERE teacher_id = v_eve_teacher_id AND lesson_type_id = v_bandcoaching_lt_id
+      WHERE teacher_user_id = v_eve_teacher_user_id AND lesson_type_id = v_bandcoaching_lt_id
     );
 
   -- Create 1 consolidated Bandcoaching event
@@ -864,23 +863,23 @@ BEGIN
     is_all_day, recurring, recurring_frequency, recurring_end_date,
     color, created_by, updated_by
   ) VALUES (
-    'manual', NULL, v_eve_user_id, 'Bandcoaching', 'Groepsles met meerdere deelnemers',
+    'manual', NULL, v_eve_teacher_user_id, 'Bandcoaching', 'Groepsles met meerdere deelnemers',
     v_first_start_date, '14:00'::TIME,
     v_last_end_date, '15:00'::TIME,
     false, true, 'biweekly', v_last_end_date,
-    '#6366F1', v_eve_user_id, v_eve_user_id
+    '#6366F1', v_eve_teacher_user_id, v_eve_teacher_user_id
   )
   RETURNING id INTO v_consolidated_event_id;
 
   -- Add Eve (teacher) as participant
   INSERT INTO public.agenda_participants (event_id, user_id)
-  VALUES (v_consolidated_event_id, v_eve_user_id);
+  VALUES (v_consolidated_event_id, v_eve_teacher_user_id);
 
   -- Add all Bandcoaching students as participants
   INSERT INTO public.agenda_participants (event_id, user_id)
   SELECT DISTINCT v_consolidated_event_id, la.student_user_id
   FROM public.lesson_agreements la
-  WHERE la.teacher_id = v_eve_teacher_id
+  WHERE la.teacher_user_id = v_eve_teacher_user_id
     AND la.lesson_type_id = v_bandcoaching_lt_id;
 END $$;
 

@@ -11,14 +11,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import type { TeacherWithProfile } from '@/types/teachers';
+import type { Teacher } from '@/types/teachers';
 
 export default function TeacherInfo() {
 	const { id } = useParams<{ id: string }>();
-	const { isTeacher, teacherId, isAdmin, isSiteAdmin, isLoading: authLoading } = useAuth();
+	const { isTeacher, teacherUserId, isAdmin, isSiteAdmin, isLoading: authLoading } = useAuth();
 	const [loading, setLoading] = useState(true);
-	const [teacherProfile, setTeacherProfile] = useState<TeacherWithProfile | null>(null);
-	const [targetTeacherId, setTargetTeacherId] = useState<string | null>(null);
+	const [teacherProfile, setTeacherProfile] = useState<Teacher | null>(null);
+	const [targetTeacherUserId, setTargetTeacherUserId] = useState<string | null>(null);
 
 	// Determine which teacher we're viewing
 	useEffect(() => {
@@ -26,31 +26,31 @@ export default function TeacherInfo() {
 
 		// If id is provided in URL, use that (for admins viewing other teachers)
 		if (id) {
-			setTargetTeacherId(id);
+			setTargetTeacherUserId(id);
 			return;
 		}
 
-		// If no id and user is a teacher, use their own teacherId
-		if (isTeacher && teacherId) {
-			setTargetTeacherId(teacherId);
+		// If no id and user is a teacher, use their own teacherUserId
+		if (isTeacher && teacherUserId) {
+			setTargetTeacherUserId(teacherUserId);
 			return;
 		}
 
 		// Otherwise, can't determine teacher
-		setTargetTeacherId(null);
-	}, [id, isTeacher, teacherId, authLoading]);
+		setTargetTeacherUserId(null);
+	}, [id, isTeacher, teacherUserId, authLoading]);
 
 	// Load teacher profile
 	const loadProfile = useCallback(async () => {
-		if (!targetTeacherId) return;
+		if (!targetTeacherUserId) return;
 
 		setLoading(true);
 
 		// Get teacher data
 		const { data: teacherData, error: teacherError } = await supabase
 			.from('teachers')
-			.select('id, user_id, bio, is_active, created_at, updated_at')
-			.eq('id', targetTeacherId)
+			.select('user_id, bio, is_active, created_at, updated_at')
+			.eq('user_id', targetTeacherUserId)
 			.single();
 
 		if (teacherError) {
@@ -62,7 +62,7 @@ export default function TeacherInfo() {
 		// Get profile data
 		const { data: profileData, error: profileError } = await supabase
 			.from('profiles')
-			.select('first_name, last_name, email, avatar_url, phone_number')
+			.select('user_id, first_name, last_name, email, avatar_url, phone_number')
 			.eq('user_id', teacherData.user_id)
 			.single();
 
@@ -73,22 +73,17 @@ export default function TeacherInfo() {
 		}
 
 		setTeacherProfile({
-			id: teacherData.id,
-			user_id: teacherData.user_id,
-			bio: teacherData.bio,
-			is_active: teacherData.is_active,
-			created_at: teacherData.created_at,
-			updated_at: teacherData.updated_at,
-			profile: profileData,
-		});
+			...teacherData,
+			...profileData,
+		} as Teacher);
 		setLoading(false);
-	}, [targetTeacherId]);
+	}, [targetTeacherUserId]);
 
 	useEffect(() => {
-		if (targetTeacherId) {
+		if (targetTeacherUserId) {
 			loadProfile();
 		}
-	}, [targetTeacherId, loadProfile]);
+	}, [targetTeacherUserId, loadProfile]);
 
 	const { setBreadcrumbSuffix } = useBreadcrumb();
 	useEffect(() => {
@@ -97,39 +92,39 @@ export default function TeacherInfo() {
 			return;
 		}
 		const name =
-			teacherProfile.profile.first_name && teacherProfile.profile.last_name
-				? `${teacherProfile.profile.first_name} ${teacherProfile.profile.last_name}`
-				: teacherProfile.profile.first_name || teacherProfile.profile.email;
+			teacherProfile.first_name && teacherProfile.last_name
+				? `${teacherProfile.first_name} ${teacherProfile.last_name}`
+				: teacherProfile.first_name || teacherProfile.email;
 		setBreadcrumbSuffix([{ label: name }]);
 		return () => setBreadcrumbSuffix([]);
 	}, [teacherProfile, setBreadcrumbSuffix]);
 
 	// Check access
 	const canView = useCallback(() => {
-		if (!targetTeacherId) return false;
+		if (!targetTeacherUserId) return false;
 		// Admins can view all teachers
 		if (isAdmin || isSiteAdmin) return true;
 		// Teachers can only view their own profile
-		if (isTeacher && teacherId === targetTeacherId) return true;
+		if (isTeacher && teacherUserId === targetTeacherUserId) return true;
 		return false;
-	}, [targetTeacherId, isAdmin, isSiteAdmin, isTeacher, teacherId]);
+	}, [targetTeacherUserId, isAdmin, isSiteAdmin, isTeacher, teacherUserId]);
 
 	// Check if can edit
 	const canEdit = useCallback(() => {
-		if (!targetTeacherId) return false;
+		if (!targetTeacherUserId) return false;
 		// Admins can edit all teachers
 		if (isAdmin || isSiteAdmin) return true;
 		// Teachers can only edit their own profile
-		if (isTeacher && teacherId === targetTeacherId) return true;
+		if (isTeacher && teacherUserId === targetTeacherUserId) return true;
 		return false;
-	}, [targetTeacherId, isAdmin, isSiteAdmin, isTeacher, teacherId]);
+	}, [targetTeacherUserId, isAdmin, isSiteAdmin, isTeacher, teacherUserId]);
 
-	// Show loading while auth is loading or while we're determining targetTeacherId
-	if (authLoading || !targetTeacherId) {
+	// Show loading while auth is loading or while we're determining targetTeacherUserId
+	if (authLoading || !targetTeacherUserId) {
 		return <PageSkeleton variant="header-and-tabs" />;
 	}
 
-	// Check access after we know targetTeacherId
+	// Check access after we know targetTeacherUserId
 	if (!canView()) {
 		return <Navigate to="/" replace />;
 	}
@@ -140,30 +135,30 @@ export default function TeacherInfo() {
 	}
 
 	const teacherName =
-		teacherProfile.profile.first_name && teacherProfile.profile.last_name
-			? `${teacherProfile.profile.first_name} ${teacherProfile.profile.last_name}`
-			: teacherProfile.profile.first_name || teacherProfile.profile.email;
+		teacherProfile.first_name && teacherProfile.last_name
+			? `${teacherProfile.first_name} ${teacherProfile.last_name}`
+			: teacherProfile.first_name || teacherProfile.email;
 
 	const teacherInitials =
-		teacherProfile.profile.first_name && teacherProfile.profile.last_name
-			? `${teacherProfile.profile.first_name[0]}${teacherProfile.profile.last_name[0]}`.toUpperCase()
-			: teacherProfile.profile.first_name
-				? teacherProfile.profile.first_name.slice(0, 2).toUpperCase()
-				: teacherProfile.profile.email.slice(0, 2).toUpperCase();
+		teacherProfile.first_name && teacherProfile.last_name
+			? `${teacherProfile.first_name[0]}${teacherProfile.last_name[0]}`.toUpperCase()
+			: teacherProfile.first_name
+				? teacherProfile.first_name.slice(0, 2).toUpperCase()
+				: teacherProfile.email.slice(0, 2).toUpperCase();
 
 	return (
 		<div className="space-y-6">
 			<PageHeader
 				icon={
 					<Avatar className="h-16 w-16">
-						<AvatarImage src={teacherProfile.profile.avatar_url ?? undefined} alt={teacherName} />
+						<AvatarImage src={teacherProfile.avatar_url ?? undefined} alt={teacherName} />
 						<AvatarFallback className="bg-primary/10 text-primary text-xl">
 							{teacherInitials}
 						</AvatarFallback>
 					</Avatar>
 				}
 				title={teacherName}
-				subtitle={teacherProfile.profile.email}
+				subtitle={teacherProfile.email}
 			/>
 
 			{/* Tabs */}
@@ -179,16 +174,16 @@ export default function TeacherInfo() {
 						{/* Left column: Profile + Lesson types */}
 						<div className="space-y-6 min-w-0">
 							<TeacherProfileSection
-								teacherId={targetTeacherId}
+								teacherUserId={targetTeacherUserId}
 								user_id={teacherProfile.user_id}
 								canEdit={canEdit()}
 								onUpdate={loadProfile}
 								initialBio={teacherProfile.bio}
-								initialFirstName={teacherProfile.profile.first_name}
-								initialLastName={teacherProfile.profile.last_name}
-								initialPhoneNumber={teacherProfile.profile.phone_number}
+								initialFirstName={teacherProfile.first_name}
+								initialLastName={teacherProfile.last_name}
+								initialPhoneNumber={teacherProfile.phone_number}
 							/>
-							<TeacherLessonTypesSection teacherId={targetTeacherId} canEdit={canEdit()} />
+							<TeacherLessonTypesSection teacherUserId={targetTeacherUserId} canEdit={canEdit()} />
 							<div className="text-xs italic text-muted-foreground space-y-1">
 								<p>Aangemaakt: {new Date(teacherProfile.created_at).toLocaleString('nl-NL')}</p>
 								<p>Laatst bijgewerkt: {new Date(teacherProfile.updated_at).toLocaleString('nl-NL')}</p>
@@ -197,13 +192,13 @@ export default function TeacherInfo() {
 
 						{/* Right column: Availability (scales with viewport) */}
 						<div className="min-w-0">
-							<TeacherAvailabilitySection teacherId={targetTeacherId} canEdit={canEdit()} />
+							<TeacherAvailabilitySection teacherUserId={targetTeacherUserId} canEdit={canEdit()} />
 						</div>
 					</div>
 				</TabsContent>
 
 				<TabsContent value="agenda">
-					<AgendaView userId={targetTeacherId} canEdit={canEdit()} />
+					<AgendaView userId={targetTeacherUserId} canEdit={canEdit()} />
 				</TabsContent>
 			</Tabs>
 		</div>

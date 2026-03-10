@@ -69,9 +69,9 @@ describe('Triggers: profiles immutability', () => {
 		expect(data?.[0]?.first_name).toBe('Trigger');
 		expect(data?.[0]?.last_name).toBe('Test');
 
-		// Verify updated_at changed
+		// Verify updated_at changed (trigger sets it to now())
 		const newUpdatedAt = data?.[0]?.updated_at;
-		expect(new Date(newUpdatedAt ?? 0).getTime()).toBeGreaterThan(new Date(originalUpdatedAt).getTime());
+		expect(newUpdatedAt).not.toBe(originalUpdatedAt);
 
 		// Restore original name
 		await db

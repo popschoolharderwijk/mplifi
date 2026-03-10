@@ -18,12 +18,9 @@
 -- SECTION 2: TABLES
 -- =============================================================================
 
--- Students table - links users to student records
+-- Students table - links users to student records (user_id is PK)
 CREATE TABLE IF NOT EXISTS public.students (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
-  -- User reference
-  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
 
   -- Parent/guardian information (for minors)
   parent_name TEXT,
@@ -82,29 +79,6 @@ REVOKE ALL ON FUNCTION public.is_student(UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.is_student(UUID) FROM anon;
 GRANT EXECUTE ON FUNCTION public.is_student(UUID) TO authenticated;
 ALTER FUNCTION public.is_student(UUID) OWNER TO postgres;
-
--- Helper function to get student ID for a user
--- Uses SECURITY DEFINER to bypass RLS on students table
-CREATE OR REPLACE FUNCTION public.get_student_id(_user_id UUID)
-RETURNS UUID
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-SET row_security = off
-AS $$
-  SELECT id
-  FROM public.students
-  WHERE user_id = _user_id
-  LIMIT 1;
-$$;
-
--- Revoke public access, grant only to authenticated users
-REVOKE ALL ON FUNCTION public.get_student_id(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_student_id(UUID) FROM anon;
-GRANT EXECUTE ON FUNCTION public.get_student_id(UUID) TO authenticated;
-ALTER FUNCTION public.get_student_id(UUID) OWNER TO postgres;
-
 
 -- =============================================================================
 -- SECTION 5: RLS POLICIES

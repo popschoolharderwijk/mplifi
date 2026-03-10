@@ -12,7 +12,7 @@ import {
 import { LessonTypeBadge } from '@/components/ui/lesson-type-badge';
 import { formatDateLong, formatDbDateLong } from '@/lib/date/date-format';
 import { formatTime } from '@/lib/time/time-format';
-import type { StudentInfoModalData } from '@/types/students';
+import type { User } from '@/types/users';
 import type { CalendarEvent } from './types';
 
 interface DetailModalProps {
@@ -26,7 +26,7 @@ interface DetailModalProps {
 	onRevertToOriginal?: () => void;
 	onRevertRecurringAll?: () => void;
 	onOpenCancelConfirm?: () => void;
-	onOpenStudentInfo?: (student: StudentInfoModalData) => void;
+	onOpenStudentInfo?: (student: User) => void;
 	/** For agenda (manual) events: edit opens form */
 	onEditAgenda?: (eventId: string) => void;
 	/** For agenda (manual) events: delete and close */
@@ -112,89 +112,45 @@ export function DetailModal({
 						</div>
 					)}
 
-					{isLessonEvent && selectedEvent?.resource.studentInfo && !selectedEvent.resource.isGroupLesson && (
+					{isLessonEvent && selectedEvent?.resource.user && !selectedEvent.resource.isGroupLesson && (
 						<StudentInfoCard
-							student={{
-								id: selectedEvent.resource.agreementId,
-								user_id: selectedEvent.resource.studentInfo.user_id,
-								profile: {
-									email: selectedEvent.resource.studentInfo.email,
-									first_name: selectedEvent.resource.studentInfo.first_name,
-									last_name: selectedEvent.resource.studentInfo.last_name,
-									avatar_url: selectedEvent.resource.studentInfo.avatar_url,
-								},
-							}}
+							student={selectedEvent.resource.user}
 							onClick={() => {
-								const info = selectedEvent.resource.studentInfo;
-								if (!info || !onOpenStudentInfo) return;
-								onOpenStudentInfo({
-									id: selectedEvent.resource.agreementId,
-									user_id: info.user_id,
-									profile: {
-										email: info.email,
-										first_name: info.first_name,
-										last_name: info.last_name,
-										avatar_url: info.avatar_url,
-										phone_number: null,
-									},
-								});
+								const user = selectedEvent.resource.user;
+								if (!user || !onOpenStudentInfo) return;
+								onOpenStudentInfo(user);
 							}}
 						/>
 					)}
 
-					{isLessonEvent &&
-						selectedEvent?.resource.isGroupLesson &&
-						selectedEvent.resource.studentInfoList && (
-							<div className="space-y-2">
-								<h4 className="text-sm font-medium">Deelnemers</h4>
-								<div className="space-y-2 max-h-48 overflow-y-auto">
-									{selectedEvent.resource.studentInfoList.map((student) => (
-										<StudentInfoCard
-											key={student.user_id}
-											student={{
-												id: selectedEvent.resource.agreementId,
-												user_id: student.user_id,
-												profile: {
-													email: student.email,
-													first_name: student.first_name,
-													last_name: student.last_name,
-													avatar_url: student.avatar_url,
-												},
-											}}
-											onClick={() =>
-												onOpenStudentInfo?.({
-													id: selectedEvent.resource.agreementId,
-													user_id: student.user_id,
-													profile: {
-														email: student.email,
-														first_name: student.first_name,
-														last_name: student.last_name,
-														avatar_url: student.avatar_url,
-														phone_number: null,
-													},
-												})
-											}
-											className="py-2"
-										/>
-									))}
-								</div>
+					{isLessonEvent && selectedEvent?.resource.isGroupLesson && selectedEvent.resource.users && (
+						<div className="space-y-2">
+							<h4 className="text-sm font-medium">Deelnemers</h4>
+							<div className="space-y-2 max-h-48 overflow-y-auto">
+								{selectedEvent.resource.users.map((user) => (
+									<StudentInfoCard
+										key={user.user_id}
+										student={user}
+										onClick={() => onOpenStudentInfo?.(user)}
+										className="py-2"
+									/>
+								))}
 							</div>
-						)}
+						</div>
+					)}
 
-					{isLessonEvent &&
-						selectedEvent?.resource.isGroupLesson &&
-						!selectedEvent.resource.studentInfoList && (
-							<div className="space-y-2">
-								<h4 className="text-sm font-medium">Deelnemers</h4>
-								<ul className="space-y-1">
-									{selectedEvent.resource.studentName.split(', ').map((name) => (
-										<li key={name} className="text-sm text-muted-foreground">
-											• {name}
-										</li>
-									))}
-								</ul>
-							</div>
-						)}
+					{isLessonEvent && selectedEvent?.resource.isGroupLesson && !selectedEvent.resource.users && (
+						<div className="space-y-2">
+							<h4 className="text-sm font-medium">Deelnemers</h4>
+							<ul className="space-y-1">
+								{selectedEvent.resource.studentName.split(', ').map((name) => (
+									<li key={name} className="text-sm text-muted-foreground">
+										• {name}
+									</li>
+								))}
+							</ul>
+						</div>
+					)}
 
 					{isLessonEvent && (
 						<div className="rounded-lg bg-muted p-4 space-y-2">

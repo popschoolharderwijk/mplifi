@@ -7,7 +7,7 @@ import { DAY_NAMES } from '@/lib/date/day-index';
 import { frequencyLabels } from '@/lib/frequencies';
 import { formatTime } from '@/lib/time/time-format';
 import type { WizardInitialAgreement, WizardLessonTypeInfo, WizardTeacherInfo } from '@/types/lesson-agreements';
-import type { StudentCardProfileFields } from '@/types/students';
+import type { UserOptional } from '@/types/users';
 import { ConfirmStepRow } from './ConfirmStepRow';
 
 interface ConfirmStepContentProps {
@@ -15,11 +15,11 @@ interface ConfirmStepContentProps {
 	hasChanges: boolean;
 	initialAgreement: WizardInitialAgreement | null;
 	loadedPeriod: { start_date: string; end_date: string | null } | null;
-	selectedUser: (StudentCardProfileFields & { user_id?: string }) | null;
+	selectedUser: UserOptional | null;
 	selectedLessonType: WizardLessonTypeInfo | undefined;
 	startDate: string;
 	endDate: string;
-	selectedTeacherId: string | null;
+	selectedTeacherUserId: string | null;
 	selectedTeacher: WizardTeacherInfo | undefined;
 	effectiveSlot: SlotWithStatus | null;
 }
@@ -33,7 +33,7 @@ export function ConfirmStepContent({
 	selectedLessonType,
 	startDate,
 	endDate,
-	selectedTeacherId,
+	selectedTeacherUserId,
 	selectedTeacher,
 	effectiveSlot,
 }: ConfirmStepContentProps) {
@@ -92,7 +92,7 @@ export function ConfirmStepContent({
 						<ConfirmStepRow
 							label="Docent"
 							hideIcon
-							changed={initialAgreement.teacher_id !== selectedTeacherId}
+							changed={initialAgreement.teacher_user_id !== selectedTeacherUserId}
 							oldValue={
 								initialAgreement.teacher ? (
 									<UserDisplay
@@ -166,7 +166,7 @@ export function ConfirmStepContent({
 						/>
 						<ConfirmStepRow
 							label="Docent"
-							changed={initialAgreement.teacher_id !== selectedTeacherId}
+							changed={initialAgreement.teacher_user_id !== selectedTeacherUserId}
 							newValue={
 								selectedTeacher ? (
 									<UserDisplay

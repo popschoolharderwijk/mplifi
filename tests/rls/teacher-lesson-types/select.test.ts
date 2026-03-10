@@ -6,8 +6,8 @@ import { TEACHER_LESSON_TYPES } from '../seed-data-constants';
 import { TestUsers } from '../test-users';
 
 // Setup: Use seed data (from supabase/seed.sql)
-const aliceTeacherId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
-const bobTeacherId = fixtures.requireTeacherId(TestUsers.TEACHER_BOB);
+const aliceTeacherUserId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
+const bobTeacherUserId = fixtures.requireTeacherId(TestUsers.TEACHER_BOB);
 
 /**
  * Teacher Lesson Types SELECT permissions:
@@ -66,13 +66,16 @@ describe('RLS: teacher_lesson_types SELECT', () => {
 
 		expect(error).toBeNull();
 		expect(data?.length).toBe(TEACHER_LESSON_TYPES.TEACHER_ALICE);
-		expect(data?.every((lt) => lt.teacher_id === aliceTeacherId)).toBe(true);
+		expect(data?.every((lt) => lt.teacher_user_id === aliceTeacherUserId)).toBe(true);
 	});
 
 	it('teacher cannot see other teachers lesson type links', async () => {
 		const db = await createClientAs(TestUsers.TEACHER_ALICE);
 
-		const { data, error } = await db.from('teacher_lesson_types').select('*').eq('teacher_id', bobTeacherId);
+		const { data, error } = await db
+			.from('teacher_lesson_types')
+			.select('*')
+			.eq('teacher_user_id', bobTeacherUserId);
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(0);

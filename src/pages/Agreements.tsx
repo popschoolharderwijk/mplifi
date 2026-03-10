@@ -66,7 +66,7 @@ export default function Agreements() {
 			let query = supabase
 				.from('lesson_agreements')
 				.select(
-					'id, created_at, day_of_week, start_time, start_date, end_date, is_active, notes, student_user_id, teacher_id, lesson_type_id, duration_minutes, frequency, price_per_lesson, lesson_types(id, name, icon, color), teachers(user_id)',
+					'id, created_at, day_of_week, start_time, start_date, end_date, is_active, notes, student_user_id, teacher_user_id, lesson_type_id, duration_minutes, frequency, price_per_lesson, lesson_types(id, name, icon, color), teachers(user_id)',
 					{ count: 'exact' },
 				);
 
@@ -120,7 +120,7 @@ export default function Agreements() {
 				is_active: boolean;
 				notes: string | null;
 				student_user_id: string;
-				teacher_id: string;
+				teacher_user_id: string;
 				lesson_type_id: string;
 				duration_minutes: number;
 				frequency: LessonFrequency;
@@ -139,9 +139,9 @@ export default function Agreements() {
 			const getLessonTypes = (a: RawRow) => (Array.isArray(a.lesson_types) ? a.lesson_types[0] : a.lesson_types);
 
 			// Collect all user IDs for profile lookup
-			const studentIds = [...new Set(raw.map((a) => a.student_user_id))];
+			const studentUserIds = [...new Set(raw.map((a) => a.student_user_id))];
 			const teacherUserIds = [...new Set(raw.map((a) => getTeachers(a)?.user_id).filter(Boolean) as string[])];
-			const allUserIds = [...new Set([...studentIds, ...teacherUserIds])];
+			const allUserIds = [...new Set([...studentUserIds, ...teacherUserIds])];
 
 			// Default empty profiles
 			const emptyStudent = { first_name: null, last_name: null, avatar_url: null, email: '' };
@@ -161,7 +161,7 @@ export default function Agreements() {
 							is_active: a.is_active,
 							notes: a.notes,
 							student_user_id: a.student_user_id,
-							teacher_id: a.teacher_id,
+							teacher_user_id: a.teacher_user_id,
 							lesson_type_id: a.lesson_type_id,
 							duration_minutes: a.duration_minutes,
 							frequency: a.frequency,
@@ -223,7 +223,7 @@ export default function Agreements() {
 					is_active: a.is_active,
 					notes: a.notes,
 					student_user_id: a.student_user_id,
-					teacher_id: a.teacher_id,
+					teacher_user_id: a.teacher_user_id,
 					lesson_type_id: a.lesson_type_id,
 					duration_minutes: a.duration_minutes,
 					frequency: a.frequency,

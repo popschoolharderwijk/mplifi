@@ -203,37 +203,18 @@ describe('RLS: get_teachers_paginated', () => {
 	it('search filter works', async () => {
 		const db = await createClientAs(TestUsers.SITE_ADMIN);
 
-		// Get all teachers first
-		const { data: allDataRaw } = await db.rpc('get_teachers_paginated', {
-			p_limit: 1000,
-			p_offset: 0,
-		});
-
-		const allData = allDataRaw as unknown as PaginatedTeachersResponse;
-		expect(allData).not.toBeNull();
-		expect(allData.data.length).toBe(TEACHERS.TOTAL);
-		const firstTeacher = allData.data[0];
-		const searchTerm = firstTeacher.profile.email.substring(0, 5);
-
+		// Search for teacher Alice - unique match in seed
 		const { data: searchDataRaw, error } = await db.rpc('get_teachers_paginated', {
 			p_limit: 100,
 			p_offset: 0,
-			p_search: searchTerm,
+			p_search: 'teacher-alice',
 		});
 
 		expect(error).toBeNull();
 		const searchData = searchDataRaw as unknown as PaginatedTeachersResponse;
-		expect(searchData.total_count).toBeGreaterThan(0);
-		expect(searchData.total_count).toBeLessThanOrEqual(TEACHERS.TOTAL);
-		// All results should match the search term
-		searchData.data.forEach((teacher) => {
-			const email = teacher.profile.email.toLowerCase();
-			const matches =
-				email.includes(searchTerm.toLowerCase()) ||
-				teacher.profile.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				teacher.profile.last_name?.toLowerCase().includes(searchTerm.toLowerCase());
-			expect(matches).toBe(true);
-		});
+		expect(searchData.total_count).toBe(1);
+		expect(searchData.data).toHaveLength(1);
+		expect(searchData.data[0]?.profile.email).toBe(TestUsers.TEACHER_ALICE);
 	});
 
 	it('status filter works', async () => {

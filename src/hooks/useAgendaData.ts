@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { CalendarEvent } from '@/components/agenda/types';
-import { buildStudentInfo, formatStudentName, generateAgendaEvents } from '@/components/agenda/utils';
+import { buildParticipantInfo, formatUserName, generateAgendaEvents } from '@/components/agenda/utils';
 import { supabase } from '@/integrations/supabase/client';
 import type { AgendaEventDeviationRow, AgendaEventRow } from '@/types/agenda-events';
-import type { LessonAgreementWithStudent } from '@/types/lesson-agreements';
+import type { LessonAgreementQuery, LessonAgreementWithStudent } from '@/types/lesson-agreements';
+import type { User } from '@/types/users';
 
 export interface LessonAgreementWithTeacher extends LessonAgreementWithStudent {
 	teacherUserId?: string;
@@ -28,11 +29,26 @@ export interface UseAgendaDataResult {
 	getEnrichedEvents: (currentDate: Date, effectiveUserId: string | undefined) => CalendarEvent[];
 }
 
+function getTeacherUserId(teachers: { user_id: string }[] | null | undefined): string | undefined {
+	return teachers?.[0]?.user_id;
+}
+
+function normalizeLessonType(
+	lt: LessonAgreementQuery['lesson_types'],
+): { id: string; name: string; icon: string | null; color: string | null; is_group_lesson: boolean | null } | null {
+	if (!lt) return null;
+	return Array.isArray(lt) ? (lt[0] ?? null) : lt;
+}
+
 export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDataResult {
 	const [agendaEvents, setAgendaEvents] = useState<AgendaEventRow[]>([]);
 	const [deviations, setDeviations] = useState<AgendaEventDeviationRow[]>([]);
 	const [participantCountByEventId, setParticipantCountByEventId] = useState<Map<string, number>>(new Map());
 	const [participantNamesByEventId, setParticipantNamesByEventId] = useState<Map<string, string[]>>(new Map());
+	const [participantCountByDeviationId, setParticipantCountByDeviationId] = useState<Map<string, number>>(new Map());
+	const [participantNamesByDeviationId, setParticipantNamesByDeviationId] = useState<Map<string, string[]>>(
+		new Map(),
+	);
 	const [agreements, setAgreements] = useState<LessonAgreementWithTeacher[]>([]);
 	const [loading, setLoading] = useState(true);
 
@@ -51,6 +67,8 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				setDeviations([]);
 				setParticipantCountByEventId(new Map());
 				setParticipantNamesByEventId(new Map());
+				setParticipantCountByDeviationId(new Map());
+				setParticipantNamesByDeviationId(new Map());
 				setAgreements([]);
 				setLoading(false);
 				return;
@@ -58,39 +76,37 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 
 			const eventIds = [...new Set(participantRows.map((p) => p.event_id))];
 
-			const { data: eventsData, error: eventsError } = await supabase
-				.from('agenda_events')
-				.select('*')
-				.in('id', eventIds);
+			const [eventsResult, deviationsResult, participantsResult] = await Promise.all([
+				supabase.from('agenda_events').select('*').in('id', eventIds),
+				supabase.from('agenda_event_deviations').select('*').in('event_id', eventIds),
+				supabase.from('agenda_participants').select('event_id, user_id').in('event_id', eventIds),
+			]);
+
+			const eventsError = eventsResult.error;
+			const devError = deviationsResult.error;
+			const eventsData = eventsResult.data;
+			const devData = deviationsResult.data;
+			const allParticipants = participantsResult.data ?? [];
 
 			if (eventsError) {
 				toast.error('Failed to load agenda events');
 				setLoading(false);
 				return;
 			}
-
-			const { data: devData, error: devError } = await supabase
-				.from('agenda_event_deviations')
-				.select('*')
-				.in('event_id', eventIds);
-
 			if (devError) {
 				toast.error('Failed to load deviations');
 				setLoading(false);
 				return;
 			}
 
-			const eventsList = (eventsData as AgendaEventRow[]) ?? [];
+			const eventsList: AgendaEventRow[] = eventsData ?? [];
+			const deviationsList: AgendaEventDeviationRow[] = devData ?? [];
 			setAgendaEvents(eventsList);
-			setDeviations((devData as AgendaEventDeviationRow[]) ?? []);
+			setDeviations(deviationsList);
 
-			const { data: allParticipants } = await supabase
-				.from('agenda_participants')
-				.select('event_id, user_id')
-				.in('event_id', eventIds);
 			const countByEvent = new Map<string, number>();
 			const userIdsByEvent = new Map<string, string[]>();
-			for (const p of allParticipants ?? []) {
+			for (const p of allParticipants) {
 				countByEvent.set(p.event_id, (countByEvent.get(p.event_id) ?? 0) + 1);
 				const list = userIdsByEvent.get(p.event_id) ?? [];
 				list.push(p.user_id);
@@ -98,82 +114,104 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 			}
 			setParticipantCountByEventId(countByEvent);
 
-			const allUserIds = [...new Set((allParticipants ?? []).map((p) => p.user_id))];
-			const { data: participantProfiles } = await supabase
-				.from('profiles')
-				.select('user_id, first_name, last_name')
-				.in('user_id', allUserIds);
-			const profileMap = new Map(participantProfiles?.map((p) => [p.user_id, p]) ?? []);
+			const deviationUserIds = [...new Set(deviationsList.flatMap((d) => d.participant_ids ?? []))];
+			const lessonSourceIds = eventsList
+				.filter(
+					(e): e is AgendaEventRow & { source_id: string } =>
+						e.source_type === 'lesson_agreement' && e.source_id != null,
+				)
+				.map((e) => e.source_id);
+
+			const [agreementsResult] = await Promise.all([
+				lessonSourceIds.length > 0
+					? supabase
+							.from('lesson_agreements')
+							.select(
+								'id, day_of_week, start_time, start_date, end_date, is_active, student_user_id, lesson_type_id, duration_minutes, frequency, price_per_lesson, lesson_types(id, name, icon, color, is_group_lesson), teachers(user_id)',
+							)
+							.in('id', lessonSourceIds)
+							.eq('is_active', true)
+					: Promise.resolve({ data: [] as LessonAgreementQuery[], error: null }),
+			]);
+
+			const agreementsData = (agreementsResult.data ?? []) as LessonAgreementQuery[];
+			const agreementsError = agreementsResult.error;
+
+			const studentUserIds =
+				agreementsError || agreementsData.length === 0
+					? []
+					: [...new Set(agreementsData.map((a) => a.student_user_id))];
+			const teacherUserIds =
+				agreementsError || agreementsData.length === 0
+					? []
+					: [
+							...new Set(
+								agreementsData
+									.map((a) => getTeacherUserId(a.teachers))
+									.filter((id): id is string => !!id),
+							),
+						];
+			const allProfileIds = [
+				...new Set([
+					...allParticipants.map((p) => p.user_id),
+					...deviationUserIds,
+					...studentUserIds,
+					...teacherUserIds,
+				]),
+			];
+
+			const { data: profilesData } =
+				allProfileIds.length > 0
+					? await supabase
+							.from('profiles')
+							.select('user_id, first_name, last_name, email, avatar_url, phone_number')
+							.in('user_id', allProfileIds)
+					: { data: [] };
+
+			const profilesList: User[] = profilesData ?? [];
+			const profileMap = new Map<string, User>(profilesList.map((p) => [p.user_id, p]));
+
 			const namesByEvent = new Map<string, string[]>();
 			for (const [eventId, userIds] of userIdsByEvent) {
 				if (userIds.length <= 1) continue;
-				const names = userIds
-					.map((uid) => {
-						const prof = profileMap.get(uid);
-						return prof?.first_name && prof?.last_name
-							? `${prof.first_name} ${prof.last_name}`
-							: (prof?.first_name ?? prof?.last_name ?? 'Onbekend');
-					})
-					.sort();
+				const names = userIds.map((uid) => formatUserName(profileMap.get(uid))).sort();
 				namesByEvent.set(eventId, names);
 			}
 			setParticipantNamesByEventId(namesByEvent);
 
-			const lessonSourceIds = eventsList
-				.filter((e) => e.source_type === 'lesson_agreement' && e.source_id)
-				.map((e) => e.source_id as string);
-			if (lessonSourceIds.length === 0) {
-				setAgreements([]);
-				setLoading(false);
-				return;
-			}
-
-			const { data: agreementsData, error: agreementsError } = await supabase
-				.from('lesson_agreements')
-				.select(
-					'id, day_of_week, start_time, start_date, end_date, is_active, student_user_id, lesson_type_id, duration_minutes, frequency, price_per_lesson, lesson_types(id, name, icon, color, is_group_lesson), teachers(user_id)',
-				)
-				.in('id', lessonSourceIds)
-				.eq('is_active', true);
-
-			if (agreementsError || !agreementsData?.length) {
-				setAgreements([]);
-				setLoading(false);
-				return;
-			}
-
-			const studentUserIds = [...new Set(agreementsData.map((a) => a.student_user_id))];
-			const getTeacherUserId = (teachers: unknown): string | undefined => {
-				if (Array.isArray(teachers) && teachers.length > 0) {
-					return (teachers[0] as { user_id?: string })?.user_id;
+			const countByDeviation = new Map<string, number>();
+			const namesByDeviation = new Map<string, string[]>();
+			for (const d of deviationsList) {
+				const pids = d.participant_ids;
+				if (pids && pids.length > 0) {
+					countByDeviation.set(d.id, pids.length);
+					const names = pids.map((uid) => formatUserName(profileMap.get(uid))).sort();
+					namesByDeviation.set(d.id, names);
 				}
-				if (teachers && typeof teachers === 'object' && 'user_id' in teachers) {
-					return (teachers as { user_id: string }).user_id;
-				}
-				return undefined;
-			};
-			const teacherUserIds = [
-				...new Set(agreementsData.map((a) => getTeacherUserId(a.teachers)).filter((id): id is string => !!id)),
-			];
-			const agreementUserIds = [...new Set([...studentUserIds, ...teacherUserIds])];
+			}
+			setParticipantCountByDeviationId(countByDeviation);
+			setParticipantNamesByDeviationId(namesByDeviation);
 
-			const { data: profilesData } = await supabase
-				.from('profiles')
-				.select('user_id, first_name, last_name, email, avatar_url')
-				.in('user_id', agreementUserIds);
-
-			const profilesMap = new Map(profilesData?.map((p) => [p.user_id, p]) ?? []);
-			const withProfiles = agreementsData.map((a) => {
-				const teacherUserId = getTeacherUserId(a.teachers);
-				const row = {
-					...a,
-					profiles: profilesMap.get(a.student_user_id) ?? null,
-					lesson_types: Array.isArray(a.lesson_types) ? a.lesson_types[0] : a.lesson_types,
-					teacherUserId,
-					teacherProfile: teacherUserId ? (profilesMap.get(teacherUserId) ?? null) : null,
-				} as unknown as LessonAgreementWithTeacher;
-				return row;
-			});
+			const withProfiles: LessonAgreementWithTeacher[] =
+				agreementsError || agreementsData.length === 0
+					? []
+					: agreementsData.map((a) => {
+							const teacherUserId = getTeacherUserId(a.teachers);
+							const lessonType = normalizeLessonType(a.lesson_types);
+							return {
+								...a,
+								profiles: profileMap.get(a.student_user_id) ?? null,
+								lesson_types: lessonType ?? {
+									id: '',
+									name: '',
+									icon: null,
+									color: null,
+									is_group_lesson: false,
+								},
+								teacherUserId,
+								teacherProfile: teacherUserId ? (profileMap.get(teacherUserId) ?? null) : null,
+							} satisfies LessonAgreementWithTeacher;
+						});
 			setAgreements(withProfiles);
 			setLoading(false);
 		},
@@ -212,7 +250,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 	}, [deviations]);
 
 	const agreementsMap = useMemo(
-		() => new Map(agreements.map((a) => [a.id, a])) as Map<string, LessonAgreementWithTeacher>,
+		() => new Map<string, LessonAgreementWithTeacher>(agreements.map((a) => [a.id, a])),
 		[agreements],
 	);
 
@@ -233,12 +271,22 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 			);
 
 			return baseEvents.map((ev) => {
-				const participantCount = ev.resource.eventId
-					? participantCountByEventId.get(ev.resource.eventId)
-					: undefined;
-				const participantNames = ev.resource.eventId
-					? participantNamesByEventId.get(ev.resource.eventId)
-					: undefined;
+				const deviationId = ev.resource.deviationId;
+				const hasDeviationParticipants =
+					deviationId &&
+					(participantCountByDeviationId.has(deviationId) || participantNamesByDeviationId.has(deviationId));
+				const participantCount =
+					hasDeviationParticipants && deviationId
+						? participantCountByDeviationId.get(deviationId)
+						: ev.resource.eventId
+							? participantCountByEventId.get(ev.resource.eventId)
+							: undefined;
+				const participantNames =
+					hasDeviationParticipants && deviationId
+						? participantNamesByDeviationId.get(deviationId)
+						: ev.resource.eventId
+							? participantNamesByEventId.get(ev.resource.eventId)
+							: undefined;
 				const enriched = {
 					...ev,
 					resource: {
@@ -250,10 +298,10 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				if (ev.resource.sourceType !== 'lesson_agreement' || !ev.resource.agreementId) return enriched;
 				const agreement = agreementsMap.get(ev.resource.agreementId);
 				if (!agreement) return enriched;
-				const studentInfo = buildStudentInfo(agreement.profiles, agreement.student_user_id);
-				const studentName = formatStudentName(agreement.profiles);
+				const user = buildParticipantInfo(agreement.profiles, agreement.student_user_id);
+				const studentName = formatUserName(agreement.profiles);
 				const teacherName = agreement.teacherProfile
-					? formatStudentName(agreement.teacherProfile)
+					? formatUserName(agreement.teacherProfile)
 					: 'Docent onbekend';
 				const viewerIsTeacher = viewerUserId === agreement.teacherUserId;
 				return {
@@ -269,8 +317,8 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 						lessonTypeIcon: agreement.lesson_types.icon,
 						isGroupLesson: agreement.lesson_types.is_group_lesson ?? false,
 						studentCount: agreement.lesson_types.is_group_lesson ? 1 : undefined,
-						studentInfo: studentInfo ?? undefined,
-						studentInfoList: studentInfo ? [studentInfo] : undefined,
+						user: user ?? undefined,
+						users: user ? [user] : undefined,
 						isLesson: true,
 					},
 				};
@@ -283,6 +331,8 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 			agreementsMap,
 			participantCountByEventId,
 			participantNamesByEventId,
+			participantCountByDeviationId,
+			participantNamesByDeviationId,
 		],
 	);
 

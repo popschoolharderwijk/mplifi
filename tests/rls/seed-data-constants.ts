@@ -99,6 +99,33 @@ export const TEACHERS = {
 } as const;
 
 /**
+ * Agenda events counts (from seed.sql)
+ */
+export const AGENDA_EVENTS = {
+	// lesson_agreement trigger + manual events from seed
+	TOTAL: 134,
+	MANUAL_TOTAL: 42,
+	LESSON_AGREEMENT_TOTAL: 92, // 100 - 8 Bandcoaching? May vary; use TOTAL - MANUAL_TOTAL
+
+	// Participations per student (agenda_participants rows)
+	STUDENT_001_PARTICIPATIONS: 4,
+	STUDENT_012_PARTICIPATIONS: 3, // Wekelijks overleg (manual) + 2 Gitaar (lesson_agreement)
+
+	// Students 002/003 participate in 1 manual event (shared?) + lesson_agreement
+	NON_PARTICIPATING_MANUAL_FOR_STUDENT_002: 41,
+
+	// Teacher Alice owned: lesson_agreement + manual
+	TEACHER_ALICE_OWNED: 15,
+} as const;
+
+/**
+ * Pagination test constants (page size used in pagination tests)
+ */
+export const PAGINATION = {
+	PAGE_SIZE: 10,
+} as const;
+
+/**
  * Users counts
  */
 export const USERS = {

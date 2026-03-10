@@ -37,48 +37,60 @@ export type Database = {
 				Row: {
 					actual_date: string;
 					actual_start_time: string;
+					color: string | null;
 					created_at: string;
 					created_by: string;
+					description: string | null;
 					event_id: string;
 					id: string;
 					is_cancelled: boolean;
 					original_date: string;
 					original_start_time: string;
+					participant_ids: string[] | null;
 					reason: string | null;
 					recurring: boolean;
 					recurring_end_date: string | null;
+					title: string | null;
 					updated_at: string;
 					updated_by: string;
 				};
 				Insert: {
 					actual_date: string;
 					actual_start_time: string;
+					color?: string | null;
 					created_at?: string;
 					created_by: string;
+					description?: string | null;
 					event_id: string;
 					id?: string;
 					is_cancelled?: boolean;
 					original_date: string;
 					original_start_time: string;
+					participant_ids?: string[] | null;
 					reason?: string | null;
 					recurring?: boolean;
 					recurring_end_date?: string | null;
+					title?: string | null;
 					updated_at?: string;
 					updated_by: string;
 				};
 				Update: {
 					actual_date?: string;
 					actual_start_time?: string;
+					color?: string | null;
 					created_at?: string;
 					created_by?: string;
+					description?: string | null;
 					event_id?: string;
 					id?: string;
 					is_cancelled?: boolean;
 					original_date?: string;
 					original_start_time?: string;
+					participant_ids?: string[] | null;
 					reason?: string | null;
 					recurring?: boolean;
 					recurring_end_date?: string | null;
+					title?: string | null;
 					updated_at?: string;
 					updated_by?: string;
 				};
@@ -210,7 +222,7 @@ export type Database = {
 					start_date: string;
 					start_time: string;
 					student_user_id: string;
-					teacher_id: string;
+					teacher_user_id: string;
 					updated_at: string;
 				};
 				Insert: {
@@ -227,7 +239,7 @@ export type Database = {
 					start_date: string;
 					start_time: string;
 					student_user_id: string;
-					teacher_id: string;
+					teacher_user_id: string;
 					updated_at?: string;
 				};
 				Update: {
@@ -244,7 +256,7 @@ export type Database = {
 					start_date?: string;
 					start_time?: string;
 					student_user_id?: string;
-					teacher_id?: string;
+					teacher_user_id?: string;
 					updated_at?: string;
 				};
 				Relationships: [
@@ -256,11 +268,11 @@ export type Database = {
 						referencedColumns: ['id'];
 					},
 					{
-						foreignKeyName: 'lesson_agreements_teacher_id_fkey';
-						columns: ['teacher_id'];
+						foreignKeyName: 'lesson_agreements_teacher_user_id_fkey';
+						columns: ['teacher_user_id'];
 						isOneToOne: false;
 						referencedRelation: 'teachers';
-						referencedColumns: ['id'];
+						referencedColumns: ['user_id'];
 					},
 				];
 			};
@@ -347,7 +359,6 @@ export type Database = {
 					created_at: string;
 					email: string;
 					first_name: string | null;
-					id: string;
 					last_name: string | null;
 					phone_number: string | null;
 					updated_at: string;
@@ -358,7 +369,6 @@ export type Database = {
 					created_at?: string;
 					email: string;
 					first_name?: string | null;
-					id?: string;
 					last_name?: string | null;
 					phone_number?: string | null;
 					updated_at?: string;
@@ -369,7 +379,6 @@ export type Database = {
 					created_at?: string;
 					email?: string;
 					first_name?: string | null;
-					id?: string;
 					last_name?: string | null;
 					phone_number?: string | null;
 					updated_at?: string;
@@ -386,7 +395,6 @@ export type Database = {
 					debtor_info_same_as_student: boolean;
 					debtor_name: string | null;
 					debtor_postal_code: string | null;
-					id: string;
 					parent_email: string | null;
 					parent_name: string | null;
 					parent_phone_number: string | null;
@@ -401,7 +409,6 @@ export type Database = {
 					debtor_info_same_as_student?: boolean;
 					debtor_name?: string | null;
 					debtor_postal_code?: string | null;
-					id?: string;
 					parent_email?: string | null;
 					parent_name?: string | null;
 					parent_phone_number?: string | null;
@@ -416,7 +423,6 @@ export type Database = {
 					debtor_info_same_as_student?: boolean;
 					debtor_name?: string | null;
 					debtor_postal_code?: string | null;
-					id?: string;
 					parent_email?: string | null;
 					parent_name?: string | null;
 					parent_phone_number?: string | null;
@@ -432,7 +438,7 @@ export type Database = {
 					end_time: string;
 					id: string;
 					start_time: string;
-					teacher_id: string;
+					teacher_user_id: string;
 					updated_at: string;
 				};
 				Insert: {
@@ -441,7 +447,7 @@ export type Database = {
 					end_time: string;
 					id?: string;
 					start_time: string;
-					teacher_id: string;
+					teacher_user_id: string;
 					updated_at?: string;
 				};
 				Update: {
@@ -450,16 +456,16 @@ export type Database = {
 					end_time?: string;
 					id?: string;
 					start_time?: string;
-					teacher_id?: string;
+					teacher_user_id?: string;
 					updated_at?: string;
 				};
 				Relationships: [
 					{
-						foreignKeyName: 'teacher_availability_teacher_id_fkey';
-						columns: ['teacher_id'];
+						foreignKeyName: 'teacher_availability_teacher_user_id_fkey';
+						columns: ['teacher_user_id'];
 						isOneToOne: false;
 						referencedRelation: 'teachers';
-						referencedColumns: ['id'];
+						referencedColumns: ['user_id'];
 					},
 				];
 			};
@@ -467,17 +473,17 @@ export type Database = {
 				Row: {
 					created_at: string;
 					lesson_type_id: string;
-					teacher_id: string;
+					teacher_user_id: string;
 				};
 				Insert: {
 					created_at?: string;
 					lesson_type_id: string;
-					teacher_id: string;
+					teacher_user_id: string;
 				};
 				Update: {
 					created_at?: string;
 					lesson_type_id?: string;
-					teacher_id?: string;
+					teacher_user_id?: string;
 				};
 				Relationships: [
 					{
@@ -488,11 +494,11 @@ export type Database = {
 						referencedColumns: ['id'];
 					},
 					{
-						foreignKeyName: 'teacher_lesson_types_teacher_id_fkey';
-						columns: ['teacher_id'];
+						foreignKeyName: 'teacher_lesson_types_teacher_user_id_fkey';
+						columns: ['teacher_user_id'];
 						isOneToOne: false;
 						referencedRelation: 'teachers';
-						referencedColumns: ['id'];
+						referencedColumns: ['user_id'];
 					},
 				];
 			};
@@ -500,7 +506,6 @@ export type Database = {
 				Row: {
 					bio: string | null;
 					created_at: string;
-					id: string;
 					is_active: boolean;
 					updated_at: string;
 					user_id: string;
@@ -508,7 +513,6 @@ export type Database = {
 				Insert: {
 					bio?: string | null;
 					created_at?: string;
-					id?: string;
 					is_active?: boolean;
 					updated_at?: string;
 					user_id: string;
@@ -516,7 +520,6 @@ export type Database = {
 				Update: {
 					bio?: string | null;
 					created_at?: string;
-					id?: string;
 					is_active?: boolean;
 					updated_at?: string;
 					user_id?: string;
@@ -589,6 +592,10 @@ export type Database = {
 				Args: { _requester_id: string; _target_id: string };
 				Returns: boolean;
 			};
+			can_manage_agenda_event: {
+				Args: { ev_id: string; uid: string };
+				Returns: boolean;
+			};
 			check_rls_enabled: { Args: { p_table_name: string }; Returns: boolean };
 			cleanup_student_if_no_agreements: {
 				Args: { _user_id: string };
@@ -614,7 +621,7 @@ export type Database = {
 				Args: {
 					p_end_date: string;
 					p_start_date: string;
-					p_teacher_id?: string;
+					p_teacher_user_id?: string;
 				};
 				Returns: Json;
 			};
@@ -628,7 +635,7 @@ export type Database = {
 					p_sort_column?: string;
 					p_sort_direction?: string;
 					p_student_user_id?: string;
-					p_teacher_id?: string;
+					p_teacher_user_id?: string;
 				};
 				Returns: Json;
 			};
@@ -646,7 +653,6 @@ export type Database = {
 					view_owner: string;
 				}[];
 			};
-			get_student_id: { Args: { _user_id: string }; Returns: string };
 			get_student_status: { Args: { _user_id: string }; Returns: string };
 			get_students_paginated: {
 				Args: {
@@ -661,7 +667,7 @@ export type Database = {
 				Returns: Json;
 			};
 			get_table_policies: { Args: { p_table_name: string }; Returns: string[] };
-			get_teacher_id: { Args: { _user_id: string }; Returns: string };
+			get_teacher_user_id: { Args: { _user_id: string }; Returns: string };
 			get_teachers_paginated: {
 				Args: {
 					p_lesson_type_id?: string;
@@ -686,6 +692,10 @@ export type Database = {
 				Returns: Json;
 			};
 			is_admin: { Args: { _user_id: string }; Returns: boolean };
+			is_agenda_participant: {
+				Args: { ev_id: string; uid: string };
+				Returns: boolean;
+			};
 			is_privileged: { Args: { _user_id: string }; Returns: boolean };
 			is_site_admin: { Args: { _user_id: string }; Returns: boolean };
 			is_staff: { Args: { _user_id: string }; Returns: boolean };

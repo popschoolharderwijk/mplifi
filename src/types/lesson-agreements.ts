@@ -3,20 +3,43 @@
  * These types extend the generated Supabase types with joined relations
  */
 
-import type { Database } from '@/integrations/supabase/types';
+import type { Enums, Tables } from '@/integrations/supabase/types';
 import type { AgendaEventDeviationWithEvent } from '@/types/agenda-events';
 
 // Base types from Supabase
-type LessonAgreementRow = Database['public']['Tables']['lesson_agreements']['Row'];
-export type LessonTypeRow = Database['public']['Tables']['lesson_types']['Row'];
-export type LessonTypeOptionRow = Database['public']['Tables']['lesson_type_options']['Row'];
-type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+type LessonAgreementRow = Tables<'lesson_agreements'>;
+export type LessonTypeRow = Tables<'lesson_types'>;
+export type LessonTypeOptionRow = Tables<'lesson_type_options'>;
+type ProfileRow = Tables<'profiles'>;
 
 /** Lesson scheduling frequency from Supabase enum (use this instead of defining locally) */
-export type LessonFrequency = Database['public']['Enums']['lesson_frequency'];
+export type LessonFrequency = Enums<'lesson_frequency'>;
 
 /** Common lesson type display fields (id, name, icon, color) */
 export type LessonTypeDisplayFields = Pick<LessonTypeRow, 'id' | 'name' | 'icon' | 'color'>;
+
+/** Lesson type from join (display fields + is_group_lesson) */
+export type LessonTypeJoined = LessonTypeDisplayFields & Pick<LessonTypeRow, 'is_group_lesson'>;
+
+/** Base agreement fields shared by query/with-student types (no profiles, no joins) */
+type LessonAgreementBaseFields = Pick<
+	LessonAgreementRow,
+	| 'id'
+	| 'day_of_week'
+	| 'start_time'
+	| 'start_date'
+	| 'end_date'
+	| 'is_active'
+	| 'student_user_id'
+	| 'lesson_type_id'
+	| 'duration_minutes'
+	| 'frequency'
+	| 'price_per_lesson'
+>;
+
+/** Agreement fields for table display (base + created_at, notes, teacher_user_id) */
+type LessonAgreementTableFields = LessonAgreementBaseFields &
+	Pick<LessonAgreementRow, 'created_at' | 'notes'> & { teacher_user_id: string };
 
 /** Form state for lesson type create/edit (nullable DB fields as string) */
 export type LessonTypeFormState = Pick<LessonTypeRow, 'name' | 'icon' | 'color' | 'is_group_lesson' | 'is_active'> & {
@@ -81,7 +104,7 @@ export interface WizardAgreementLessonType {
 export interface WizardInitialAgreement {
 	id: string;
 	student_user_id: string;
-	teacher_id: string;
+	teacher_user_id: string;
 	lesson_type_id: string;
 	duration_minutes: number;
 	frequency: LessonFrequency;
@@ -97,25 +120,21 @@ export interface WizardInitialAgreement {
 // ======== End Wizard Step Types ========
 
 /**
+ * Raw shape from lesson_agreements select with lesson_types and teachers joins.
+ * Used when querying agreements with .select('..., lesson_types(...), teachers(user_id)').
+ */
+export type LessonAgreementQuery = LessonAgreementBaseFields & {
+	lesson_types: LessonTypeJoined | LessonTypeJoined[] | null;
+	teachers: { user_id: string }[] | null;
+};
+
+/**
  * Lesson agreement from teacher's perspective (includes student profile)
  * Duration/frequency/price come from agreement snapshot, not lesson_types.
  */
-export type LessonAgreementWithStudent = Pick<
-	LessonAgreementRow,
-	| 'id'
-	| 'day_of_week'
-	| 'start_time'
-	| 'start_date'
-	| 'end_date'
-	| 'is_active'
-	| 'student_user_id'
-	| 'lesson_type_id'
-	| 'duration_minutes'
-	| 'frequency'
-	| 'price_per_lesson'
-> & {
+export type LessonAgreementWithStudent = LessonAgreementBaseFields & {
 	profiles: Pick<ProfileRow, 'first_name' | 'last_name' | 'email'> | null;
-	lesson_types: LessonTypeDisplayFields & Pick<LessonTypeRow, 'is_group_lesson'>;
+	lesson_types: LessonTypeJoined;
 };
 
 /**
@@ -143,23 +162,7 @@ export type LessonAgreementWithTeacher = Pick<
  * Lesson agreement row for the Agreements data table.
  * lesson_type has name/icon/color from lesson_types; duration/frequency/price from agreement snapshot.
  */
-export type AgreementTableRow = Pick<
-	LessonAgreementRow,
-	| 'id'
-	| 'created_at'
-	| 'day_of_week'
-	| 'start_time'
-	| 'start_date'
-	| 'end_date'
-	| 'is_active'
-	| 'notes'
-	| 'student_user_id'
-	| 'teacher_id'
-	| 'lesson_type_id'
-	| 'duration_minutes'
-	| 'frequency'
-	| 'price_per_lesson'
-> & {
+export type AgreementTableRow = LessonAgreementTableFields & {
 	student: Pick<ProfileRow, 'first_name' | 'last_name' | 'avatar_url' | 'email'>;
 	teacher: Pick<ProfileRow, 'first_name' | 'last_name' | 'avatar_url' | 'email'>;
 	lesson_type: LessonTypeDisplayFields;

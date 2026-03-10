@@ -18,7 +18,7 @@ import { SubmitButton } from '@/components/ui/submit-button';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { type AppRole, allRoles, roleLabels } from '@/lib/roles';
-import type { UserProfileDisplay } from '@/types/user';
+import type { User } from '@/types/users';
 
 interface UserData {
 	user_id: string;
@@ -33,7 +33,7 @@ interface UserFormDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	/** Called when save succeeds. In create mode, receives the new user (Supabase profile display) so caller can select them. */
-	onSuccess: (createdUser?: UserProfileDisplay) => void;
+	onSuccess: (createdUser?: User) => void;
 	/** User data for edit mode. If undefined, dialog is in create mode. */
 	user?: UserData;
 }
@@ -164,12 +164,13 @@ export function UserFormDialog({ open, onOpenChange, onSuccess, user }: UserForm
 			});
 		}
 
-		const createdUserInfo: UserProfileDisplay = {
+		const createdUserInfo: User = {
 			user_id: data.user_id,
 			email: data.email ?? form.email,
 			first_name: form.first_name || null,
 			last_name: form.last_name || null,
 			avatar_url: null,
+			phone_number: form.phone_number || null,
 		};
 		setForm(emptyForm);
 		onOpenChange(false);

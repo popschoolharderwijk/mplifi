@@ -18,8 +18,8 @@ afterAll(async () => {
 
 const dbNoRLS = createClientBypassRLS();
 
-const aliceTeacherId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
-const bobTeacherId = fixtures.requireTeacherId(TestUsers.TEACHER_BOB);
+const aliceTeacherUserId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
+const bobTeacherUserId = fixtures.requireTeacherId(TestUsers.TEACHER_BOB);
 
 /**
  * Teacher Availability INSERT/UPDATE/DELETE permissions:
@@ -38,7 +38,7 @@ const bobTeacherId = fixtures.requireTeacherId(TestUsers.TEACHER_BOB);
  */
 describe('RLS: teacher_availability INSERT - blocked for non-teacher/admin roles', () => {
 	const newAvailability: TeacherAvailabilityInsert = {
-		teacher_id: aliceTeacherId,
+		teacher_user_id: aliceTeacherUserId,
 		day_of_week: 1,
 		start_time: '09:00',
 		end_time: '12:00',
@@ -77,7 +77,7 @@ describe('RLS: teacher_availability INSERT - teacher permissions', () => {
 		const db = await createClientAs(TestUsers.TEACHER_ALICE);
 
 		const newAvailability: TeacherAvailabilityInsert = {
-			teacher_id: aliceTeacherId,
+			teacher_user_id: aliceTeacherUserId,
 			day_of_week: 4,
 			start_time: '13:00',
 			end_time: '16:00',
@@ -87,7 +87,7 @@ describe('RLS: teacher_availability INSERT - teacher permissions', () => {
 
 		expect(error).toBeNull();
 		expect(data).toHaveLength(1);
-		expect(data?.[0]?.teacher_id).toBe(aliceTeacherId);
+		expect(data?.[0]?.teacher_user_id).toBe(aliceTeacherUserId);
 
 		// Cleanup
 		if (data?.[0]?.id) {
@@ -99,7 +99,7 @@ describe('RLS: teacher_availability INSERT - teacher permissions', () => {
 		const db = await createClientAs(TestUsers.TEACHER_ALICE);
 
 		const newAvailability: TeacherAvailabilityInsert = {
-			teacher_id: bobTeacherId,
+			teacher_user_id: bobTeacherUserId,
 			day_of_week: 1,
 			start_time: '09:00',
 			end_time: '12:00',
@@ -117,7 +117,7 @@ describe('RLS: teacher_availability INSERT - admin permissions', () => {
 		const db = await createClientAs(TestUsers.ADMIN_ONE);
 
 		const newAvailability: TeacherAvailabilityInsert = {
-			teacher_id: aliceTeacherId,
+			teacher_user_id: aliceTeacherUserId,
 			day_of_week: 5,
 			start_time: '10:00',
 			end_time: '14:00',
@@ -138,7 +138,7 @@ describe('RLS: teacher_availability INSERT - admin permissions', () => {
 		const db = await createClientAs(TestUsers.SITE_ADMIN);
 
 		const newAvailability: TeacherAvailabilityInsert = {
-			teacher_id: bobTeacherId,
+			teacher_user_id: bobTeacherUserId,
 			day_of_week: 5,
 			start_time: '10:00',
 			end_time: '14:00',
@@ -164,7 +164,7 @@ describe('RLS: teacher_availability UPDATE - blocked for non-teacher/admin roles
 		const { data: existing } = await dbNoRLS
 			.from('teacher_availability')
 			.select('id')
-			.eq('teacher_id', aliceTeacherId)
+			.eq('teacher_user_id', aliceTeacherUserId)
 			.limit(1)
 			.single();
 
@@ -188,7 +188,7 @@ describe('RLS: teacher_availability UPDATE - blocked for non-teacher/admin roles
 		const { data: existing } = await dbNoRLS
 			.from('teacher_availability')
 			.select('id')
-			.eq('teacher_id', aliceTeacherId)
+			.eq('teacher_user_id', aliceTeacherUserId)
 			.limit(1)
 			.single();
 
@@ -215,7 +215,7 @@ describe('RLS: teacher_availability UPDATE - teacher permissions', () => {
 		const { data: existing } = await dbNoRLS
 			.from('teacher_availability')
 			.select('*')
-			.eq('teacher_id', aliceTeacherId)
+			.eq('teacher_user_id', aliceTeacherUserId)
 			.limit(1)
 			.single();
 
@@ -242,7 +242,7 @@ describe('RLS: teacher_availability UPDATE - teacher permissions', () => {
 		const { data: existing } = await dbNoRLS
 			.from('teacher_availability')
 			.select('id')
-			.eq('teacher_id', bobTeacherId)
+			.eq('teacher_user_id', bobTeacherUserId)
 			.limit(1)
 			.single();
 
@@ -268,7 +268,7 @@ describe('RLS: teacher_availability UPDATE - admin permissions', () => {
 		const { data: existing } = await dbNoRLS
 			.from('teacher_availability')
 			.select('*')
-			.eq('teacher_id', aliceTeacherId)
+			.eq('teacher_user_id', aliceTeacherUserId)
 			.limit(1)
 			.single();
 
@@ -297,7 +297,7 @@ describe('RLS: teacher_availability DELETE - blocked for non-teacher/admin roles
 		const { data: existing } = await dbNoRLS
 			.from('teacher_availability')
 			.select('id')
-			.eq('teacher_id', aliceTeacherId)
+			.eq('teacher_user_id', aliceTeacherUserId)
 			.limit(1)
 			.single();
 
@@ -317,7 +317,7 @@ describe('RLS: teacher_availability DELETE - blocked for non-teacher/admin roles
 		const { data: existing } = await dbNoRLS
 			.from('teacher_availability')
 			.select('id')
-			.eq('teacher_id', aliceTeacherId)
+			.eq('teacher_user_id', aliceTeacherUserId)
 			.limit(1)
 			.single();
 
@@ -340,7 +340,7 @@ describe('RLS: teacher_availability DELETE - teacher permissions', () => {
 		const { data: inserted } = await dbNoRLS
 			.from('teacher_availability')
 			.insert({
-				teacher_id: aliceTeacherId,
+				teacher_user_id: aliceTeacherUserId,
 				day_of_week: 6,
 				start_time: '09:00',
 				end_time: '12:00',
@@ -364,7 +364,7 @@ describe('RLS: teacher_availability DELETE - teacher permissions', () => {
 		const { data: existing } = await dbNoRLS
 			.from('teacher_availability')
 			.select('id')
-			.eq('teacher_id', bobTeacherId)
+			.eq('teacher_user_id', bobTeacherUserId)
 			.limit(1)
 			.single();
 
@@ -387,7 +387,7 @@ describe('RLS: teacher_availability DELETE - admin permissions', () => {
 		const { data: inserted } = await dbNoRLS
 			.from('teacher_availability')
 			.insert({
-				teacher_id: aliceTeacherId,
+				teacher_user_id: aliceTeacherUserId,
 				day_of_week: 6,
 				start_time: '09:00',
 				end_time: '12:00',
@@ -411,7 +411,7 @@ describe('RLS: teacher_availability validation', () => {
 		const db = await createClientAs(TestUsers.TEACHER_ALICE);
 
 		const invalidAvailability: TeacherAvailabilityInsert = {
-			teacher_id: aliceTeacherId,
+			teacher_user_id: aliceTeacherUserId,
 			day_of_week: 1,
 			start_time: '12:00',
 			end_time: '09:00', // Invalid: end before start

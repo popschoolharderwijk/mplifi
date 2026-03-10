@@ -18,26 +18,14 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
-
-interface TeacherData {
-	id: string;
-	user_id: string;
-	bio: string | null;
-	is_active: boolean;
-	profile: {
-		email: string;
-		first_name: string | null;
-		last_name: string | null;
-		phone_number: string | null;
-	};
-}
+import type { Teacher } from '@/types/teachers';
 
 interface TeacherFormDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	onSuccess: (teacherId?: string) => void;
+	onSuccess: (teacherUserId?: string) => void;
 	/** Teacher data for edit mode. If undefined, dialog is in create mode. */
-	teacher?: TeacherData;
+	teacher?: Teacher;
 }
 
 interface FormState {
@@ -94,7 +82,7 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 			supabase
 				.from('teacher_lesson_types')
 				.select('lesson_type_id')
-				.eq('teacher_id', teacher.id)
+				.eq('teacher_user_id', teacher.user_id)
 				.then(({ data, error }) => {
 					if (error) {
 						console.error('Error loading teacher lesson types:', error);
@@ -111,10 +99,10 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 		if (open) {
 			if (teacher) {
 				setForm({
-					email: teacher.profile.email,
-					first_name: teacher.profile.first_name ?? '',
-					last_name: teacher.profile.last_name ?? '',
-					phone_number: teacher.profile.phone_number ?? '',
+					email: teacher.email ?? '',
+					first_name: teacher.first_name ?? '',
+					last_name: teacher.last_name ?? '',
+					phone_number: teacher.phone_number ?? '',
 					bio: teacher.bio ?? '',
 					lesson_type_ids: [],
 				});
@@ -203,7 +191,7 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 				bio: form.bio || null,
 				is_active: true,
 			})
-			.select('id')
+			.select('user_id')
 			.single();
 
 		if (teacherError || !teacherData) {
@@ -216,7 +204,7 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 		// Link lesson types
 		if (form.lesson_type_ids.length > 0) {
 			const lessonTypeLinks = form.lesson_type_ids.map((lesson_type_id) => ({
-				teacher_id: teacherData.id,
+				teacher_user_id: teacherData.user_id,
 				lesson_type_id,
 			}));
 
@@ -235,7 +223,7 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 		setForm(emptyForm);
 		setSelectedUserId(null);
 		onOpenChange(false);
-		onSuccess(teacherData.id);
+		onSuccess(teacherData.user_id);
 	};
 
 	const handleEdit = async () => {
@@ -247,7 +235,7 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 			.update({
 				bio: form.bio || null,
 			})
-			.eq('id', teacher.id);
+			.eq('user_id', teacher.user_id);
 
 		if (teacherError) {
 			toast.error('Fout bij bijwerken docent', {
@@ -278,7 +266,7 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 		const { data: currentLinks } = await supabase
 			.from('teacher_lesson_types')
 			.select('lesson_type_id')
-			.eq('teacher_id', teacher.id);
+			.eq('teacher_user_id', teacher.user_id);
 
 		const currentIds = new Set((currentLinks ?? []).map((link) => link.lesson_type_id));
 		const newIds = new Set(form.lesson_type_ids);
@@ -291,7 +279,7 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 		// Add new links
 		if (toAdd.length > 0) {
 			const linksToAdd = toAdd.map((lesson_type_id) => ({
-				teacher_id: teacher.id,
+				teacher_user_id: teacher.user_id,
 				lesson_type_id,
 			}));
 			const { error: addError } = await supabase.from('teacher_lesson_types').insert(linksToAdd);
@@ -308,7 +296,7 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 			const { error: removeError } = await supabase
 				.from('teacher_lesson_types')
 				.delete()
-				.eq('teacher_id', teacher.id)
+				.eq('teacher_user_id', teacher.user_id)
 				.in('lesson_type_id', toRemove);
 			if (removeError) {
 				toast.error('Fout bij verwijderen lessoorten', {

@@ -3,7 +3,7 @@
 CREATE OR REPLACE FUNCTION public.get_hours_report(
   p_start_date date,
   p_end_date date,
-  p_teacher_id uuid DEFAULT NULL
+  p_teacher_user_id uuid DEFAULT NULL
 )
 RETURNS json
 LANGUAGE plpgsql
@@ -22,7 +22,7 @@ BEGIN
   agreement_occurrences AS (
     SELECT
       la.id AS agreement_id,
-      la.teacher_id,
+      la.teacher_user_id,
       la.lesson_type_id,
       la.student_user_id,
       la.duration_minutes,
@@ -47,8 +47,8 @@ BEGIN
     WHERE
       -- Filter to correct day_of_week (0=Sunday in app, extract dow: 0=Sunday)
       EXTRACT(DOW FROM d.occurrence_date) = la.day_of_week
-      -- Optional filter by teacher (staff can pass a teacher_id; teachers only see own data via RLS)
-      AND (p_teacher_id IS NULL OR la.teacher_id = p_teacher_id)
+      -- Optional filter by teacher (staff can pass a teacher_user_id; teachers only see own data via RLS)
+      AND (p_teacher_user_id IS NULL OR la.teacher_user_id = p_teacher_user_id)
       -- Apply frequency filter
       AND (
         la.frequency = 'daily'
@@ -97,7 +97,7 @@ BEGIN
   -- Join with student data for age calculation and teacher/lesson type info
   enriched AS (
     SELECT
-      nco.teacher_id,
+      nco.teacher_user_id,
       nco.lesson_type_id,
       nco.duration_minutes,
       nco.occurrence_date,
@@ -116,19 +116,19 @@ BEGIN
   -- Aggregate per teacher, lesson type, age category
   aggregated AS (
     SELECT
-      e.teacher_id,
+      e.teacher_user_id,
       e.lesson_type_id,
       e.age_category,
       SUM(e.duration_minutes) AS total_minutes,
       COUNT(*) AS lesson_count
     FROM enriched e
-    GROUP BY e.teacher_id, e.lesson_type_id, e.age_category
+    GROUP BY e.teacher_user_id, e.lesson_type_id, e.age_category
   )
   SELECT json_build_object(
     'data', COALESCE(
       (SELECT json_agg(
         json_build_object(
-          'teacher_id', a.teacher_id,
+          'teacher_user_id', a.teacher_user_id,
           'teacher_name', COALESCE(p.first_name || ' ' || p.last_name, p.first_name, p.last_name, p.email),
           'lesson_type_id', a.lesson_type_id,
           'lesson_type_name', lt.name,
@@ -141,7 +141,7 @@ BEGIN
         ORDER BY COALESCE(p.first_name || ' ' || p.last_name, p.email), lt.name, a.age_category
       )
       FROM aggregated a
-      INNER JOIN teachers t ON a.teacher_id = t.id
+      INNER JOIN teachers t ON a.teacher_user_id = t.user_id
       INNER JOIN profiles p ON t.user_id = p.user_id
       INNER JOIN lesson_types lt ON a.lesson_type_id = lt.id
       ),

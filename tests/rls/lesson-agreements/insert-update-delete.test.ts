@@ -19,7 +19,7 @@ afterAll(async () => {
 
 // Use student-009 who has agreement with teacher-alice
 const studentAUserId = fixtures.requireUserId(TestUsers.STUDENT_009);
-const teacherAliceId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
+const teacherAliceUserId = fixtures.requireTeacherId(TestUsers.TEACHER_ALICE);
 const lessonTypeId = fixtures.requireLessonTypeId('Gitaarles');
 const testAgreementId = fixtures.requireAgreementId(TestUsers.STUDENT_009, TestUsers.TEACHER_ALICE);
 
@@ -37,7 +37,7 @@ const testAgreementId = fixtures.requireAgreementId(TestUsers.STUDENT_009, TestU
 describe('RLS: lesson_agreements INSERT - blocked for students and teachers', () => {
 	const newAgreement: LessonAgreementInsert = {
 		student_user_id: studentAUserId,
-		teacher_id: teacherAliceId,
+		teacher_user_id: teacherAliceUserId,
 		lesson_type_id: lessonTypeId,
 		day_of_week: 4,
 		start_time: '17:00',
@@ -62,7 +62,7 @@ describe('RLS: lesson_agreements INSERT - blocked for students and teachers', ()
 describe('RLS: lesson_agreements INSERT - staff permissions', () => {
 	const newAgreement: LessonAgreementInsert = {
 		student_user_id: studentAUserId,
-		teacher_id: teacherAliceId,
+		teacher_user_id: teacherAliceUserId,
 		lesson_type_id: lessonTypeId,
 		day_of_week: 4,
 		start_time: '17:00',
@@ -78,7 +78,7 @@ describe('RLS: lesson_agreements INSERT - staff permissions', () => {
 		const [data] = unwrap(await db.from('lesson_agreements').insert(newAgreement).select());
 
 		expect(data.student_user_id).toBe(newAgreement.student_user_id);
-		expect(data.teacher_id).toBe(newAgreement.teacher_id);
+		expect(data.teacher_user_id).toBe(newAgreement.teacher_user_id);
 
 		// Cleanup
 		unwrap(await db.from('lesson_agreements').delete().eq('id', data.id).select());
@@ -186,7 +186,7 @@ describe('RLS: lesson_agreements DELETE - staff permissions', () => {
 		// Create an agreement to delete
 		const newAgreement: LessonAgreementInsert = {
 			student_user_id: studentAUserId,
-			teacher_id: teacherAliceId,
+			teacher_user_id: teacherAliceUserId,
 			lesson_type_id: lessonTypeId,
 			day_of_week: 5,
 			start_time: '18:00',
@@ -234,7 +234,7 @@ describe('RLS: lesson_agreements - teacher cannot be their own student', () => {
 
 		const selfAgreement: LessonAgreementInsert = {
 			student_user_id: teacherAliceUserId, // Teacher Alice as student
-			teacher_id: teacherAliceId, // Teacher Alice as teacher
+			teacher_user_id: teacherAliceUserId, // Teacher Alice as teacher
 			lesson_type_id: lessonTypeId,
 			day_of_week: 1,
 			start_time: '10:00',
@@ -257,7 +257,7 @@ describe('RLS: lesson_agreements - teacher cannot be their own student', () => {
 		// First create a valid agreement
 		const validAgreement: LessonAgreementInsert = {
 			student_user_id: studentAUserId,
-			teacher_id: teacherAliceId,
+			teacher_user_id: teacherAliceUserId,
 			lesson_type_id: lessonTypeId,
 			day_of_week: 1,
 			start_time: '11:00',

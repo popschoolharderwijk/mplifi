@@ -1,5 +1,5 @@
 import type { Event } from 'react-big-calendar';
-import type { StudentEventInfo } from '@/types/students';
+import type { User } from '@/types/users';
 
 export interface CalendarEventResource {
 	type: 'agreement' | 'deviation' | 'agenda';
@@ -8,8 +8,8 @@ export interface CalendarEventResource {
 	eventId?: string;
 	deviationId?: string;
 	studentName: string;
-	studentInfo?: StudentEventInfo;
-	studentInfoList?: StudentEventInfo[];
+	user?: User;
+	users?: User[];
 	lessonTypeName: string;
 	lessonTypeColor: string | null;
 	lessonTypeIcon: string | null;
