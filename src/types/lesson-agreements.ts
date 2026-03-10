@@ -5,12 +5,12 @@
 
 import type { Enums, Tables } from '@/integrations/supabase/types';
 import type { AgendaEventDeviationWithEvent } from '@/types/agenda-events';
+import type { User } from '@/types/users';
 
 // Base types from Supabase
 type LessonAgreementRow = Tables<'lesson_agreements'>;
 export type LessonTypeRow = Tables<'lesson_types'>;
 export type LessonTypeOptionRow = Tables<'lesson_type_options'>;
-type ProfileRow = Tables<'profiles'>;
 
 /** Lesson scheduling frequency from Supabase enum (use this instead of defining locally) */
 export type LessonFrequency = Enums<'lesson_frequency'>;
@@ -133,7 +133,7 @@ export type LessonAgreementQuery = LessonAgreementBaseFields & {
  * Duration/frequency/price come from agreement snapshot, not lesson_types.
  */
 export type LessonAgreementWithStudent = LessonAgreementBaseFields & {
-	profiles: Pick<ProfileRow, 'first_name' | 'last_name' | 'email'> | null;
+	profiles: Pick<User, 'first_name' | 'last_name' | 'email'> | null;
 	lesson_types: LessonTypeJoined;
 };
 
@@ -154,7 +154,7 @@ export type LessonAgreementWithTeacher = Pick<
 	| 'frequency'
 	| 'price_per_lesson'
 > & {
-	teacher: Pick<ProfileRow, 'first_name' | 'last_name' | 'avatar_url'>;
+	teacher: Pick<User, 'first_name' | 'last_name' | 'avatar_url'>;
 	lesson_type: LessonTypeDisplayFields;
 };
 
@@ -163,8 +163,8 @@ export type LessonAgreementWithTeacher = Pick<
  * lesson_type has name/icon/color from lesson_types; duration/frequency/price from agreement snapshot.
  */
 export type AgreementTableRow = LessonAgreementTableFields & {
-	student: Pick<ProfileRow, 'first_name' | 'last_name' | 'avatar_url' | 'email'>;
-	teacher: Pick<ProfileRow, 'first_name' | 'last_name' | 'avatar_url' | 'email'>;
+	student: Pick<User, 'first_name' | 'last_name' | 'avatar_url' | 'email'>;
+	teacher: Pick<User, 'first_name' | 'last_name' | 'avatar_url' | 'email'>;
 	lesson_type: LessonTypeDisplayFields;
 };
 

@@ -15,10 +15,10 @@ import { LessonTypeBadge } from '@/components/ui/lesson-type-badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { TimeInput } from '@/components/ui/time-input';
-import { getDisplayName } from '@/components/ui/user-display';
 import { UsersSelect } from '@/components/ui/users-select';
-import { useAgendaEventForm } from '@/hooks/useAgendaEventForm';
+import { type OccurrenceOverrides, useAgendaEventForm } from '@/hooks/useAgendaEventForm';
 import { useAuth } from '@/hooks/useAuth';
+import { getDisplayName } from '@/lib/display-name';
 import { frequencyOptions } from '@/lib/frequencies';
 import type { AgendaEventRow, DeleteScope, DeviationInfo } from '@/types/agenda-events';
 import type { LessonFrequency } from '@/types/lesson-agreements';
@@ -38,6 +38,8 @@ interface AgendaEventFormDialogProps {
 	occurrenceStartTime?: string | null;
 	occurrenceEndTime?: string | null;
 	occurrenceParticipantIds?: string[] | null;
+	/** When editing one occurrence that has a deviation, pass its title/description/color so the form shows them */
+	occurrenceOverrides?: OccurrenceOverrides | null;
 	readonlyParticipantIds?: string[];
 	canAddParticipants?: boolean;
 	lessonType?: { name: string; icon?: string | null; color?: string | null } | null;
@@ -56,6 +58,7 @@ export function AgendaEventFormDialog({
 	occurrenceStartTime,
 	occurrenceEndTime,
 	occurrenceParticipantIds,
+	occurrenceOverrides,
 	readonlyParticipantIds = [],
 	canAddParticipants = true,
 	lessonType,
@@ -70,6 +73,7 @@ export function AgendaEventFormDialog({
 		occurrenceStartTime,
 		occurrenceEndTime,
 		occurrenceParticipantIds,
+		occurrenceOverrides,
 		readonlyParticipantIds,
 		onSuccess,
 		onOpenChange,
@@ -350,7 +354,7 @@ export function AgendaEventFormDialog({
 						)}
 					</div>
 
-					{canRevert && deviationInfo && (
+					{canRevert && deviationInfo && deviationInfo.hasTimeOrDateChange && (
 						<DeviationInfoBanner
 							deviationInfo={deviationInfo}
 							onRevert={handleRevert}

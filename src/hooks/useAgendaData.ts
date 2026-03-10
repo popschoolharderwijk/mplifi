@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { CalendarEvent } from '@/components/agenda/types';
-import { buildParticipantInfo, formatUserName, generateAgendaEvents } from '@/components/agenda/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { generateAgendaEvents } from '@/lib/agenda/eventGenerators';
+import { buildParticipantInfo } from '@/lib/agenda/eventUtils';
+import { getDisplayName } from '@/lib/display-name';
 import type { AgendaEventDeviationRow, AgendaEventRow } from '@/types/agenda-events';
 import type { LessonAgreementQuery, LessonAgreementWithStudent } from '@/types/lesson-agreements';
 import type { User } from '@/types/users';
@@ -174,7 +176,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 			const namesByEvent = new Map<string, string[]>();
 			for (const [eventId, userIds] of userIdsByEvent) {
 				if (userIds.length <= 1) continue;
-				const names = userIds.map((uid) => formatUserName(profileMap.get(uid))).sort();
+				const names = userIds.map((uid) => getDisplayName(profileMap.get(uid))).sort();
 				namesByEvent.set(eventId, names);
 			}
 			setParticipantNamesByEventId(namesByEvent);
@@ -185,7 +187,7 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				const pids = d.participant_ids;
 				if (pids && pids.length > 0) {
 					countByDeviation.set(d.id, pids.length);
-					const names = pids.map((uid) => formatUserName(profileMap.get(uid))).sort();
+					const names = pids.map((uid) => getDisplayName(profileMap.get(uid))).sort();
 					namesByDeviation.set(d.id, names);
 				}
 			}
@@ -299,9 +301,9 @@ export function useAgendaData(effectiveUserId: string | undefined): UseAgendaDat
 				const agreement = agreementsMap.get(ev.resource.agreementId);
 				if (!agreement) return enriched;
 				const user = buildParticipantInfo(agreement.profiles, agreement.student_user_id);
-				const studentName = formatUserName(agreement.profiles);
+				const studentName = getDisplayName(agreement.profiles);
 				const teacherName = agreement.teacherProfile
-					? formatUserName(agreement.teacherProfile)
+					? getDisplayName(agreement.teacherProfile)
 					: 'Docent onbekend';
 				const viewerIsTeacher = viewerUserId === agreement.teacherUserId;
 				return {

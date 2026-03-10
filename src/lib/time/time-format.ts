@@ -15,6 +15,19 @@ export function normalizeTime(timeStr: string): string {
 	return timeStr.length === 5 ? `${timeStr}:00` : timeStr;
 }
 
+/** Apply a time string (HH:mm or HH:mm:ss) to a date; returns new Date. */
+export function applyTimeToDate(date: Date, time: string): Date {
+	const parts = time.split(':').map(Number);
+	const d = new Date(date);
+	d.setHours(parts[0], parts[1] ?? 0, parts[2] ?? 0, 0);
+	return d;
+}
+
+/** True when actual and original time strings differ (after normalizing). */
+export function hasTimeChange(actual: string, original: string): boolean {
+	return normalizeTime(actual) !== normalizeTime(original);
+}
+
 export function formatTimeFromDate(date: Date): string {
 	return format(date, 'HH:mm');
 }

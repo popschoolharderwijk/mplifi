@@ -182,7 +182,7 @@ export function DetailModal({
 						</div>
 					)}
 
-					{selectedEvent?.resource.isDeviation && !selectedEvent?.resource.isCancelled && (
+					{selectedEvent?.resource.hasTimeOrDateChange && !selectedEvent?.resource.isCancelled && (
 						<div className="flex items-center gap-2 rounded-lg bg-amber-500/10 p-5 text-amber-600">
 							<LuTriangleAlert className="h-4 w-4 shrink-0" />
 							<div className="min-w-0 flex-1 space-y-0.5">

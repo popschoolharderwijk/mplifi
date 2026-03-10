@@ -11,8 +11,16 @@ interface AgendaEventProps {
 
 export function AgendaEvent({ event, title }: AgendaEventProps) {
 	const view = useCalendarView();
-	const { isDeviation, isCancelled, isRecurring, participantCount, color, lessonTypeColor, isLesson, sourceType } =
-		event.resource;
+	const {
+		hasTimeOrDateChange,
+		isCancelled,
+		isRecurring,
+		participantCount,
+		color,
+		lessonTypeColor,
+		isLesson,
+		sourceType,
+	} = event.resource;
 	const hasMultipleParticipants = (participantCount ?? 0) > 1;
 	const isLessonEvent = isLesson || sourceType === 'lesson_agreement';
 
@@ -46,9 +54,10 @@ export function AgendaEvent({ event, title }: AgendaEventProps) {
 					className={`absolute h-3 w-3 ${iconColorClass} drop-shadow-md z-10 shrink-0 top-0.5 right-0.5`}
 				/>
 			)}
-			{isDeviation && !isCancelled && (
+			{hasTimeOrDateChange && !isCancelled && (
 				<LuTriangleAlert
 					className={`absolute h-3 w-3 ${iconColorClass} drop-shadow-md z-10 shrink-0 top-0.5 right-0.5`}
+					title="Gewijzigde afspraak"
 				/>
 			)}
 			<span className="flex items-start gap-1 text-xs leading-tight overflow-hidden pr-4 min-h-0">

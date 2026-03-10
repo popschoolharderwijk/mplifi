@@ -35,6 +35,8 @@ export interface DeviationInfo {
 	originalDate: string;
 	originalStartTime: string;
 	isCancelled?: boolean;
+	/** True when actual date/time differs from original (show "Gewijzigde afspraak" only then). */
+	hasTimeOrDateChange?: boolean;
 }
 
 /** Scope for delete/cancel operations on recurring events */

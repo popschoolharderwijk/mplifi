@@ -1,16 +1,11 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getDisplayName } from '@/lib/display-name';
 import { cn } from '@/lib/utils';
-
-interface UserProfile {
-	first_name?: string | null;
-	last_name?: string | null;
-	email?: string | null;
-	avatar_url?: string | null;
-}
+import type { UserOptional } from '@/types/users';
 
 interface UserDisplayProps {
 	/** User profile data */
-	profile: UserProfile;
+	profile: UserOptional;
 	/** Show email below name */
 	showEmail?: boolean;
 	/** Text to show after the name (e.g., "(you)") */
@@ -19,7 +14,7 @@ interface UserDisplayProps {
 	className?: string;
 }
 
-export function getUserInitials(profile: UserProfile): string {
+export function getUserInitials(profile: UserOptional): string {
 	if (profile.first_name && profile.last_name) {
 		return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
 	}
@@ -27,16 +22,6 @@ export function getUserInitials(profile: UserProfile): string {
 		return profile.first_name.slice(0, 2).toUpperCase();
 	}
 	return (profile.email ?? '??').slice(0, 2).toUpperCase();
-}
-
-export function getDisplayName(profile: UserProfile): string {
-	if (profile.first_name && profile.last_name) {
-		return `${profile.first_name} ${profile.last_name}`;
-	}
-	if (profile.first_name) {
-		return profile.first_name;
-	}
-	return profile.email ?? 'Onbekend';
 }
 
 /**

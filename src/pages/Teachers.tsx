@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { DataTable, type DataTableColumn, type QuickFilterGroup } from '@/components/ui/data-table';
 import { LessonTypeBadge } from '@/components/ui/lesson-type-badge';
-import { getDisplayName, UserDisplay } from '@/components/ui/user-display';
+import { UserDisplay } from '@/components/ui/user-display';
 import { NAV_LABELS } from '@/config/nav-labels';
 import { useActiveLessonTypes } from '@/hooks/useActiveLessonTypes';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,6 +16,7 @@ import { useServerTableState } from '@/hooks/useServerTableState';
 import { useLessonTypeFilter, useStatusFilter } from '@/hooks/useTableFilters';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDateTimeShort } from '@/lib/date/date-format';
+import { getDisplayName } from '@/lib/display-name';
 import {
 	flattenTeacherWithLessonTypes,
 	type PaginatedTeachersResponseRaw,

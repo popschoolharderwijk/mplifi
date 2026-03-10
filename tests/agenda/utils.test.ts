@@ -6,14 +6,11 @@
 import { describe, expect, it } from 'bun:test';
 import { agendaMessages, getEventStyle } from '../../src/components/agenda/agenda-calendar-config';
 import type { CalendarEvent, CalendarEventResource } from '../../src/components/agenda/types';
-import {
-	buildParticipantInfo,
-	buildTooltipText,
-	formatUserName,
-	generateRecurringEvents,
-	getActualDateInOriginalWeek,
-} from '../../src/components/agenda/utils';
-import { formatDateToDb, getDateForDayOfWeek } from '../../src/lib/date/date-format';
+import { generateRecurringEvents } from '../../src/lib/agenda/eventGenerators';
+import { buildParticipantInfo } from '../../src/lib/agenda/eventUtils';
+import { buildTooltipText } from '../../src/lib/agenda/tooltip';
+import { formatDateToDb, getActualDateInOriginalWeek, getDateForDayOfWeek } from '../../src/lib/date/date-format';
+import { getDisplayName } from '../../src/lib/display-name';
 import type {
 	LessonAgreementWithStudent,
 	LessonAppointmentDeviationWithAgreement,
@@ -376,33 +373,33 @@ describe('agenda utils: generateRecurringEvents', () => {
 	});
 });
 
-describe('agenda utils: formatUserName', () => {
+describe('agenda utils: getDisplayName', () => {
 	it('returns full name when first and last name are present', () => {
 		const profile = { first_name: 'Jan', last_name: 'Jansen', email: 'jan@example.com' };
-		expect(formatUserName(profile)).toBe('Jan Jansen');
+		expect(getDisplayName(profile)).toBe('Jan Jansen');
 	});
 
 	it('returns first name only when last name is missing', () => {
 		const profile = { first_name: 'Jan', last_name: null, email: 'jan@example.com' };
-		expect(formatUserName(profile)).toBe('Jan');
+		expect(getDisplayName(profile)).toBe('Jan');
 	});
 
 	it('returns email when names are missing', () => {
 		const profile = { first_name: null, last_name: null, email: 'jan@example.com' };
-		expect(formatUserName(profile)).toBe('jan@example.com');
+		expect(getDisplayName(profile)).toBe('jan@example.com');
 	});
 
 	it('returns "Onbekend" when profile is null', () => {
-		expect(formatUserName(null)).toBe('Onbekend');
+		expect(getDisplayName(null)).toBe('Onbekend');
 	});
 
 	it('returns "Onbekend" when profile is undefined', () => {
-		expect(formatUserName(undefined)).toBe('Onbekend');
+		expect(getDisplayName(undefined)).toBe('Onbekend');
 	});
 
 	it('returns "Onbekend" when all fields are null', () => {
 		const profile = { first_name: null, last_name: null, email: null };
-		expect(formatUserName(profile)).toBe('Onbekend');
+		expect(getDisplayName(profile)).toBe('Onbekend');
 	});
 });
 
@@ -536,6 +533,7 @@ describe('agenda utils: buildTooltipText', () => {
 		const event = mockCalendarEvent({
 			resource: mockCalendarEventResource({
 				isDeviation: true,
+				hasTimeOrDateChange: true,
 				originalDate: '2025-02-17',
 				originalStartTime: '14:00',
 			}),
@@ -549,6 +547,7 @@ describe('agenda utils: buildTooltipText', () => {
 		const event = mockCalendarEvent({
 			resource: mockCalendarEventResource({
 				isDeviation: true,
+				hasTimeOrDateChange: true,
 				originalDate: '2025-02-17',
 				originalStartTime: '14:00',
 				reason: 'Ziek',

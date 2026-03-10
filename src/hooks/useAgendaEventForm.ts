@@ -7,6 +7,13 @@ import { formatTime, formatTimeFromDate, normalizeTime } from '@/lib/time/time-f
 import type { AgendaEventInsert, AgendaEventRow } from '@/types/agenda-events';
 import type { LessonFrequency } from '@/types/lesson-agreements';
 
+/** Overrides from a deviation for a single occurrence (title/description/color). Null means use base event. */
+export interface OccurrenceOverrides {
+	title: string | null;
+	description: string | null;
+	color: string | null;
+}
+
 export interface UseAgendaEventFormOptions {
 	open: boolean;
 	event: AgendaEventRow | null | undefined;
@@ -16,6 +23,8 @@ export interface UseAgendaEventFormOptions {
 	occurrenceStartTime?: string | null;
 	occurrenceEndTime?: string | null;
 	occurrenceParticipantIds?: string[] | null;
+	/** When editing one occurrence that has a deviation, pass its title/description/color so the form shows them */
+	occurrenceOverrides?: OccurrenceOverrides | null;
 	readonlyParticipantIds?: string[];
 	onSuccess?: () => void;
 	onOpenChange: (open: boolean) => void;
@@ -70,6 +79,7 @@ export function useAgendaEventForm({
 	occurrenceStartTime,
 	occurrenceEndTime,
 	occurrenceParticipantIds,
+	occurrenceOverrides,
 	readonlyParticipantIds = [],
 	onSuccess,
 	onOpenChange,
@@ -95,9 +105,14 @@ export function useAgendaEventForm({
 	useEffect(() => {
 		if (!open) return;
 		if (event) {
-			setTitle(event.title);
-			setDescription(event.description ?? '');
-			setShowDescription(!!event.description);
+			const titleValue = occurrenceOverrides ? (occurrenceOverrides.title ?? event.title) : event.title;
+			const descriptionValue = occurrenceOverrides
+				? (occurrenceOverrides.description ?? event.description ?? '')
+				: (event.description ?? '');
+			const colorValue = occurrenceOverrides ? (occurrenceOverrides.color ?? event.color ?? null) : event.color;
+			setTitle(titleValue);
+			setDescription(descriptionValue);
+			setShowDescription(!!descriptionValue);
 			setStartDate(occurrenceDate ?? event.start_date);
 			setStartTime((occurrenceStartTime ?? event.start_time).substring(0, 5));
 			setEndDate(occurrenceDate ?? event.end_date ?? event.start_date);
@@ -106,7 +121,7 @@ export function useAgendaEventForm({
 			setRecurring(event.recurring);
 			setRecurringFrequency((event.recurring_frequency as LessonFrequency) ?? 'weekly');
 			setRecurringEndDate(event.recurring_end_date);
-			setColor(event.color);
+			setColor(colorValue);
 		} else {
 			const today = formatDateToDb(now());
 			if (initialSlot) {
@@ -131,7 +146,7 @@ export function useAgendaEventForm({
 			setParticipantIds(userId ? [userId] : []);
 			setInitialParticipantIds([]);
 		}
-	}, [open, event, userId, initialSlot, occurrenceDate, occurrenceStartTime, occurrenceEndTime]);
+	}, [open, event, userId, initialSlot, occurrenceDate, occurrenceStartTime, occurrenceEndTime, occurrenceOverrides]);
 
 	useEffect(() => {
 		const eventId = event?.id;
@@ -196,9 +211,16 @@ export function useAgendaEventForm({
 		if (!event) return null;
 		const origStart = (occurrenceStartTime ?? event.start_time).toString();
 		const origEnd = (occurrenceEndTime ?? event.end_time ?? event.start_time)?.toString() ?? '10:00';
+		const titleVal = occurrenceOverrides ? (occurrenceOverrides.title ?? event.title) : event.title;
+		const descriptionVal = occurrenceOverrides
+			? (occurrenceOverrides.description ?? event.description ?? '')
+			: (event.description ?? '');
+		const colorVal = occurrenceOverrides
+			? (occurrenceOverrides.color ?? event.color ?? null)
+			: (event.color ?? null);
 		return {
-			title: event.title,
-			description: event.description ?? '',
+			title: titleVal,
+			description: descriptionVal,
 			startDate: occurrenceDate ?? event.start_date,
 			startTime: normalizeTime(formatTime(origStart)),
 			endDate: occurrenceDate ?? event.end_date ?? event.start_date,
@@ -207,10 +229,10 @@ export function useAgendaEventForm({
 			recurring: event.recurring,
 			recurringFrequency: (event.recurring_frequency as string) ?? 'weekly',
 			recurringEndDate: event.recurring_end_date ?? null,
-			color: event.color ?? null,
+			color: colorVal,
 			participantIds: [...initialParticipantIds].sort(),
 		};
-	}, [event, occurrenceDate, occurrenceStartTime, occurrenceEndTime, initialParticipantIds]);
+	}, [event, occurrenceDate, occurrenceStartTime, occurrenceEndTime, occurrenceOverrides, initialParticipantIds]);
 
 	const currentSnapshot = useMemo(
 		(): FormSnapshot => ({
@@ -343,15 +365,24 @@ export function useAgendaEventForm({
 							}
 						}
 					} else {
+						// scope === 'all': update series-wide fields only; keep base event start/end so all occurrences (past + future) stay visible
+						const baseStartDate = scope === 'all' && occurrenceDate ? event.start_date : payload.start_date;
+						const baseStartTime = scope === 'all' && occurrenceDate ? event.start_time : payload.start_time;
+						const baseEndDate =
+							scope === 'all' && occurrenceDate
+								? (event.end_date ?? event.start_date)
+								: (payload.end_date ?? payload.start_date);
+						const baseEndTime =
+							scope === 'all' && occurrenceDate ? (event.end_time ?? event.start_time) : payload.end_time;
 						const { error: updateError } = await supabase
 							.from('agenda_events')
 							.update({
 								title: payload.title,
 								description: payload.description,
-								start_date: payload.start_date,
-								start_time: payload.start_time,
-								end_date: payload.end_date,
-								end_time: payload.end_time,
+								start_date: baseStartDate,
+								start_time: baseStartTime,
+								end_date: baseEndDate,
+								end_time: baseEndTime,
 								is_all_day: payload.is_all_day,
 								recurring: payload.recurring,
 								recurring_frequency: payload.recurring_frequency,
@@ -361,6 +392,20 @@ export function useAgendaEventForm({
 							})
 							.eq('id', event.id);
 						if (updateError) throw updateError;
+						// When scope is "all": apply same title/description/color/participants to all deviations so every occurrence shows the update
+						if (scope === 'all') {
+							const { error: devErr } = await supabase
+								.from('agenda_event_deviations')
+								.update({
+									title: payload.title,
+									description: payload.description,
+									color: payload.color,
+									participant_ids: participantIds.length > 0 ? participantIds : null,
+									updated_by: userId,
+								})
+								.eq('event_id', event.id);
+							if (devErr) throw devErr;
+						}
 						const { data: existing } = await supabase
 							.from('agenda_participants')
 							.select('user_id')

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { LessonTypeBadge } from '@/components/ui/lesson-type-badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DAY_NAMES_DISPLAY, getDayNameFromDbIndex } from '@/lib/date/day-index';
+import { getDisplayName } from '@/lib/display-name';
 import { formatTime } from '@/lib/time/time-format';
 import { cn } from '@/lib/utils';
 import type { LessonAgreementWithTeacher } from '@/types/lesson-agreements';
@@ -17,16 +18,6 @@ interface LessonAgreementItemProps {
 	readOnly?: boolean;
 }
 
-function getTeacherDisplayName(teacher: LessonAgreementWithTeacher['teacher']): string {
-	if (teacher.first_name && teacher.last_name) {
-		return `${teacher.first_name} ${teacher.last_name}`;
-	}
-	if (teacher.first_name) {
-		return teacher.first_name;
-	}
-	return 'Onbekend';
-}
-
 function getTooltipText(agreement: LessonAgreementWithTeacher, teacherName: string): string {
 	const dayName = getDayNameFromDbIndex(agreement.day_of_week);
 	const time = formatTime(agreement.start_time);
@@ -36,7 +27,7 @@ function getTooltipText(agreement: LessonAgreementWithTeacher, teacherName: stri
 export function LessonAgreementItem({ agreement, className, readOnly = false }: LessonAgreementItemProps) {
 	const [dialogOpen, setDialogOpen] = useState(false);
 
-	const teacherName = getTeacherDisplayName(agreement.teacher);
+	const teacherName = getDisplayName(agreement.teacher);
 
 	const handleOpenChange = (open: boolean) => {
 		setDialogOpen(open);

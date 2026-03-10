@@ -43,6 +43,11 @@ export function addDaysToDate(date: Date, days: number) {
 	return d;
 }
 
+/** Add minutes to a date; returns new Date. */
+export function addMinutes(date: Date, minutes: number): Date {
+	return new Date(date.getTime() + minutes * 60 * 1000);
+}
+
 /** Add days to a DB-format date string (YYYY-MM-DD), returns DB format. */
 export function addDaysToDateStr(dateStr: string, days: number): string {
 	const d = parseISO(dateStr);
@@ -69,4 +74,12 @@ export function getDateForDayOfWeek(dayOfWeek: number, referenceDate: Date) {
 	const diff = dayOfWeek - currentDay;
 	date.setDate(date.getDate() + diff);
 	return date;
+}
+
+/** Date in the same week as originalDateStr with the same weekday as referenceDate (YYYY-MM-DD). */
+export function getActualDateInOriginalWeek(originalDateStr: string, referenceDate: Date): string {
+	const originalDate = parseISO(originalDateStr + 'T12:00:00');
+	const targetDayOfWeek = referenceDate.getDay();
+	const actualDate = getDateForDayOfWeek(targetDayOfWeek, originalDate);
+	return formatDateToDb(actualDate);
 }

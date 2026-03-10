@@ -28,7 +28,8 @@ export function RecurrenceChoiceDialog({
 	const isEdit = action === 'edit';
 	const showSingleOption = true;
 	const showFutureOption = !hideFutureOption;
-	const showAllOption = isDelete || isEdit;
+	/** Show "all appointments" option for change (drag/resize), delete, and edit — applies to past and future. */
+	const showAllOption = true;
 
 	const defaultScope: RecurrenceScope = 'single';
 	const [selected, setSelected] = useState<RecurrenceScope>(defaultScope);

@@ -8,13 +8,14 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { DataTable, type DataTableColumn, type QuickFilterGroup } from '@/components/ui/data-table';
 import { RoleBadge } from '@/components/ui/role-badge';
-import { getDisplayName, UserDisplay } from '@/components/ui/user-display';
+import { UserDisplay } from '@/components/ui/user-display';
 import { UserFormDialog } from '@/components/users/UserFormDialog';
 import { NAV_LABELS } from '@/config/nav-labels';
 import { useAuth } from '@/hooks/useAuth';
 import { useServerTableState } from '@/hooks/useServerTableState';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDateTimeShort } from '@/lib/date/date-format';
+import { getDisplayName } from '@/lib/display-name';
 import { type AppRole, allRoles, getIcon, roleLabels } from '@/lib/roles';
 
 interface UserWithRole {

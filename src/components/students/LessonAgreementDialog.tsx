@@ -2,7 +2,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { LessonTypeBadge } from '@/components/ui/lesson-type-badge';
+import { getUserInitials } from '@/components/ui/user-display';
 import { DAY_NAMES } from '@/lib/date/day-index';
+import { getDisplayName } from '@/lib/display-name';
 import { formatTime } from '@/lib/time/time-format';
 import type { LessonAgreementWithTeacher } from '@/types/lesson-agreements';
 
@@ -22,33 +24,13 @@ function formatDate(date: string): string {
 	});
 }
 
-function getTeacherDisplayName(teacher: LessonAgreementWithTeacher['teacher']): string {
-	if (teacher.first_name && teacher.last_name) {
-		return `${teacher.first_name} ${teacher.last_name}`;
-	}
-	if (teacher.first_name) {
-		return teacher.first_name;
-	}
-	return 'Onbekend';
-}
-
-function getTeacherInitials(teacher: LessonAgreementWithTeacher['teacher']): string {
-	if (teacher.first_name && teacher.last_name) {
-		return `${teacher.first_name[0]}${teacher.last_name[0]}`.toUpperCase();
-	}
-	if (teacher.first_name) {
-		return teacher.first_name.slice(0, 2).toUpperCase();
-	}
-	return '??';
-}
-
 export function LessonAgreementDialog({ open, onOpenChange, agreement }: LessonAgreementDialogProps) {
 	if (!agreement) {
 		return null;
 	}
 
-	const teacherName = getTeacherDisplayName(agreement.teacher);
-	const teacherInitials = getTeacherInitials(agreement.teacher);
+	const teacherName = getDisplayName(agreement.teacher);
+	const teacherInitials = getUserInitials(agreement.teacher);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
