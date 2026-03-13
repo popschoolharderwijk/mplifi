@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { LuTrash2, LuX } from 'react-icons/lu';
 import { toast } from 'sonner';
 import { DeviationInfoBanner } from '@/components/agenda/DeviationInfoBanner';
@@ -18,9 +18,10 @@ import { TimeInput } from '@/components/ui/time-input';
 import { UserSelectSingle } from '@/components/ui/user-select';
 import { type OccurrenceOverrides, useAgendaEventForm } from '@/hooks/useAgendaEventForm';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { getDisplayName } from '@/lib/display-name';
 import { frequencyOptions } from '@/lib/frequencies';
-import type { AgendaEventRow, DeleteScope, DeviationInfo } from '@/types/agenda-events';
+import type { AgendaEventRow, AgendaEventSourceType, DeleteScope, DeviationInfo } from '@/types/agenda-events';
 import type { LessonFrequency } from '@/types/lesson-agreements';
 
 export type { DeleteScope, DeviationInfo } from '@/types/agenda-events';
@@ -43,6 +44,13 @@ interface AgendaEventFormDialogProps {
 	readonlyParticipantIds?: string[];
 	canAddParticipants?: boolean;
 	lessonType?: { name: string; icon?: string | null; color?: string | null } | null;
+	/** Pre-select project source for new events */
+	initialProjectId?: string | null;
+}
+
+interface ProjectOption {
+	id: string;
+	name: string;
 }
 
 export function AgendaEventFormDialog({
@@ -62,8 +70,47 @@ export function AgendaEventFormDialog({
 	readonlyParticipantIds = [],
 	canAddParticipants = true,
 	lessonType,
+	initialProjectId,
 }: AgendaEventFormDialogProps) {
-	const { user } = useAuth();
+	const { user, isPrivileged } = useAuth();
+
+	// Source type + project selection state
+	const [selectedSourceType, setSelectedSourceType] = useState<AgendaEventSourceType>('manual');
+	const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+	const [projectOptions, setProjectOptions] = useState<ProjectOption[]>([]);
+
+	// Load project options when dialog opens for privileged users
+	useEffect(() => {
+		if (!open || !isPrivileged) return;
+		async function loadProjects() {
+			const { data } = await supabase
+				.from('projects')
+				.select('id, name')
+				.eq('is_active', true)
+				.order('name');
+			setProjectOptions(data ?? []);
+		}
+		loadProjects();
+	}, [open, isPrivileged]);
+
+	// Initialize source type from event or initialProjectId
+	useEffect(() => {
+		if (!open) return;
+		if (event) {
+			setSelectedSourceType((event.source_type as AgendaEventSourceType) ?? 'manual');
+			setSelectedProjectId(event.source_type === 'project' ? event.source_id : null);
+		} else if (initialProjectId) {
+			setSelectedSourceType('project');
+			setSelectedProjectId(initialProjectId);
+		} else {
+			setSelectedSourceType('manual');
+			setSelectedProjectId(null);
+		}
+	}, [open, event, initialProjectId]);
+
+	const effectiveSourceType = event ? (event.source_type as AgendaEventSourceType) : selectedSourceType;
+	const effectiveSourceId = effectiveSourceType === 'project' ? selectedProjectId : null;
+
 	const { formState, handlers, saving, hasChanges } = useAgendaEventForm({
 		open,
 		event,
@@ -75,6 +122,8 @@ export function AgendaEventFormDialog({
 		occurrenceParticipantIds,
 		occurrenceOverrides,
 		readonlyParticipantIds,
+		sourceType: effectiveSourceType,
+		sourceId: effectiveSourceId,
 		onSuccess,
 		onOpenChange,
 	});
@@ -84,16 +133,21 @@ export function AgendaEventFormDialog({
 	const [editRecurrenceOpen, setEditRecurrenceOpen] = useState(false);
 	const [reverting, setReverting] = useState(false);
 
-	const isManualEvent = event?.source_type === 'manual';
+	const isManualEvent = (event?.source_type ?? selectedSourceType) === 'manual';
 	const isLessonEvent = event?.source_type === 'lesson_agreement';
+	const isProjectEvent = effectiveSourceType === 'project';
 	const isRecurringEvent = !!event?.recurring;
 	const isCancelledEvent = !!deviationInfo?.isCancelled;
-	const canDelete = isManualEvent && event?.id && onDelete && !isCancelledEvent;
+	const canDelete = (isManualEvent || isProjectEvent) && event?.id && onDelete && !isCancelledEvent;
 	const canRevert = !!deviationInfo && !!onRevert;
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!user || !formState.startDate || !formState.startTime) return;
+		if (isProjectEvent && !selectedProjectId && !event) {
+			toast.error('Selecteer een project');
+			return;
+		}
 		if (event?.id && isRecurringEvent) {
 			setEditRecurrenceOpen(true);
 		} else {
@@ -136,6 +190,17 @@ export function AgendaEventFormDialog({
 			setReverting(false);
 		}
 	};
+
+	const handleSourceTypeChange = useCallback(
+		(value: string) => {
+			const newType = value as AgendaEventSourceType;
+			setSelectedSourceType(newType);
+			if (newType !== 'project') {
+				setSelectedProjectId(null);
+			}
+		},
+		[],
+	);
 
 	const {
 		title,
@@ -202,6 +267,46 @@ export function AgendaEventFormDialog({
 							/>
 						)}
 					</div>
+
+					{/* Source type selector for new events (privileged users only) */}
+					{!event && isPrivileged && (
+						<div className="space-y-2">
+							<Label>Bron</Label>
+							<Select value={selectedSourceType} onValueChange={handleSourceTypeChange}>
+								<SelectTrigger className="w-full">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="manual">Handmatig</SelectItem>
+									<SelectItem value="project">Project</SelectItem>
+								</SelectContent>
+							</Select>
+							{isProjectEvent && (
+								<Select
+									value={selectedProjectId ?? ''}
+									onValueChange={(val) => setSelectedProjectId(val || null)}
+								>
+									<SelectTrigger className="w-full">
+										<SelectValue placeholder="Selecteer een project..." />
+									</SelectTrigger>
+									<SelectContent>
+										{projectOptions.map((p) => (
+											<SelectItem key={p.id} value={p.id}>
+												{p.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							)}
+						</div>
+					)}
+
+					{/* Show project badge when editing a project event */}
+					{event && isProjectEvent && (
+						<div className="flex items-center gap-2">
+							<Badge variant="secondary">Project</Badge>
+						</div>
+					)}
 
 					{showDescription ? (
 						<Textarea

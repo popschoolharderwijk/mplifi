@@ -49,8 +49,10 @@ export function DetailModal({
 	onDeleteAgenda,
 }: DetailModalProps) {
 	const isAgendaEvent = selectedEvent?.resource.type === 'agenda';
+	const isProjectEvent = selectedEvent?.resource.sourceType === 'project';
 	const isLessonEvent =
-		selectedEvent?.resource.type !== 'agenda' || selectedEvent?.resource.sourceType === 'lesson_agreement';
+		!isProjectEvent &&
+		(selectedEvent?.resource.type !== 'agenda' || selectedEvent?.resource.sourceType === 'lesson_agreement');
 	const isManualAgendaEvent = isAgendaEvent && selectedEvent?.resource.sourceType === 'manual';
 	const eventId = selectedEvent?.resource.eventId;
 
@@ -72,8 +74,15 @@ export function DetailModal({
 						)}
 						<div>
 							<DialogTitle>
-								{isLessonEvent ? selectedEvent?.resource.lessonTypeName : selectedEvent?.title}
+								{isProjectEvent
+									? selectedEvent?.resource.projectName ?? selectedEvent?.title
+									: isLessonEvent
+										? selectedEvent?.resource.lessonTypeName
+										: selectedEvent?.title}
 							</DialogTitle>
+							{isProjectEvent && (
+								<DialogDescription>Project-afspraak</DialogDescription>
+							)}
 							{isLessonEvent && selectedEvent?.resource.isGroupLesson && (
 								<DialogDescription>
 									Groepsles met {selectedEvent?.resource.studentCount} deelnemers
@@ -89,7 +98,7 @@ export function DetailModal({
 				</DialogHeader>
 
 				<div className="space-y-4">
-					{isManualAgendaEvent && (
+					{(isManualAgendaEvent || isProjectEvent) && (
 						<div className="rounded-lg bg-muted p-4 space-y-2">
 							<div className="flex justify-between">
 								<span className="text-sm text-muted-foreground">Datum</span>
@@ -248,7 +257,7 @@ export function DetailModal({
 					)}
 				</div>
 
-				{isManualAgendaEvent && canEdit && eventId && (onEditAgenda || onDeleteAgenda) && (
+				{(isManualAgendaEvent || isProjectEvent) && canEdit && eventId && (onEditAgenda || onDeleteAgenda) && (
 					<DialogFooter>
 						{onEditAgenda && (
 							<Button variant="outline" onClick={() => onEditAgenda(eventId)}>

@@ -4,7 +4,7 @@ import type { RecurrenceScope } from '@/components/agenda/RecurrenceChoiceDialog
 import { supabase } from '@/integrations/supabase/client';
 import { addDaysToDateStr, formatDateToDb, now } from '@/lib/date/date-format';
 import { formatTime, formatTimeFromDate, normalizeTime } from '@/lib/time/time-format';
-import type { AgendaEventInsert, AgendaEventRow } from '@/types/agenda-events';
+import type { AgendaEventInsert, AgendaEventRow, AgendaEventSourceType } from '@/types/agenda-events';
 import type { LessonFrequency } from '@/types/lesson-agreements';
 
 /** Overrides from a deviation for a single occurrence (title/description/color). Null means use base event. */
@@ -26,6 +26,9 @@ export interface UseAgendaEventFormOptions {
 	/** When editing one occurrence that has a deviation, pass its title/description/color so the form shows them */
 	occurrenceOverrides?: OccurrenceOverrides | null;
 	readonlyParticipantIds?: string[];
+	/** When creating a project event, pass source info */
+	sourceType?: AgendaEventSourceType;
+	sourceId?: string | null;
 	onSuccess?: () => void;
 	onOpenChange: (open: boolean) => void;
 }
@@ -81,6 +84,8 @@ export function useAgendaEventForm({
 	occurrenceParticipantIds,
 	occurrenceOverrides,
 	readonlyParticipantIds = [],
+	sourceType: externalSourceType,
+	sourceId: externalSourceId,
 	onSuccess,
 	onOpenChange,
 }: UseAgendaEventFormOptions) {
@@ -274,9 +279,12 @@ export function useAgendaEventForm({
 		async (scope: RecurrenceScope = 'all') => {
 			if (!userId || !startDate || !startTime) return;
 
+			const resolvedSourceType = externalSourceType ?? (event?.source_type as AgendaEventSourceType) ?? 'manual';
+			const resolvedSourceId = externalSourceId ?? event?.source_id ?? null;
+
 			const payload: AgendaEventInsert = {
-				source_type: 'manual',
-				source_id: null,
+				source_type: resolvedSourceType,
+				source_id: resolvedSourceId,
 				owner_user_id: userId,
 				title: title.trim(),
 				description: description.trim() || null,

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { LuPlus, LuSettings } from 'react-icons/lu';
+import { LuCalendarPlus, LuPlus, LuSettings } from 'react-icons/lu';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { AgendaEventFormDialog } from '@/components/agenda/AgendaEventFormDialog';
 import { ProjectDomainsManager } from '@/components/projects/ProjectDomainsManager';
 import { ProjectFormDialog } from '@/components/projects/ProjectFormDialog';
 import { ProjectLabelsManager } from '@/components/projects/ProjectLabelsManager';
@@ -27,10 +28,15 @@ export default function Projects() {
 	});
 	const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; project: ProjectRow | null } | null>(null);
 	const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+	const [scheduleDialog, setScheduleDialog] = useState<{ open: boolean; projectId: string | null }>({
+		open: false,
+		projectId: null,
+	});
 	const refetchLabelsRef = useRef<() => void>();
 
 	const canView = isTeacher || isPrivileged;
 	const canEdit = isAdmin || isSiteAdmin;
+	const canSchedule = isPrivileged;
 
 	const loadProjects = useCallback(async () => {
 		if (!canView) return;
@@ -105,6 +111,10 @@ export default function Projects() {
 			loadProjects();
 		}
 	}, [authLoading, loadProjects]);
+
+	const handleSchedule = useCallback((project: ProjectRow) => {
+		setScheduleDialog({ open: true, projectId: project.id });
+	}, []);
 
 	const columns: DataTableColumn<ProjectRow>[] = useMemo(
 		() => [
@@ -247,14 +257,23 @@ export default function Projects() {
 						)}
 					</div>
 				}
-				rowActions={
-					canEdit
-						? {
-								onEdit: handleEdit,
-								onDelete: handleDelete,
-							}
-						: undefined
-				}
+				rowActions={{
+					onEdit: canEdit ? handleEdit : undefined,
+					onDelete: canEdit ? handleDelete : undefined,
+					render: canSchedule
+						? (project) =>
+								project.is_active ? (
+									<Button
+										variant="ghost"
+										size="icon"
+										onClick={() => handleSchedule(project)}
+										title="Tijdslot plannen"
+									>
+										<LuCalendarPlus className="h-4 w-4" />
+									</Button>
+								) : null
+						: undefined,
+				}}
 			/>
 
 			<ProjectFormDialog
@@ -278,6 +297,18 @@ export default function Projects() {
 					onConfirm={confirmDelete}
 				/>
 			)}
+
+			<AgendaEventFormDialog
+				open={scheduleDialog.open}
+				onOpenChange={(open) => {
+					if (!open) setScheduleDialog({ open: false, projectId: null });
+				}}
+				initialProjectId={scheduleDialog.projectId}
+				onSuccess={() => {
+					toast.success('Tijdslot gepland');
+					setScheduleDialog({ open: false, projectId: null });
+				}}
+			/>
 
 			<Dialog open={settingsModalOpen} onOpenChange={setSettingsModalOpen}>
 				<DialogContent className="max-w-2xl">

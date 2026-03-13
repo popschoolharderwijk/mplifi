@@ -21,7 +21,8 @@ export function buildTooltipText(event: CalendarEvent): string {
 		viewerIsTeacher,
 	} = event.resource;
 
-	const lines: string[] = [lessonTypeName];
+	const isProjectEvent = sourceType === 'project';
+	const lines: string[] = [isProjectEvent ? `📁 ${lessonTypeName}` : lessonTypeName];
 
 	if (isLesson && !isGroupLesson) {
 		const otherPartyName = viewerIsTeacher ? studentName : (teacherName ?? studentName);
