@@ -24,9 +24,7 @@ git rebase origin/main
 # Herhaal indien meerdere commits conflicten geven
 
 # Types opnieuw genereren na andere wijzigingen (nooit overslaan)
-supabase link --project-ref zdvscmogkfyddnnxzkdu
-supabase db reset --linked
-supabase gen types typescript --linked > src/integrations/supabase/types.ts
+bun run reset-db:dev
 
 # Run Biome check voor de rest van de code (format + lint + fix)
 biome check --write .
@@ -54,7 +52,7 @@ git push --force-with-lease origin lovable
 |-------|--------------|
 | **Biome Linting** | Code formatting en linting |
 | **Unit Tests** | Tests in `tests/code/` |
-| **Supabase Tests** | RLS + Auth tests op lokale Supabase (bij supabase/tests changes) |
+| **Supabase Tests** | RLS + Auth tests tegen **mcp-test** in CI (bij wijzigingen in supabase/** of tests/**) |
 
 ---
 

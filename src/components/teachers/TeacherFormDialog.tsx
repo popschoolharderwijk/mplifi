@@ -333,10 +333,10 @@ export function TeacherFormDialog({ open, onOpenChange, onSuccess, teacher }: Te
 					{!isEditMode && (
 						<ExistingOrNewUserSelect
 							value={selectedUserId}
-							onChange={(userId, _user) => {
-								setSelectedUserId(userId);
-								if (userId) {
-									loadUserData(userId);
+							onChange={(user) => {
+								setSelectedUserId(user?.user_id ?? null);
+								if (user) {
+									loadUserData(user.user_id);
 								} else {
 									setForm(emptyForm);
 								}

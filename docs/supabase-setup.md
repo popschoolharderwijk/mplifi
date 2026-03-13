@@ -64,8 +64,9 @@ Dit past toe:
 - `20260207000002_lesson_agreements.sql` - Lesovereenkomsten tabel met RLS policies
 - `20260210000000_shared_pagination_views.sql` - Gedeelde paginatie-views
 - `20260210000001_students_paginated_function.sql` t/m `20260210000004_users_paginated_function.sql` - Paginated functies
-- `20260211000000_lesson_appointment_deviations.sql` - Lesson appointment deviations (agenda)
+- `20260211000000_agenda_events.sql` - Agenda (agenda_events, agenda_participants, deviations)
 - `20260226155756_reports.sql` - Reports tabel met RLS policies
+- `20260311194748_projects.sql` - Projecten (project_domains, project_labels, projects) met RLS
 
 ---
 

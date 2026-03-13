@@ -30,6 +30,9 @@ const EXPECTED_RLS_TABLES = [
 	'agenda_events',
 	'agenda_participants',
 	'agenda_event_deviations',
+	'project_domains',
+	'project_labels',
+	'projects',
 ];
 
 const EXPECTED_POLICIES: Record<string, string[]> = {
@@ -145,6 +148,19 @@ const EXPECTED_POLICIES: Record<string, string[]> = {
 		// DELETE policy - event owner or privileged users can delete deviations
 		'agenda_event_deviations_delete',
 	],
+	project_domains: [
+		'project_domains_select_all',
+		'project_domains_insert_admin',
+		'project_domains_update_admin',
+		'project_domains_delete_admin',
+	],
+	project_labels: [
+		'project_labels_select_all',
+		'project_labels_insert_admin',
+		'project_labels_update_admin',
+		'project_labels_delete_admin',
+	],
+	projects: ['projects_select_all', 'projects_insert_admin', 'projects_update_admin', 'projects_delete_admin'],
 };
 
 const EXPECTED_FUNCTIONS = [

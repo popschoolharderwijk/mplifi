@@ -18,6 +18,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NAV_LABELS } from '@/config/nav-labels';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -320,167 +321,189 @@ export default function Settings() {
 				<p className="text-muted-foreground">Beheer je voorkeuren en accountinstellingen</p>
 			</div>
 
-			{/* Profile Information */}
-			<Card>
-				<CardHeader>
-					<CardTitle>Profiel</CardTitle>
-					<CardDescription>Wijzig je persoonlijke informatie</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-6">
-					{/* Avatar */}
-					<div className="flex items-center gap-4">
-						<Avatar className="h-20 w-20">
-							<AvatarImage src={profile?.avatar_url || undefined} alt="Avatar" />
-							<AvatarFallback className="bg-primary text-primary-foreground text-lg">
-								{userInitials}
-							</AvatarFallback>
-						</Avatar>
-						<div className="space-y-2">
-							<Label htmlFor="avatar-upload">Avatar</Label>
-							<div className="flex items-center gap-2">
-								<Input
-									id="avatar-upload"
-									type="file"
-									accept="image/*"
-									onChange={handleAvatarUpload}
+			<Tabs defaultValue="profile">
+				<TabsList>
+					<TabsTrigger value="profile">Profiel</TabsTrigger>
+					<TabsTrigger value="appearance">Weergave</TabsTrigger>
+					<TabsTrigger value="danger">Account</TabsTrigger>
+				</TabsList>
+
+				<TabsContent value="profile" className="space-y-6 mt-6">
+					{/* Profile Information */}
+					<Card>
+						<CardHeader>
+							<CardTitle>Profiel</CardTitle>
+							<CardDescription>Wijzig je persoonlijke informatie</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-6">
+							{/* Avatar */}
+							<div className="flex items-center gap-4">
+								<Avatar className="h-20 w-20">
+									<AvatarImage src={profile?.avatar_url || undefined} alt="Avatar" />
+									<AvatarFallback className="bg-primary text-primary-foreground text-lg">
+										{userInitials}
+									</AvatarFallback>
+								</Avatar>
+								<div className="space-y-2">
+									<Label htmlFor="avatar-upload">Avatar</Label>
+									<div className="flex items-center gap-2">
+										<Input
+											id="avatar-upload"
+											type="file"
+											accept="image/*"
+											onChange={handleAvatarUpload}
+											disabled={saving}
+											className="hidden"
+										/>
+										<Button
+											type="button"
+											variant="outline"
+											onClick={() => document.getElementById('avatar-upload')?.click()}
+											disabled={saving}
+										>
+											<LuUpload className="mr-2 h-4 w-4" />
+											Upload avatar
+										</Button>
+										{profile?.avatar_url && (
+											<Button
+												type="button"
+												variant="outline"
+												onClick={handleAvatarDelete}
+												disabled={saving}
+												className="text-destructive hover:text-destructive"
+											>
+												<LuTrash2 className="mr-2 h-4 w-4" />
+												Verwijderen
+											</Button>
+										)}
+									</div>
+									<p className="text-xs text-muted-foreground">JPG, PNG of GIF. Max 5MB.</p>
+								</div>
+							</div>
+
+							{/* Profile Form */}
+							<form onSubmit={handleSubmit} className="space-y-4">
+								<div className="grid grid-cols-2 gap-4">
+									<div className="space-y-2">
+										<Label htmlFor="first_name">Voornaam</Label>
+										<Input
+											id="first_name"
+											value={formData.first_name}
+											onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+											disabled={saving}
+										/>
+										{errors.first_name && (
+											<p className="text-xs text-destructive">{errors.first_name}</p>
+										)}
+									</div>
+
+									<div className="space-y-2">
+										<Label htmlFor="last_name">Achternaam</Label>
+										<Input
+											id="last_name"
+											value={formData.last_name}
+											onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+											disabled={saving}
+										/>
+										{errors.last_name && (
+											<p className="text-xs text-destructive">{errors.last_name}</p>
+										)}
+									</div>
+								</div>
+
+								<PhoneInput
+									id="phone_number"
+									label="Telefoonnummer"
+									value={formData.phone_number}
+									onChange={(value) => {
+										setFormData({ ...formData, phone_number: value });
+										if (value && value.length !== 10) {
+											setErrors({
+												...errors,
+												phone_number: 'Telefoonnummer moet precies 10 cijfers zijn',
+											});
+										} else {
+											setErrors({ ...errors, phone_number: undefined });
+										}
+									}}
+									error={errors.phone_number}
 									disabled={saving}
-									className="hidden"
 								/>
-								<Button
-									type="button"
-									variant="outline"
-									onClick={() => document.getElementById('avatar-upload')?.click()}
-									disabled={saving}
-								>
-									<LuUpload className="mr-2 h-4 w-4" />
-									Upload avatar
+
+								<Button type="submit" disabled={saving}>
+									{saving ? 'Opslaan...' : 'Opslaan'}
 								</Button>
-								{profile?.avatar_url && (
-									<Button
-										type="button"
-										variant="outline"
-										onClick={handleAvatarDelete}
-										disabled={saving}
-										className="text-destructive hover:text-destructive"
-									>
-										<LuTrash2 className="mr-2 h-4 w-4" />
-										Verwijderen
-									</Button>
-								)}
+							</form>
+						</CardContent>
+					</Card>
+				</TabsContent>
+
+				<TabsContent value="appearance" className="space-y-6 mt-6">
+					{/* Theme Settings */}
+					<Card>
+						<CardHeader>
+							<CardTitle>Thema</CardTitle>
+							<CardDescription>Kies je voorkeur voor licht of donker thema</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<div className="flex gap-2">
+								<Button
+									variant="outline"
+									className={cn('flex-1', theme === 'light' && 'border-primary bg-primary/10')}
+									onClick={() => setTheme('light')}
+								>
+									<LuSun className="mr-2 h-4 w-4" />
+									Licht
+								</Button>
+								<Button
+									variant="outline"
+									className={cn('flex-1', theme === 'dark' && 'border-primary bg-primary/10')}
+									onClick={() => setTheme('dark')}
+								>
+									<LuMoon className="mr-2 h-4 w-4" />
+									Donker
+								</Button>
+								<Button
+									variant="outline"
+									className={cn('flex-1', theme === 'system' && 'border-primary bg-primary/10')}
+									onClick={() => setTheme('system')}
+								>
+									<LuMonitor className="mr-2 h-4 w-4" />
+									Systeem
+								</Button>
 							</div>
-							<p className="text-xs text-muted-foreground">JPG, PNG of GIF. Max 5MB.</p>
-						</div>
-					</div>
+						</CardContent>
+					</Card>
+				</TabsContent>
 
-					{/* Profile Form */}
-					<form onSubmit={handleSubmit} className="space-y-4">
-						<div className="grid grid-cols-2 gap-4">
-							<div className="space-y-2">
-								<Label htmlFor="first_name">Voornaam</Label>
-								<Input
-									id="first_name"
-									value={formData.first_name}
-									onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-									disabled={saving}
-								/>
-								{errors.first_name && <p className="text-xs text-destructive">{errors.first_name}</p>}
+				<TabsContent value="danger" className="space-y-6 mt-6">
+					{/* Danger Zone - Delete Account */}
+					<Card className="border-destructive/50">
+						<CardHeader>
+							<CardTitle className="text-destructive">Gevarenzone</CardTitle>
+							<CardDescription>Onomkeerbare acties voor je account</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<div className="flex items-center justify-between">
+								<div>
+									<p className="font-medium">Account verwijderen</p>
+									<p className="text-sm text-muted-foreground">
+										Verwijder je account en alle bijbehorende gegevens permanent.
+									</p>
+								</div>
+								<Button
+									variant="destructive"
+									onClick={() => setDeleteDialogOpen(true)}
+									disabled={deleting}
+								>
+									<LuTrash2 className="mr-2 h-4 w-4" />
+									Verwijder account
+								</Button>
 							</div>
-
-							<div className="space-y-2">
-								<Label htmlFor="last_name">Achternaam</Label>
-								<Input
-									id="last_name"
-									value={formData.last_name}
-									onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-									disabled={saving}
-								/>
-								{errors.last_name && <p className="text-xs text-destructive">{errors.last_name}</p>}
-							</div>
-						</div>
-
-						<PhoneInput
-							id="phone_number"
-							label="Telefoonnummer"
-							value={formData.phone_number}
-							onChange={(value) => {
-								setFormData({ ...formData, phone_number: value });
-								if (value && value.length !== 10) {
-									setErrors({
-										...errors,
-										phone_number: 'Telefoonnummer moet precies 10 cijfers zijn',
-									});
-								} else {
-									setErrors({ ...errors, phone_number: undefined });
-								}
-							}}
-							error={errors.phone_number}
-							disabled={saving}
-						/>
-
-						<Button type="submit" disabled={saving}>
-							{saving ? 'Opslaan...' : 'Opslaan'}
-						</Button>
-					</form>
-				</CardContent>
-			</Card>
-
-			{/* Theme Settings */}
-			<Card>
-				<CardHeader>
-					<CardTitle>Thema</CardTitle>
-					<CardDescription>Kies je voorkeur voor licht of donker thema</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<div className="flex gap-2">
-						<Button
-							variant="outline"
-							className={cn('flex-1', theme === 'light' && 'border-primary bg-primary/10')}
-							onClick={() => setTheme('light')}
-						>
-							<LuSun className="mr-2 h-4 w-4" />
-							Licht
-						</Button>
-						<Button
-							variant="outline"
-							className={cn('flex-1', theme === 'dark' && 'border-primary bg-primary/10')}
-							onClick={() => setTheme('dark')}
-						>
-							<LuMoon className="mr-2 h-4 w-4" />
-							Donker
-						</Button>
-						<Button
-							variant="outline"
-							className={cn('flex-1', theme === 'system' && 'border-primary bg-primary/10')}
-							onClick={() => setTheme('system')}
-						>
-							<LuMonitor className="mr-2 h-4 w-4" />
-							Systeem
-						</Button>
-					</div>
-				</CardContent>
-			</Card>
-
-			{/* Danger Zone - Delete Account */}
-			<Card className="border-destructive/50">
-				<CardHeader>
-					<CardTitle className="text-destructive">Gevarenzone</CardTitle>
-					<CardDescription>Onomkeerbare acties voor je account</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<div className="flex items-center justify-between">
-						<div>
-							<p className="font-medium">Account verwijderen</p>
-							<p className="text-sm text-muted-foreground">
-								Verwijder je account en alle bijbehorende gegevens permanent.
-							</p>
-						</div>
-						<Button variant="destructive" onClick={() => setDeleteDialogOpen(true)} disabled={deleting}>
-							<LuTrash2 className="mr-2 h-4 w-4" />
-							Verwijder account
-						</Button>
-					</div>
-				</CardContent>
-			</Card>
+						</CardContent>
+					</Card>
+				</TabsContent>
+			</Tabs>
 
 			{/* Delete Account Confirmation Dialog */}
 			<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

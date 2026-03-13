@@ -4,9 +4,9 @@ import { Label } from '@/components/ui/label';
 import { LessonTypeBadge } from '@/components/ui/lesson-type-badge';
 import { type LessonTypeOption, LessonTypeSelect } from '@/components/ui/lesson-type-select';
 import { UserDisplay } from '@/components/ui/user-display';
-import type { UserOption } from '@/components/ui/users-select';
 import { frequencyLabels } from '@/lib/frequencies';
 import type { LessonFrequency, LessonTypeOptionSnapshot, WizardLessonTypeInfo } from '@/types/lesson-agreements';
+import type { User } from '@/types/users';
 
 interface OptionSnapshot {
 	duration_minutes: number;
@@ -17,14 +17,14 @@ interface OptionSnapshot {
 interface UserStepContentProps {
 	isEditMode: boolean;
 	selectedStudentUserId: string | null;
-	selectedUser: UserOption | null;
+	selectedUser: User | null;
 	selectedLessonTypeId: string | null;
 	selectedLessonType: WizardLessonTypeInfo | undefined;
 	lessonTypes: LessonTypeOption[];
 	lessonTypeOptions: LessonTypeOptionSnapshot[];
 	selectedOptionSnapshot: OptionSnapshot | null;
 	onStudentUserIdChange: (userId: string | null) => void;
-	onUserChange: (user: UserOption | null) => void;
+	onUserChange: (user: User | null) => void;
 	onLessonTypeChange: (lessonTypeId: string | null) => void;
 	onOptionSnapshotChange: (snap: OptionSnapshot | null) => void;
 }
@@ -90,8 +90,8 @@ export function UserStepContent({
 		<div id="wizard-step-user" className="space-y-6 py-6">
 			<ExistingOrNewUserSelect
 				value={selectedStudentUserId}
-				onChange={(userId, user) => {
-					onStudentUserIdChange(userId);
+				onChange={(user) => {
+					onStudentUserIdChange(user?.user_id ?? null);
 					onUserChange(user);
 				}}
 				filter="all"

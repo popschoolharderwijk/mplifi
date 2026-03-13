@@ -38,7 +38,7 @@ export function UserDisplay({ profile, showEmail = false, nameSuffix, className 
 				<AvatarImage src={profile.avatar_url ?? undefined} alt={displayName} />
 				<AvatarFallback className="bg-primary/10 text-primary text-xs">{initials}</AvatarFallback>
 			</Avatar>
-			<div className="min-w-0 flex-1">
+			<div className="min-w-0 flex-1 text-left">
 				<p className="font-medium truncate text-sm">
 					{displayName}
 					{nameSuffix}

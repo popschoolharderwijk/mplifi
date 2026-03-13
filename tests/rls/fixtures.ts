@@ -10,6 +10,9 @@ const { data: allStudents, error: studentsError } = await dbNoRLS.from('students
 const { data: allTeachers, error: teachersError } = await dbNoRLS.from('teachers').select('*');
 const { data: allLessonTypes, error: lessonTypesError } = await dbNoRLS.from('lesson_types').select('*');
 const { data: allLessonAgreements, error: agreementsError } = await dbNoRLS.from('lesson_agreements').select('*');
+const { data: allProjectDomains, error: domainsError } = await dbNoRLS.from('project_domains').select('*');
+const { data: allProjectLabels, error: labelsError } = await dbNoRLS.from('project_labels').select('*');
+const { data: allProjects, error: projectsError } = await dbNoRLS.from('projects').select('*');
 
 if (profilesError || !allProfiles) {
 	throw new Error(`Failed to fetch profiles: ${profilesError?.message}`);
@@ -35,6 +38,18 @@ if (agreementsError || !allLessonAgreements) {
 	throw new Error(`Failed to fetch lesson agreements: ${agreementsError?.message}`);
 }
 
+if (domainsError || !allProjectDomains) {
+	throw new Error(`Failed to fetch project domains: ${domainsError?.message}`);
+}
+
+if (labelsError || !allProjectLabels) {
+	throw new Error(`Failed to fetch project labels: ${labelsError?.message}`);
+}
+
+if (projectsError || !allProjects) {
+	throw new Error(`Failed to fetch projects: ${projectsError?.message}`);
+}
+
 // Build lookup maps for fast access
 const profileByEmail = new Map(allProfiles.map((p) => [p.email, p]));
 const studentByUserId = new Map(allStudents.map((s) => [s.user_id, s]));
@@ -47,6 +62,9 @@ export const fixtures = {
 	allTeachers,
 	allLessonTypes,
 	allLessonAgreements,
+	allProjectDomains,
+	allProjectLabels,
+	allProjects,
 
 	userRoleMap: new Map(allUserRoles.map((ur) => [ur.user_id, ur.role])),
 

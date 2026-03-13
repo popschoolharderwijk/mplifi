@@ -1,0 +1,29 @@
+/**
+ * Test project IDs and related constants from supabase/seed.sql.
+ * Use these instead of hardcoding UUIDs in tests.
+ * (Seed display names remain Dutch in the DB/frontend.)
+ */
+export const TestProjectDomains = {
+	MUSIC: '70000000-0001-0000-0000-000000000000',
+	DANCE: '70000000-0002-0000-0000-000000000000',
+	THEATRE: '70000000-0003-0000-0000-000000000000',
+} as const;
+
+export const TestProjectLabels = {
+	GUITAR_LESSONS: '71000000-0001-0000-0000-000000000000',
+	PIANO_LESSONS: '71000000-0002-0000-0000-000000000000',
+	BALLET: '71000000-0003-0000-0000-000000000000',
+	STREET_DANCE: '71000000-0004-0000-0000-000000000000',
+	IMPRO: '71000000-0005-0000-0000-000000000000',
+	MUSICAL: '71000000-0006-0000-0000-000000000000',
+} as const;
+
+export const TestProjects = {
+	GUITAR_PROJECT_SPRING: '72000000-0001-0000-0000-000000000000',
+	BALLET_BEGINNERS: '72000000-0002-0000-0000-000000000000',
+	IMPRO_WORKSHOP: '72000000-0003-0000-0000-000000000000',
+	PIANO_MASTERCLASS: '72000000-0004-0000-0000-000000000000',
+} as const;
+
+/** Owner of first project in seed (admin-one). Use for insert payloads when a valid owner_user_id is needed. */
+export const TEST_PROJECT_OWNER_ADMIN_ID = '20000000-0001-0000-0000-000000000000';

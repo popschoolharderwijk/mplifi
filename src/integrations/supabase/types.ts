@@ -386,6 +386,109 @@ export type Database = {
 				};
 				Relationships: [];
 			};
+			project_domains: {
+				Row: {
+					created_at: string;
+					id: string;
+					is_active: boolean;
+					name: string;
+					updated_at: string;
+				};
+				Insert: {
+					created_at?: string;
+					id?: string;
+					is_active?: boolean;
+					name: string;
+					updated_at?: string;
+				};
+				Update: {
+					created_at?: string;
+					id?: string;
+					is_active?: boolean;
+					name?: string;
+					updated_at?: string;
+				};
+				Relationships: [];
+			};
+			project_labels: {
+				Row: {
+					created_at: string;
+					domain_id: string;
+					id: string;
+					is_active: boolean;
+					name: string;
+					updated_at: string;
+				};
+				Insert: {
+					created_at?: string;
+					domain_id: string;
+					id?: string;
+					is_active?: boolean;
+					name: string;
+					updated_at?: string;
+				};
+				Update: {
+					created_at?: string;
+					domain_id?: string;
+					id?: string;
+					is_active?: boolean;
+					name?: string;
+					updated_at?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'project_labels_domain_id_fkey';
+						columns: ['domain_id'];
+						isOneToOne: false;
+						referencedRelation: 'project_domains';
+						referencedColumns: ['id'];
+					},
+				];
+			};
+			projects: {
+				Row: {
+					cost_center: string | null;
+					created_at: string;
+					description: string | null;
+					id: string;
+					is_active: boolean;
+					label_id: string;
+					name: string;
+					owner_user_id: string;
+					updated_at: string;
+				};
+				Insert: {
+					cost_center?: string | null;
+					created_at?: string;
+					description?: string | null;
+					id?: string;
+					is_active?: boolean;
+					label_id: string;
+					name: string;
+					owner_user_id: string;
+					updated_at?: string;
+				};
+				Update: {
+					cost_center?: string | null;
+					created_at?: string;
+					description?: string | null;
+					id?: string;
+					is_active?: boolean;
+					label_id?: string;
+					name?: string;
+					owner_user_id?: string;
+					updated_at?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'projects_label_id_fkey';
+						columns: ['label_id'];
+						isOneToOne: false;
+						referencedRelation: 'project_labels';
+						referencedColumns: ['id'];
+					},
+				];
+			};
 			students: {
 				Row: {
 					created_at: string;

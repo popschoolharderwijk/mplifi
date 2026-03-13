@@ -1,4 +1,4 @@
-import { LuCalendar, LuShieldCheck } from 'react-icons/lu';
+import { LuShieldCheck } from 'react-icons/lu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import { NAV_ICONS, NAV_LABELS } from '@/config/nav-labels';
@@ -83,11 +83,25 @@ const sections: ManualSection[] = [
 		],
 	},
 	{
-		icon: LuCalendar,
+		icon: NAV_ICONS.projects,
+		title: NAV_LABELS.projects,
+		description: 'Beheer projecten en plan tijdsloten voor docenten en leerlingen.',
+		details: [
+			'Projecten overzicht: bekijk alle projecten met domein, label, eigenaar en status (actief/inactief).',
+			'Project aanmaken: geef een naam op, kies een label (gekoppeld aan een domein), wijs een eigenaar toe en stel optioneel een kostenplaats in.',
+			'Domeinen en labels: organiseer projecten via een hiërarchie van domeinen en labels, beheerd via Instellingen.',
+			'Tijdslot plannen: plan vanuit de projectpagina of de agenda een tijdslot voor een project, gekoppeld aan één of meer docenten en leerlingen.',
+			'Deactiveren: zet een project op inactief zodat er geen nieuwe tijdsloten meer voor gepland kunnen worden.',
+		],
+	},
+	{
+		icon: NAV_ICONS.agenda,
 		title: 'Agenda & afwijkingen',
-		description: 'De agenda toont alle ingeplande lessen op basis van overeenkomsten.',
+		description: 'De agenda toont alle ingeplande lessen en projecten op basis van overeenkomsten en planning.',
 		details: [
 			'Agenda weergave: bekijk de planning per week of maand voor een docent.',
+			'Handmatige events: maak losse afspraken aan met titel, beschrijving, kleur en deelnemers.',
+			'Projectplanning: plan tijdsloten voor projecten met meerdere docenten en leerlingen als deelnemers.',
 			'Les verplaatsen: maak een afwijking aan om een les eenmalig of structureel te verplaatsen naar een andere dag/tijd.',
 			'Les annuleren: annuleer een enkele les of alle toekomstige lessen in een reeks.',
 			'Herhaling: afwijkingen kunnen eenmalig of herhalend zijn, met een optionele einddatum.',
@@ -96,12 +110,13 @@ const sections: ManualSection[] = [
 	{
 		icon: NAV_ICONS.reports,
 		title: NAV_LABELS.reports,
-		description: 'Rapportages over lesuren, leeftijdscategorieën en BTW.',
+		description: 'Rapportages over lesuren, projecturen, leeftijdscategorieën en BTW.',
 		details: [
 			'Periode selecteren: kies een vooraf ingestelde periode (deze maand, vorig kwartaal, etc.) of stel handmatig een start- en einddatum in.',
 			'Docentenfilter: filter de rapportage op een specifieke docent (alleen zichtbaar voor beheerders).',
 			'Samenvatting: bekijk het totaal aantal uren, opgesplitst naar leerlingen onder 18 (BTW-vrij) en 18+ (BTW-plichtig).',
 			'Detail per lessoort: zie per lessoort het aantal leerlingen, totaal uren en de verdeling per leeftijdscategorie.',
+			'Projecturen: bekijk per docent per project het aantal geplande uren binnen de geselecteerde periode.',
 		],
 	},
 	{

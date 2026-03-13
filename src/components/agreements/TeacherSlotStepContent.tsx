@@ -3,7 +3,7 @@ import { LuCircleCheck, LuCircleX, LuTriangleAlert } from 'react-icons/lu';
 import { Label } from '@/components/ui/label';
 import { SectionSkeleton } from '@/components/ui/page-skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { UsersSelect } from '@/components/ui/users-select';
+import { UserSelectSingle } from '@/components/ui/user-select';
 import type { SlotStatus, SlotWithStatus } from '@/lib/agreementSlots';
 import { DAY_NAMES } from '@/lib/date/day-index';
 import { formatTime } from '@/lib/time/time-format';
@@ -96,13 +96,8 @@ interface TeacherOption {
 interface TeacherSlotStepContentProps {
 	teachers: TeacherOption[];
 	selectedTeacher: TeacherOption | undefined;
-	teacherUserOptions: Array<{
-		user_id: string;
-		first_name: string | null;
-		last_name: string | null;
-		email: string;
-		avatar_url: string | null;
-	}>;
+	/** User IDs to exclude from the teacher list (e.g. the student so they can't be their own teacher) */
+	excludeUserIds?: string[];
 	slotsWithStatus: SlotWithStatus[];
 	selectedSlot: SlotWithStatus | null;
 	/** When editing: the time slot of the existing agreement (shown with solid background) */
@@ -116,7 +111,7 @@ interface TeacherSlotStepContentProps {
 export function TeacherSlotStepContent({
 	teachers,
 	selectedTeacher,
-	teacherUserOptions,
+	excludeUserIds = [],
 	slotsWithStatus,
 	selectedSlot,
 	currentAgreementSlot = null,
@@ -133,17 +128,18 @@ export function TeacherSlotStepContent({
 		<div className="space-y-4 py-4">
 			<div className="space-y-2">
 				<Label>Docent</Label>
-				<UsersSelect
+				<UserSelectSingle
+					filter="teachers"
 					value={selectedTeacher?.userId ?? null}
-					onChange={(userId) => {
-						if (!userId) {
+					onChange={(user) => {
+						if (!user) {
 							onTeacherChange(null);
 							return;
 						}
-						const teacher = teachers.find((t) => t.userId === userId);
+						const teacher = teachers.find((t) => t.userId === user.user_id);
 						onTeacherChange(teacher?.id ?? null);
 					}}
-					options={teacherUserOptions}
+					excludeUserIds={excludeUserIds}
 					placeholder="Selecteer docent..."
 				/>
 				{isTeacherOwnStudent && (

@@ -75,14 +75,9 @@ supabase config push --linked
 
 # Generate types voor gelinkte project
 supabase gen types typescript --linked > src/integrations/supabase/types.ts
-
-# Voor lokale testing (alleen voor CI/tests):
-supabase start
-supabase start -x realtime,storage-api,imgproxy,edge-runtime,logflare,vector,studio,postgres-meta,supavisor
-supabase stop
 ```
 
-> 💡 **Development workflow**: Gebruik `--linked` voor alle commando's die werken met de remote dev instance (mcp-dev). Lokale Supabase wordt alleen gebruikt voor CI tests. Voor development gebruik je de test database via `bun dev:test`.
+> 💡 **Workflow**: Er zijn geen lokale Supabase-databases. **Development** (Lovable, `bun dev`, `reset-db:dev`) gebruikt **mcp-dev** (`zdvscmogkfyddnnxzkdu`). **CI bij een PR** gebruikt altijd **mcp-test** (link via secret `SUPABASE_PROJECT_REF`, credentials uit secrets). Lokaal testen (`bun test rls`): zet in `.env.test` de credentials van mcp-test of mcp-dev. Zie [secrets.md](./secrets.md) en [architecture.md](./architecture.md).
 
 ---
 
@@ -104,11 +99,11 @@ bun run create-storage-bucket
 # Configureer in .env.development of .env.test:
 #   SUPABASE_URL=https://...supabase.co          (verplicht, API URL)
 #   SUPABASE_SERVICE_ROLE_KEY=eyJ...             (verplicht, service role key)
-#   DEV_LOGIN_EMAIL=user@example.com             (verplicht, voor createuser script)
+#   DEV_LOGIN_EMAIL=user@example.com             (verplicht, voor create-user script)
 #   DEV_LOGIN_PASSWORD=wachtwoord                (optioneel, zonder = passwordless user)
 #   DEV_LOGIN_FIRST_NAME=Voornaam                (optioneel)
 #   DEV_LOGIN_LAST_NAME=Achternaam               (optioneel)
-bun run createuser
+bun run create-user
 ```
 
 **Twee modes:**
@@ -145,7 +140,7 @@ VITE_DEV_LOGIN_PASSWORD=your-custom-password
 
 Als `VITE_DEV_LOGIN_PASSWORD` niet is ingesteld, wordt de Dev Login knop uitgeschakeld. De seed users in de remote dev instance gebruiken standaard het wachtwoord `password`.
 
-> 💡 **Let op**: De Dev Login knop gebruikt hardcoded emails uit de seed data (bijv. `site-admin@test.nl`). Deze emails zijn niet configureerbaar via environment variabelen. Voor custom users gebruik je `bun run createuser` met `DEV_LOGIN_EMAIL`.
+> 💡 **Let op**: De Dev Login knop gebruikt hardcoded emails uit de seed data (bijv. `site-admin@test.nl`). Deze emails zijn niet configureerbaar via environment variabelen. Voor custom users gebruik je `bun run create-user` met `DEV_LOGIN_EMAIL`.
 
 ### Beveiliging
 
@@ -164,10 +159,10 @@ bun test code
 # Agenda-logica (recurrence, frequency, deviations; geen Supabase nodig)
 bun test agenda
 
-# RLS tests (lokale Supabase moet draaien voor CI; incl. lesson_appointment_deviations agenda: recurring, opheffen)
+# RLS tests (tegen mcp-test of mcp-dev; vereist SUPABASE_* en VITE_DEV_LOGIN_PASSWORD in env)
 bun test rls
 
-# Auth tests (lokale Supabase moet draaien voor CI)
+# Auth tests (tegen mcp-test of mcp-dev; vereist SUPABASE_* en VITE_DEV_LOGIN_PASSWORD in env)
 bun test auth
 
 # Alle tests

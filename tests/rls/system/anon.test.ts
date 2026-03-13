@@ -1,6 +1,6 @@
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { afterAll, beforeAll, describe, it } from 'bun:test';
 import { createClientAnon } from '../../db';
-import type { LessonTypeInsert, ProfileInsert, UserRoleInsert } from '../../types';
+import { unwrapError } from '../../utils';
 import { type DatabaseState, setupDatabaseStateVerification } from '../db-state';
 
 let initialState: DatabaseState;
@@ -15,189 +15,25 @@ afterAll(async () => {
 });
 
 /**
- * All RLS policies are defined for 'authenticated' role only.
- * Anonymous users should have NO access to any data.
+ * Security helper and introspection functions are not granted to anon.
+ * Table-specific anon tests live in each domain folder (profiles, user-roles, lesson-types, projects).
  */
-describe('RLS: anonymous user access', () => {
-	describe('profiles table', () => {
-		it('anon cannot read profiles', async () => {
-			const db = createClientAnon();
-
-			const { data, error } = await db.from('profiles').select('*');
-
-			// Should return empty result (RLS blocks all rows)
-			expect(error).toBeNull();
-			expect(data).toHaveLength(0);
-		});
-
-		it('anon cannot insert profiles', async () => {
-			const db = createClientAnon();
-
-			const newProfile: ProfileInsert = {
-				user_id: '00000000-0000-0000-0000-999999999999',
-				email: 'anon@test.nl',
-			};
-
-			const { data, error } = await db.from('profiles').insert(newProfile).select();
-
-			// Should fail - no INSERT policy for anon
-			expect(error).not.toBeNull();
-			expect(data).toBeNull();
-		});
-
-		it('anon cannot update profiles', async () => {
-			const db = createClientAnon();
-
-			const { data, error } = await db
-				.from('profiles')
-				.update({ first_name: 'Hacked', last_name: null })
-				.eq('email', 'student-001@test.nl')
-				.select();
-
-			// Should return empty result (RLS blocks)
-			expect(error).toBeNull();
-			expect(data).toHaveLength(0);
-		});
-
-		it('anon cannot delete profiles', async () => {
-			const db = createClientAnon();
-
-			const { data, error } = await db.from('profiles').delete().eq('email', 'student-001@test.nl').select();
-
-			expect(error).toBeNull();
-			expect(data).toHaveLength(0);
-		});
-	});
-
-	describe('user_roles table', () => {
-		it('anon cannot read user_roles', async () => {
-			const db = createClientAnon();
-
-			const { data, error } = await db.from('user_roles').select('*');
-
-			expect(error).toBeNull();
-			expect(data).toHaveLength(0);
-		});
-
-		it('anon cannot insert user_roles', async () => {
-			const db = createClientAnon();
-
-			const newUserRole: UserRoleInsert = {
-				user_id: '00000000-0000-0000-0000-999999999999',
-				role: 'site_admin',
-			};
-
-			const { data, error } = await db.from('user_roles').insert(newUserRole).select();
-
-			expect(error).not.toBeNull();
-			expect(data).toBeNull();
-		});
-
-		it('anon cannot update user_roles', async () => {
-			const db = createClientAnon();
-
-			const { data, error } = await db
-				.from('user_roles')
-				.update({ role: 'site_admin' })
-				.neq('role', 'site_admin')
-				.select();
-
-			expect(error).toBeNull();
-			expect(data).toHaveLength(0);
-		});
-
-		it('anon cannot delete user_roles', async () => {
-			const db = createClientAnon();
-
-			const { data, error } = await db.from('user_roles').delete().eq('role', 'staff').select();
-
-			expect(error).toBeNull();
-			expect(data).toHaveLength(0);
-		});
-	});
-
-	describe('lesson_types table', () => {
-		it('anon cannot read lesson_types', async () => {
-			const db = createClientAnon();
-
-			const { data, error } = await db.from('lesson_types').select('*');
-
-			// Should return empty result (RLS blocks all rows)
-			expect(error).toBeNull();
-			expect(data).toHaveLength(0);
-		});
-
-		it('anon cannot insert lesson_types', async () => {
-			const db = createClientAnon();
-
-			const newLessonType: LessonTypeInsert = {
-				name: 'Hacked Lesson Type',
-				icon: 'test',
-				color: '#FF0000',
-			};
-
-			const { data, error } = await db.from('lesson_types').insert(newLessonType).select();
-
-			// Should fail - no INSERT policy for anon
-			expect(error).not.toBeNull();
-			expect(data).toBeNull();
-		});
-
-		it('anon cannot update lesson_types', async () => {
-			const db = createClientAnon();
-
-			const { data, error } = await db
-				.from('lesson_types')
-				.update({ name: 'Hacked' })
-				.neq('name', 'Hacked')
-				.select();
-
-			// Should return empty result (RLS blocks)
-			expect(error).toBeNull();
-			expect(data).toHaveLength(0);
-		});
-
-		it('anon cannot delete lesson_types', async () => {
-			const db = createClientAnon();
-
-			const { data, error } = await db
-				.from('lesson_types')
-				.delete()
-				.neq('id', '00000000-0000-0000-0000-000000000000')
-				.select();
-
-			expect(error).toBeNull();
-			expect(data).toHaveLength(0);
-		});
-	});
-
-	describe('security functions', () => {
-		it('anon cannot call role helper functions', async () => {
-			const db = createClientAnon();
-
-			// Role helper functions are REVOKE'd from PUBLIC and only granted to authenticated.
-			// Anon should NOT be able to call these functions.
-			const { data, error } = await db.rpc('is_site_admin', {
+describe('RLS: anonymous user – security functions', () => {
+	it('anon cannot call role helper functions', async () => {
+		const db = createClientAnon();
+		unwrapError(
+			await db.rpc('is_site_admin', {
 				_user_id: '10000000-0001-0000-0000-000000000000',
-			});
+			}),
+		);
+	});
 
-			// Anon must be blocked from calling this function
-			expect(error).not.toBeNull();
-			expect(data).toBeNull();
-		});
-
-		it('anon cannot call introspection functions', async () => {
-			const db = createClientAnon();
-
-			// Introspection functions are REVOKE'd from PUBLIC and only granted to service_role.
-			// Anon should NOT be able to call these functions.
-			const { data, error } = await db.rpc('check_rls_enabled', {
+	it('anon cannot call introspection functions', async () => {
+		const db = createClientAnon();
+		unwrapError(
+			await db.rpc('check_rls_enabled', {
 				p_table_name: 'profiles',
-			});
-
-			// Anon must be blocked from calling this function
-			expect(error).not.toBeNull();
-			expect(data).toBeNull();
-		});
+			}),
+		);
 	});
 });

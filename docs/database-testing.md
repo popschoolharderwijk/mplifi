@@ -2,29 +2,22 @@
 
 ## Hoe het werkt
 
-Tests draaien tegen een **lokale Supabase instance** in CI:
+Tests draaien tegen een **remote Supabase-project** (geen lokale instance). Er zijn twee projecten in gebruik:
 
-```
-PR met wijzigingen in supabase/** of tests/**
-       ↓
-pull-request-test-code-and-supabase.yml triggert
-       ↓
-Start lokale Supabase (supabase start -x ...)
-       ↓
-Exporteert credentials van draaiende instance
-       ↓
-Draait seed.sql (test users + relaties)
-       ↓
-Tests draaien tegen lokale Supabase
-       ↓
-Verifieert RLS policies + Auth policies
-```
+- **mcp-test** (`jserlqacarlgtdzrblic`): gebruikt door **CI bij elke PR** en optioneel lokaal via `bun dev:test` / `bun test rls` (credentials in `.env.test` of env).
+- **mcp-dev** (`zdvscmogkfyddnnxzkdu`): development; lokaal kun je ook tegen mcp-dev testen als je env daarop wijst.
+
+**In CI** (`pull-request-test-code-and-supabase.yml`):
+- Workflow linkt naar **mcp-test** (via secret `SUPABASE_PROJECT_REF`)
+- `supabase db reset --linked --yes` (seed wordt toegepast)
+- Credentials uit GitHub secrets (moeten van mcp-test zijn) → `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PUBLISHABLE_DEFAULT_KEY`
+- `bun test` draait RLS- en Auth-tests tegen mcp-test
 
 ---
 
 ## Seed Data voor RLS Tests
 
-De lokale Supabase wordt automatisch geseeded met testgebruikers uit `supabase/seed.sql`. De seed bevat:
+Het gelinkte project wordt voor tests gereset en geseeded met `supabase/seed.sql`. De seed bevat:
 
 | Type | Gebruikers |
 |------|-----------|
@@ -40,6 +33,7 @@ Daarnaast bevat de seed:
 - **Students**: Koppeling van student-gebruikers aan student-records
 - **Teachers**: Koppeling van teacher-gebruikers aan teacher-records
 - **Lesson agreements**: Lesovereenkomsten tussen studenten en docenten
+- **Project domains / labels / projects**: Referentiedata voor de projecten-module
 
 ---
 
@@ -61,6 +55,7 @@ fixtures.requireStudentId(email)              // student.id op basis van email
 fixtures.requireTeacherId(email)              // teacher.id op basis van email
 fixtures.requireLessonTypeId(name)            // lesson_type.id op basis van naam
 fixtures.requireAgreementId(student, teacher) // agreement.id op basis van student+teacher
+fixtures.allProjectDomains / allProjectLabels / allProjects  // project-referentiedata
 ```
 
 ---
@@ -116,6 +111,13 @@ fixtures.requireAgreementId(student, teacher) // agreement.id op basis van stude
 - ✅ INSERT/UPDATE/DELETE: alleen staff/admin/site_admin
 - ✅ Studenten en docenten kunnen geen overeenkomsten wijzigen
 
+#### Project Domains / Labels / Projects (`projects/`)
+
+- ✅ SELECT: alle ingelogde gebruikers zien domains, labels en projecten
+- ✅ INSERT/UPDATE/DELETE domains en labels: alleen admin/site_admin
+- ✅ INSERT/UPDATE/DELETE projecten: alleen admin/site_admin (geen staff)
+- ✅ Anonieme gebruikers hebben geen toegang
+
 #### Users zonder rol (`users/`)
 
 - ✅ SELECT: alleen eigen profiel, geen toegang tot students/teachers/agreements/roles
@@ -133,21 +135,16 @@ fixtures.requireAgreementId(student, teacher) // agreement.id op basis van stude
 
 ## Lokaal tests draaien
 
-Start eerst lokale Supabase:
+Lokaal kun je tegen **mcp-test** of **mcp-dev** testen. Zet in je omgeving (bijv. `.env.test`) de variabelen van het project dat je gebruikt:
 
-```bash
-# Start Supabase (minimale services voor testing)
-supabase start -x realtime,storage-api,imgproxy,edge-runtime,logflare,vector,studio,postgres-meta,supavisor
-
-# Of start alle services
-supabase start
-```
-
-Dan tests draaien:
+- `SUPABASE_URL` — URL van het Supabase-project
+- `SUPABASE_SERVICE_ROLE_KEY` — service role key (voor bypass RLS in fixtures)
+- `SUPABASE_PUBLISHABLE_DEFAULT_KEY` — anon key (voor client)
+- `VITE_DEV_LOGIN_PASSWORD` — wachtwoord van seed-users (bijv. `password`)
 
 ```bash
 # Alle database tests
-bun test rls auth 
+bun test rls auth
 
 # Alleen RLS tests
 bun test rls
@@ -164,4 +161,4 @@ bun test tests/rls/teachers
 
 ## Environment Variables
 
-Voor lokaal testen zijn credentials automatisch beschikbaar via `supabase status`. Voor CI, zie [secrets.md](./secrets.md).
+Voor lokaal testen: zet de credentials in `.env.test` of exporteer ze in je shell (zelfde variabelen als in "Lokaal tests draaien"). Voor CI worden ze uit GitHub secrets gezet; zie [secrets.md](./secrets.md).

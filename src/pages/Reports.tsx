@@ -23,7 +23,7 @@ import { LessonTypeBadge } from '@/components/ui/lesson-type-badge';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { UserDisplay } from '@/components/ui/user-display';
-import { type UserOption, UsersSelect } from '@/components/ui/users-select';
+import { UserSelectSingle } from '@/components/ui/user-select';
 import { NAV_ICONS, NAV_LABELS } from '@/config/nav-labels';
 import { MUSIC_ICONS } from '@/constants/icons';
 import { useAuth } from '@/hooks/useAuth';
@@ -43,13 +43,6 @@ interface ReportRow {
 	age_category: 'under_18' | '18_plus' | 'unknown';
 	total_minutes: number;
 	lesson_count: number;
-}
-
-/** Teacher id (for API) and user_id (for UsersSelect); profile for dropdown display */
-interface TeacherOption {
-	id: string;
-	user_id: string;
-	profile: UserOption;
 }
 
 type PeriodPreset = 'this_month' | 'last_month' | 'this_quarter' | 'last_quarter' | 'this_year' | 'custom';
@@ -282,63 +275,7 @@ export default function Reports() {
 
 	// Data state
 	const [data, setData] = useState<ReportRow[]>([]);
-	const [teachers, setTeachers] = useState<TeacherOption[]>([]);
 	const [loading, setLoading] = useState(true);
-
-	// Load teachers for filter (privileged only); same shape as AgreementWizard for UsersSelect
-	useEffect(() => {
-		if (!isPrivileged) return;
-		(async () => {
-			const { data: teacherData, error } = await supabase
-				.from('teachers')
-				.select('id, user_id')
-				.eq('is_active', true);
-			if (error) {
-				console.error('Error loading teachers:', error);
-				return;
-			}
-			if (!teacherData || teacherData.length === 0) {
-				setTeachers([]);
-				return;
-			}
-			const userIds = teacherData.map((t) => t.user_id);
-			const { data: profileData, error: profileError } = await supabase
-				.from('profiles')
-				.select('user_id, first_name, last_name, email, avatar_url')
-				.in('user_id', userIds);
-			if (profileError) {
-				console.error('Error loading teacher profiles:', profileError);
-				return;
-			}
-			const profileMap = new Map((profileData || []).map((p) => [p.user_id, p]));
-			const options: TeacherOption[] = teacherData
-				.map((t) => {
-					const p = profileMap.get(t.user_id);
-					if (!p) return null;
-					return {
-						id: t.user_id,
-						user_id: t.user_id,
-						profile: {
-							user_id: p.user_id,
-							first_name: p.first_name,
-							last_name: p.last_name,
-							email: p.email ?? '',
-							avatar_url: p.avatar_url,
-						},
-					};
-				})
-				.filter((t): t is TeacherOption => t != null);
-			options.sort((a, b) =>
-				[a.profile.first_name, a.profile.last_name, a.profile.email]
-					.filter(Boolean)
-					.join(' ')
-					.localeCompare(
-						[b.profile.first_name, b.profile.last_name, b.profile.email].filter(Boolean).join(' '),
-					),
-			);
-			setTeachers(options);
-		})();
-	}, [isPrivileged]);
 
 	// Handle preset change
 	const handlePresetChange = (newPreset: PeriodPreset) => {
@@ -483,18 +420,18 @@ export default function Reports() {
 				</div>
 			)}
 
-			{/* Teacher filter (API) - staff/admin only; same UsersSelect as AgreementWizard */}
+			{/* Teacher filter (API) - staff/admin only */}
 			{isPrivileged && (
 				<div className="flex flex-wrap items-end gap-4">
 					<div className="space-y-1.5 min-w-[280px]">
 						<Label>Docent</Label>
 						<div className="flex items-center gap-2">
-							<UsersSelect
+							<UserSelectSingle
+								filter="teachers"
 								value={selectedTeacherUserId === 'all' ? null : selectedTeacherUserId}
-								onChange={(userId) => {
-									setSelectedTeacherUserId(userId ?? 'all');
+								onChange={(user) => {
+									setSelectedTeacherUserId(user?.user_id ?? 'all');
 								}}
-								options={teachers.map((t) => t.profile)}
 								placeholder="Alle docenten"
 							/>
 							{selectedTeacherUserId !== 'all' && (

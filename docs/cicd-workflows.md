@@ -57,14 +57,13 @@ supabase db lint --linked --schema public
 
 ### PR Supabase Workflow Details
 
-Draait alle tests tegen een lokale Supabase instance in GitHub Actions:
+Draait alle tests tegen **mcp-test** in GitHub Actions:
 
 - **Path filter**: Draait alleen bij wijzigingen in `supabase/**` of `tests/**` (rapporteert altijd status)
 - **Handmatige trigger**: Kan ook handmatig gestart worden via `workflow_dispatch`
-- **Docker images**: Download Supabase images bij elke run (~3-5 min)
-- **Excluded services**: `realtime, storage-api, imgproxy, edge-runtime, logflare, vector, studio, postgres-meta, supavisor`
-- **Environment**: Credentials worden dynamisch opgehaald van draaiende Supabase instance (zie [secrets.md](./secrets.md))
-- **Vereiste secret**: `RESEND_API_KEY` voor email tests (SMTP config)
+- **Project**: Link naar **mcp-test** via secret `SUPABASE_PROJECT_REF` (zie [secrets.md](./secrets.md)); daarna `supabase db reset --linked --yes` voor een schone database met seed
+- **Credentials**: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_DEFAULT_KEY`, `SUPABASE_SERVICE_ROLE_KEY` uit GitHub secrets (moeten van hetzelfde mcp-test project zijn)
+- **Vereiste secret**: `RESEND_API_KEY` voor e-mailtests (SMTP)
 
 ---
 
@@ -74,6 +73,6 @@ Te vinden in `.github/workflows-disabled/`:
 
 | Workflow | Reden uitgeschakeld |
 |----------|---------------------|
-| `pull-request-database.yml` | Vervangen door lokale Supabase workflow (geen preview branches meer) |
+| `pull-request-database.yml` | Vervangen door workflow die tegen gelinkte Supabase draait (geen preview branches meer) |
 | `reset-lovable-branch.yml` | Handmatige trigger, niet nodig in normale flow |
 | `prevent-protected-folder-changes.yml` | Vervangen door branch protection rules |

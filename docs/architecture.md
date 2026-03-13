@@ -25,7 +25,11 @@ students ──┐
 teachers ──┼── lesson_agreements (N:M via koppeltabel)
 lesson_types ─┘
 
+project_domains ── project_labels ── projects (eigenaar: auth.users)
+agenda_events (source: manual | lesson_agreement | project) ── agenda_participants
 ```
+
+Agenda: `agenda_events` kan gekoppeld zijn aan een lesovereenkomst (`source_type = 'lesson_agreement'`), een project (`source_type = 'project'`) of handmatig (`source_type = 'manual'`). Deelnemers via `agenda_participants`.
 
 ### Tabellen
 
@@ -37,6 +41,12 @@ lesson_types ─┘
 | `teachers` | Docent-registratie. Koppelt een `auth.users` aan een teacher-record. |
 | `lesson_types` | Lestypes (bijv. "Gitaar", "Piano"). Referentiedata, zichtbaar voor alle ingelogde gebruikers. |
 | `lesson_agreements` | Lesovereenkomsten tussen student en docent. Bevat dag, tijd, start/einddatum, actief-status en notities. |
+| `project_domains` | Categorieën voor projecten (bijv. "Muziek", "Dans"). SELECT voor alle ingelogden; INSERT/UPDATE/DELETE alleen admin/site_admin. |
+| `project_labels` | Subcategorieën binnen een domein (bijv. "Gitaar", "Piano"). Beheer alleen admin/site_admin. |
+| `projects` | Projecten met label, eigenaar, kostenplaats. SELECT voor alle ingelogden; INSERT/UPDATE/DELETE alleen admin/site_admin. |
+| `agenda_events` | Agenda-items (handmatig, les of project). Bevat source_type/source_id, start/eind, recurring. |
+| `agenda_participants` | Koppelt deelnemers (auth.users) aan agenda_events. |
+| `agenda_event_deviations` | Afwijkingen op recurring events (verplaatsen, afzeggen). |
 
 ### Views
 
@@ -203,13 +213,13 @@ Dit project gebruikt drie aparte Supabase omgevingen:
 
 | Omgeving | Project ID | Gebruik |
 |----------|------------|---------|
-| **Test** | `jserlqacarlgtdzrblic` | Test database voor development (`bun dev:test`) |
-| **Development** | `zdvscmogkfyddnnxzkdu` (mcp-dev) | Directe connectie vanuit Lovable (`bun dev`) |
+| **mcp-test** | `jserlqacarlgtdzrblic` | Testproject: `bun dev:test` en **CI/PR-checks** (workflow linkt via `SUPABASE_PROJECT_REF`) |
+| **mcp-dev** | `zdvscmogkfyddnnxzkdu` | Development: Lovable / `bun dev`, en lokaal `reset-db:dev` |
 | **Production** | `bnagepkxryauifzyoxgo` | Productie deployment (`bun prod`) |
 
 ### Hoe dit werkt
 
-1. **Lovable** is verbonden met `mcp-dev` - een losse development database
-2. **Test database** (`jserlqacarlgtdzrblic`) wordt gebruikt voor lokale development via `bun dev:test`
-3. **CI tests** draaien tegen een **lokale Supabase** instance
-4. Bij **merge naar main** worden migraties handmatig toegepast op production via `supabase db push`
+1. **Lovable** is verbonden met **mcp-dev** — development database.
+2. **Lokaal testen** (`bun dev:test` of `bun test rls`): gebruik **mcp-test** of mcp-dev via `.env.test` (SUPABASE_URL etc.).
+3. **CI bij een PR**: de workflow **pull-request-test-code-and-supabase** linkt naar **mcp-test** (via GitHub secret `SUPABASE_PROJECT_REF`), doet `supabase db reset --linked --yes`, en draait daar alle tests. Zie [secrets.md](./secrets.md) en [cicd-workflows.md](./cicd-workflows.md).
+4. Bij **merge naar main** worden migraties handmatig toegepast op production via `supabase db push`.

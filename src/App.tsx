@@ -17,6 +17,7 @@ import MyStatistics from './pages/MyStatistics';
 import MyStudentProfile from './pages/MyStudentProfile';
 import MyStudents from './pages/MyStudents';
 import NotFound from './pages/NotFound';
+import Projects from './pages/Projects';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Students from './pages/Students';
@@ -57,6 +58,7 @@ const App = () => (
 						<Route path="/agreements/new" element={<AgreementWizard />} />
 						<Route path="/agreements/:id" element={<AgreementWizard />} />
 						<Route path="/settings" element={<Settings />} />
+						<Route path="/projects" element={<Projects />} />
 						<Route path="/teachers" element={<Teachers />} />
 						<Route path="/teachers/availability" element={<TeacherAvailability />} />
 						<Route path="/teachers/my-profile" element={<TeacherInfo />} />

@@ -37,6 +37,8 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 	const showTeachersNav = isAdmin || isSiteAdmin;
 	const showStudentsNav = isPrivileged;
 	const showReportsNav = isPrivileged || isTeacher;
+	// Projects: visible to teachers, staff, admin, site_admin (not users/students); only admin/site_admin can edit (on page)
+	const showProjectsNav = isTeacher || isPrivileged;
 
 	return (
 		<TooltipProvider delayDuration={0}>
@@ -178,7 +180,20 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 									</>
 								)}
 
-								{/* Admin section */}
+								{/* Projecten: teachers, staff, admin, site_admin (edit alleen admin/site_admin) */}
+								{showProjectsNav && (
+									<>
+										{collapsed && <Separator />}
+										<NavItem
+											href="/projects"
+											label={NAV_LABELS.projects}
+											icon={NAV_ICONS.projects}
+											collapsed={collapsed}
+										/>
+									</>
+								)}
+
+								{/* Admin section (admin/site_admin only) */}
 								{showAdminNav && (
 									<>
 										{!collapsed && (

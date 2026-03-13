@@ -15,7 +15,7 @@ import { LessonTypeBadge } from '@/components/ui/lesson-type-badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { TimeInput } from '@/components/ui/time-input';
-import { UsersSelect } from '@/components/ui/users-select';
+import { UserSelectSingle } from '@/components/ui/user-select';
 import { type OccurrenceOverrides, useAgendaEventForm } from '@/hooks/useAgendaEventForm';
 import { useAuth } from '@/hooks/useAuth';
 import { getDisplayName } from '@/lib/display-name';
@@ -340,10 +340,10 @@ export function AgendaEventFormDialog({
 							</>
 						)}
 						{canAddParticipants && (
-							<UsersSelect
+							<UserSelectSingle
 								value={participantAddId}
-								onChange={(id) => {
-									if (id) handlers.handleAddParticipant(id);
+								onChange={(user) => {
+									if (user) handlers.handleAddParticipant(user.user_id);
 									setParticipantAddId(null);
 								}}
 								disabled={isCancelledEvent}

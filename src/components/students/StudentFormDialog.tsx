@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { SubmitButton } from '@/components/ui/submit-button';
-import { UserSelector } from '@/components/ui/user-selector';
+import { UserSelectSingle } from '@/components/ui/user-select';
 import { supabase } from '@/integrations/supabase/client';
 import type { Student } from '@/types/students';
 
@@ -374,12 +374,12 @@ export function StudentFormDialog({ open, onOpenChange, onSuccess, student }: St
 					{!isEditMode && mode === 'existing-user' && (
 						<div className="space-y-1.5">
 							<Label className="text-sm">Selecteer gebruiker *</Label>
-							<UserSelector
+							<UserSelectSingle
 								value={selectedUserId}
-								onChange={async (userId) => {
-									setSelectedUserId(userId);
-									if (userId) {
-										await loadUserData(userId);
+								onChange={async (user) => {
+									setSelectedUserId(user?.user_id ?? null);
+									if (user) {
+										await loadUserData(user.user_id);
 									}
 								}}
 							/>

@@ -24,6 +24,7 @@ import type {
 	WizardLessonTypeInfo,
 	WizardTeacherInfo,
 } from '@/types/lesson-agreements';
+import type { User } from '@/types/users';
 
 // ============ Helpers ============
 
@@ -333,14 +334,7 @@ export default function AgreementWizard() {
 	const [step, setStep] = useState<WizardStep>(WizardStep.User);
 	const [form, setForm] = useState({
 		studentUserId: null as string | null,
-		user: null as {
-			user_id: string;
-			first_name: string | null;
-			last_name: string | null;
-			email: string;
-			avatar_url: string | null;
-			phone_number?: string | null;
-		} | null,
+		user: null as User | null,
 		lessonTypeId: null as string | null,
 		/** Snapshot from chosen option (for new agreement); in edit mode comes from agreement */
 		selectedOptionSnapshot: null as {
@@ -467,6 +461,7 @@ export default function AgreementWizard() {
 					last_name: agreement.student.last_name,
 					email: agreement.student.email,
 					avatar_url: agreement.student.avatar_url,
+					phone_number: null,
 				},
 				lessonTypeId: agreement.lesson_type_id,
 				selectedOptionSnapshot: {
@@ -668,13 +663,7 @@ export default function AgreementWizard() {
 					<TeacherSlotStepContent
 						teachers={teachers}
 						selectedTeacher={selectedTeacher}
-						teacherUserOptions={teachers.map((t) => ({
-							user_id: t.userId,
-							first_name: t.firstName,
-							last_name: t.lastName,
-							email: t.email ?? '',
-							avatar_url: t.avatarUrl,
-						}))}
+						excludeUserIds={form.studentUserId ? [form.studentUserId] : []}
 						slotsWithStatus={slotsWithStatus}
 						selectedSlot={form.slot}
 						currentAgreementSlot={

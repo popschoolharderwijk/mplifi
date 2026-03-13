@@ -139,3 +139,24 @@ export const USERS = {
 	// 10 teachers + 60 students + 10 users without role = 80
 	WITHOUT_ROLE: 80,
 } as const;
+
+/**
+ * Project domains counts
+ */
+export const PROJECT_DOMAINS = {
+	TOTAL: 3,
+} as const;
+
+/**
+ * Project labels counts
+ */
+export const PROJECT_LABELS = {
+	TOTAL: 6,
+} as const;
+
+/**
+ * Projects counts
+ */
+export const PROJECTS = {
+	TOTAL: 4,
+} as const;

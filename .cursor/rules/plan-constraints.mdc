@@ -19,6 +19,7 @@ When making an implementation plan, apply these constraints **in this order**:
 
 3. **UI components**
    - The plan must **explicitly include** reviewing `./src/components/ui` first to get an overview of what exists; then use those existing components before introducing new ones.
+   - For **user selection** (single or multiple): use **UserSelectSingle** or **UserSelectMultiple** from `./src/components/ui/user-select`.
    - For **larger UI loading** (pages, sections): use **PageSkeleton** or **SectionSkeleton** from `page-skeleton.tsx` (variants: `header-and-cards`, `header-and-tabs`, `header-only`). No ad-hoc skeleton layouts for pages/sections.
 
 4. **Icons**

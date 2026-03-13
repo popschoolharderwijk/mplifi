@@ -2,11 +2,10 @@
 
 ## Database tests falen in CI (RLS/Auth)
 
-1. Check of `supabase start` succesvol is (zie workflow logs)
-2. Controleer of credentials correct geëxporteerd zijn via `supabase status`
-3. Controleer of seeding is gelukt
-4. Verifieer dat `RESEND_API_KEY` secret is ingesteld in GitHub
-5. Voor Auth tests: controleer of password policy correct is in `config.toml`
+1. Controleer of alle vereiste GitHub secrets aanwezig zijn: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_DEFAULT_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`
+2. Controleer of `supabase db reset --linked --yes` in de workflow is geslaagd (seed wordt dan toegepast)
+3. Verifieer dat `RESEND_API_KEY` secret is ingesteld in GitHub (voor email-tests)
+4. Voor Auth tests: controleer of password policy correct is in `config.toml`
 
 ---
 
@@ -18,12 +17,10 @@
 
 ---
 
-## Lokale Supabase start niet
+## Tests falen lokaal (RLS/Auth)
 
-1. Check of Docker draait
-2. Probeer `supabase stop` en dan `supabase start`
-3. Check disk space (Docker images zijn ~2-3GB)
-4. Bekijk logs: `docker logs supabase_db_mcp`
+1. Zet in je omgeving (of `.env.test`) de credentials van het project waar je tegen test: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PUBLISHABLE_DEFAULT_KEY`, `VITE_DEV_LOGIN_PASSWORD` (seed-users: wachtwoord `password`). Gebruik **mcp-test**-credentials om hetzelfde als CI te gebruiken, of **mcp-dev** als je daar tegen ontwikkelt.
+2. Optioneel: voor mcp-dev kun je `bun run reset-db:dev` draaien voor een schone database met seed.
 
 ---
 

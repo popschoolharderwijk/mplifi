@@ -2,16 +2,17 @@ import { useState } from 'react';
 import { LuTrash2, LuUserPlus } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { type UserFilter, type UserOption, UsersSelect } from '@/components/ui/users-select';
+import { type UserFilter, UserSelectSingle } from '@/components/ui/user-select';
 import { UserFormDialog } from '@/components/users/UserFormDialog';
 import { cn } from '@/lib/utils';
+import type { User } from '@/types/users';
 
 export interface ExistingOrNewUserSelectProps {
 	/** Currently selected user ID */
 	value: string | null;
 	/** Called when selection changes */
-	onChange: (userId: string | null, user: UserOption | null) => void;
-	/** Filter for UsersSelect (default: "all") */
+	onChange: (user: User | null) => void;
+	/** Filter for user list (default: "all") */
 	filter?: UserFilter;
 	/** User IDs to exclude from the list */
 	excludeUserIds?: string[];
@@ -44,15 +45,9 @@ export function ExistingOrNewUserSelect({
 }: ExistingOrNewUserSelectProps) {
 	const [newUserDialogOpen, setNewUserDialogOpen] = useState(false);
 
-	const handleNewUserSuccess = (createdUser?: {
-		user_id: string;
-		first_name: string | null;
-		last_name: string | null;
-		email: string;
-		avatar_url: string | null;
-	}) => {
+	const handleNewUserSuccess = (createdUser?: User) => {
 		if (createdUser) {
-			onChange(createdUser.user_id, createdUser);
+			onChange(createdUser);
 		}
 		setNewUserDialogOpen(false);
 	};
@@ -66,7 +61,7 @@ export function ExistingOrNewUserSelect({
 				</Label>
 				<div className="flex gap-2 items-start">
 					<div className="flex-1">
-						<UsersSelect
+						<UserSelectSingle
 							value={value}
 							onChange={onChange}
 							filter={filter}
@@ -80,7 +75,7 @@ export function ExistingOrNewUserSelect({
 							type="button"
 							variant="outline"
 							size="icon"
-							onClick={() => onChange(null, null)}
+							onClick={() => onChange(null)}
 							className="h-10 w-10 flex-shrink-0 mt-1.5"
 							title="Selectie wissen"
 							disabled={disabled}
