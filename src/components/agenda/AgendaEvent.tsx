@@ -1,4 +1,4 @@
-import { LuBan, LuMusic, LuRepeat, LuTriangleAlert, LuUsers } from 'react-icons/lu';
+import { LuBan, LuFolderOpen, LuMusic, LuRepeat, LuTriangleAlert, LuUsers } from 'react-icons/lu';
 import { isLightColor } from '@/lib/color/color-utils';
 import { formatTimeFromDate } from '@/lib/time/time-format';
 import { useCalendarView } from './CalendarViewContext';
@@ -23,6 +23,7 @@ export function AgendaEvent({ event, title }: AgendaEventProps) {
 	} = event.resource;
 	const hasMultipleParticipants = (participantCount ?? 0) > 1;
 	const isLessonEvent = isLesson || sourceType === 'lesson_agreement';
+	const isProjectEvent = sourceType === 'project';
 
 	const displayTitle = view === 'month' && event.start ? `${formatTimeFromDate(event.start)} ${title}` : title;
 
@@ -61,14 +62,21 @@ export function AgendaEvent({ event, title }: AgendaEventProps) {
 				/>
 			)}
 			<span className="flex items-start gap-1 text-xs leading-tight overflow-hidden pr-4 min-h-0">
-				{isLessonEvent && (
+				{isProjectEvent && (
+					<LuFolderOpen
+						className={`h-3 w-3 shrink-0 mt-0.5 ${iconColorClass} drop-shadow-md`}
+						title="Project"
+						aria-hidden
+					/>
+				)}
+				{isLessonEvent && !isProjectEvent && (
 					<LuMusic
 						className={`h-3 w-3 shrink-0 mt-0.5 ${iconColorClass} drop-shadow-md`}
 						title="Les"
 						aria-hidden
 					/>
 				)}
-				{!isLessonEvent && hasMultipleParticipants && (
+				{!isLessonEvent && !isProjectEvent && hasMultipleParticipants && (
 					<LuUsers
 						className={`h-3 w-3 shrink-0 mt-0.5 ${iconColorClass} drop-shadow-md`}
 						title="Meerdere deelnemers"
