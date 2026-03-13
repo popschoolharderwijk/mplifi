@@ -1,4 +1,5 @@
 import type { Event } from 'react-big-calendar';
+import type { AgendaEventSourceType } from '@/types/agenda-events';
 import type { User } from '@/types/users';
 
 export interface CalendarEventResource {
