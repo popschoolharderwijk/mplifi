@@ -365,11 +365,12 @@ export default function Reports() {
 	// Filtered by quick filter only (lesson type + age); DataTable will apply search + sort + pagination
 	const filteredData = useMemo(() => {
 		return data.filter((row) => {
+			if (tableSourceType != null && row.source_type !== tableSourceType) return false;
 			if (tableLessonTypeId != null && row.lesson_type_id !== tableLessonTypeId) return false;
 			if (tableAgeCategory != null && row.age_category !== tableAgeCategory) return false;
 			return true;
 		});
-	}, [data, tableLessonTypeId, tableAgeCategory]);
+	}, [data, tableSourceType, tableLessonTypeId, tableAgeCategory]);
 
 	// Same as DataTable: filter by search query so summary matches visible rows
 	const dataVisibleInTable = useMemo(() => {
