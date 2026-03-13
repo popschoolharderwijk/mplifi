@@ -74,8 +74,15 @@ export function DetailModal({
 						)}
 						<div>
 							<DialogTitle>
-								{isLessonEvent ? selectedEvent?.resource.lessonTypeName : selectedEvent?.title}
+								{isProjectEvent
+									? selectedEvent?.resource.projectName ?? selectedEvent?.title
+									: isLessonEvent
+										? selectedEvent?.resource.lessonTypeName
+										: selectedEvent?.title}
 							</DialogTitle>
+							{isProjectEvent && (
+								<DialogDescription>Project-afspraak</DialogDescription>
+							)}
 							{isLessonEvent && selectedEvent?.resource.isGroupLesson && (
 								<DialogDescription>
 									Groepsles met {selectedEvent?.resource.studentCount} deelnemers
