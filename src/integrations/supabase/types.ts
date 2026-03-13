@@ -149,15 +149,7 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "agenda_events_source_id_fkey"
-            columns: ["source_id"]
-            isOneToOne: false
-            referencedRelation: "lesson_agreements"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       agenda_participants: {
         Row: {
