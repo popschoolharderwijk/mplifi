@@ -31,7 +31,7 @@ export interface CalendarEventResource {
 	/** Participant display names for tooltip (when multiple participants) */
 	participantNames?: string[];
 	/** When type is agenda: manual events can be edited/deleted; lesson_agreement cannot */
-	sourceType?: 'manual' | 'lesson_agreement';
+	sourceType?: AgendaEventSourceType;
 	/** Custom color for the event (hex) */
 	color?: string | null;
 	/** True when this event is linked to a lesson_agreement */

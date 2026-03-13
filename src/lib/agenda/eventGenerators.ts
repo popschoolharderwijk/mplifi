@@ -426,7 +426,7 @@ export function generateAgendaEvents(
 					originalStartTime: resourceOriginalStartTime ?? effective?.original_start_time,
 					reason: effective?.reason ?? null,
 					isRecurring: ev.recurring || (effective?.recurring ?? false),
-					sourceType: ev.source_type as 'manual' | 'lesson_agreement',
+					sourceType,
 					color: displayColor,
 					isLesson: isLessonEvent,
 				},

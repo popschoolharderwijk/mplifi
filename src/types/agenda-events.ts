@@ -17,7 +17,7 @@ export type AgendaEventDeviationInsert = TablesInsert<'agenda_event_deviations'>
 export type AgendaEventDeviationUpdate = TablesUpdate<'agenda_event_deviations'>;
 
 /** Source type for agenda_events */
-export type AgendaEventSourceType = 'manual' | 'lesson_agreement';
+export type AgendaEventSourceType = 'manual' | 'lesson_agreement' | 'project';
 
 /** Agenda event with participants joined (for display) */
 export interface AgendaEventWithParticipants extends AgendaEventRow {
