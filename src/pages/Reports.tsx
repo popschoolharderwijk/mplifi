@@ -378,7 +378,8 @@ export default function Reports() {
 		if (query === '') return filteredData;
 		const searchFields = [
 			(r: ReportRow) => r.teacher_name,
-			(r: ReportRow) => r.lesson_type_name,
+			(r: ReportRow) => r.lesson_type_name ?? '',
+			(r: ReportRow) => r.project_name ?? '',
 			(r: ReportRow) => AGE_LABELS[r.age_category],
 		];
 		return filteredData.filter((row) =>
