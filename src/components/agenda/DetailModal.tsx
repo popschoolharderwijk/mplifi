@@ -49,8 +49,10 @@ export function DetailModal({
 	onDeleteAgenda,
 }: DetailModalProps) {
 	const isAgendaEvent = selectedEvent?.resource.type === 'agenda';
+	const isProjectEvent = selectedEvent?.resource.sourceType === 'project';
 	const isLessonEvent =
-		selectedEvent?.resource.type !== 'agenda' || selectedEvent?.resource.sourceType === 'lesson_agreement';
+		!isProjectEvent &&
+		(selectedEvent?.resource.type !== 'agenda' || selectedEvent?.resource.sourceType === 'lesson_agreement');
 	const isManualAgendaEvent = isAgendaEvent && selectedEvent?.resource.sourceType === 'manual';
 	const eventId = selectedEvent?.resource.eventId;
 
