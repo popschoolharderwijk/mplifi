@@ -9,7 +9,7 @@ import {
 	subQuarters,
 } from 'date-fns';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { LuClock, LuTrash2, LuUsers } from 'react-icons/lu';
+import { LuClock, LuFolderOpen, LuTrash2, LuUsers } from 'react-icons/lu';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -33,16 +33,21 @@ import { formatDurationMinutes } from '@/lib/time/time-format';
 
 // --- Types ---
 
+type ReportSourceType = 'lesson' | 'project';
+
 interface ReportRow {
+	source_type: ReportSourceType;
 	teacher_user_id: string;
 	teacher_name: string;
-	lesson_type_id: string;
-	lesson_type_name: string;
-	lesson_type_color: string;
-	lesson_type_icon: string;
+	lesson_type_id: string | null;
+	lesson_type_name: string | null;
+	lesson_type_color: string | null;
+	lesson_type_icon: string | null;
 	age_category: 'under_18' | '18_plus' | 'unknown';
 	total_minutes: number;
 	lesson_count: number;
+	project_id: string | null;
+	project_name: string | null;
 }
 
 type PeriodPreset = 'this_month' | 'last_month' | 'this_quarter' | 'last_quarter' | 'this_year' | 'custom';
@@ -105,6 +110,8 @@ function ReportsDataTable({
 	onTableLessonTypeChange,
 	tableAgeCategory,
 	onTableAgeCategoryChange,
+	tableSourceType,
+	onTableSourceTypeChange,
 	reportLessonTypeOptions,
 }: {
 	data: ReportRow[];
@@ -116,6 +123,8 @@ function ReportsDataTable({
 	onTableLessonTypeChange: (id: string | null) => void;
 	tableAgeCategory: string | null;
 	onTableAgeCategoryChange: (cat: string | null) => void;
+	tableSourceType: string | null;
+	onTableSourceTypeChange: (t: string | null) => void;
 	reportLessonTypeOptions: ReportLessonTypeOption[];
 }) {
 	const columns: DataTableColumn<ReportRow>[] = useMemo(() => {
@@ -140,43 +149,53 @@ function ReportsDataTable({
 		}
 		cols.push(
 			{
-				key: 'lesson_type_name',
-				label: 'Lessoort',
+				key: 'category',
+				label: 'Lessoort / Project',
 				sortable: true,
-				sortValue: (r) => r.lesson_type_name.toLowerCase(),
-				render: (row) => (
-					<LessonTypeBadge
-						lessonType={{
-							name: row.lesson_type_name,
-							icon: row.lesson_type_icon,
-							color: row.lesson_type_color,
-						}}
-						size="sm"
-					/>
-				),
+				sortValue: (r) =>
+					(r.source_type === 'project' ? r.project_name ?? '' : r.lesson_type_name ?? '').toLowerCase(),
+				render: (row) =>
+					row.source_type === 'project' ? (
+						<Badge variant="outline" className="gap-1">
+							<LuFolderOpen className="h-3 w-3" />
+							{row.project_name}
+						</Badge>
+					) : row.lesson_type_name ? (
+						<LessonTypeBadge
+							lessonType={{
+								name: row.lesson_type_name,
+								icon: row.lesson_type_icon ?? '',
+								color: row.lesson_type_color ?? '',
+							}}
+							size="sm"
+						/>
+					) : null,
 			},
 			{
 				key: 'age_category',
 				label: 'Leeftijd',
 				sortable: true,
 				sortValue: (r) => r.age_category,
-				render: (row) => (
-					<Badge
-						variant={
-							row.age_category === 'under_18'
-								? 'secondary'
-								: row.age_category === '18_plus'
-									? 'outline'
-									: 'default'
-						}
-					>
-						{AGE_LABELS[row.age_category]}
-					</Badge>
-				),
+				render: (row) =>
+					row.source_type === 'project' ? (
+						<span className="text-muted-foreground">—</span>
+					) : (
+						<Badge
+							variant={
+								row.age_category === 'under_18'
+									? 'secondary'
+									: row.age_category === '18_plus'
+										? 'outline'
+										: 'default'
+							}
+						>
+							{AGE_LABELS[row.age_category]}
+						</Badge>
+					),
 			},
 			{
 				key: 'lesson_count',
-				label: 'Lessen',
+				label: 'Aantal',
 				sortable: true,
 				sortValue: (r) => r.lesson_count,
 				className: 'text-right tabular-nums',
@@ -198,6 +217,17 @@ function ReportsDataTable({
 
 	const quickFilter: QuickFilterGroup[] = useMemo(() => {
 		const groups: QuickFilterGroup[] = [
+			{
+				label: 'Type',
+				value: tableSourceType,
+				options: [
+					{ id: 'lesson', label: 'Lessen' },
+					{ id: 'project', label: 'Projecten' },
+				],
+				onChange: onTableSourceTypeChange,
+				showAllOption: true,
+				allOptionLabel: 'Alle',
+			},
 			{
 				label: 'Lessoort',
 				value: tableLessonTypeId,
@@ -225,9 +255,11 @@ function ReportsDataTable({
 		];
 		return groups;
 	}, [
+		tableSourceType,
 		tableLessonTypeId,
 		tableAgeCategory,
 		reportLessonTypeOptions,
+		onTableSourceTypeChange,
 		onTableLessonTypeChange,
 		onTableAgeCategoryChange,
 	]);
@@ -239,10 +271,19 @@ function ReportsDataTable({
 			columns={columns}
 			searchQuery={tableSearchQuery}
 			onSearchChange={onTableSearchChange}
-			searchPlaceholder="Zoeken op docent of lessoort..."
-			searchFields={[(r) => r.teacher_name, (r) => r.lesson_type_name, (r) => AGE_LABELS[r.age_category]]}
+			searchPlaceholder="Zoeken op docent, lessoort of project..."
+			searchFields={[
+				(r) => r.teacher_name,
+				(r) => r.lesson_type_name ?? '',
+				(r) => r.project_name ?? '',
+				(r) => AGE_LABELS[r.age_category],
+			]}
 			loading={loading}
-			getRowKey={(row) => `${row.teacher_user_id}-${row.lesson_type_id}-${row.age_category}`}
+			getRowKey={(row) =>
+				row.source_type === 'project'
+					? `project-${row.teacher_user_id}-${row.project_id}`
+					: `lesson-${row.teacher_user_id}-${row.lesson_type_id}-${row.age_category}`
+			}
 			emptyMessage="Geen gegevens gevonden voor de geselecteerde periode en filters."
 			initialSortColumn="total_minutes"
 			initialSortDirection="desc"
@@ -272,6 +313,7 @@ export default function Reports() {
 	const [tableSearchQuery, setTableSearchQuery] = useState('');
 	const [tableLessonTypeId, setTableLessonTypeId] = useState<string | null>(null);
 	const [tableAgeCategory, setTableAgeCategory] = useState<string | null>(null);
+	const [tableSourceType, setTableSourceType] = useState<string | null>(null);
 
 	// Data state
 	const [data, setData] = useState<ReportRow[]>([]);
@@ -323,11 +365,12 @@ export default function Reports() {
 	// Filtered by quick filter only (lesson type + age); DataTable will apply search + sort + pagination
 	const filteredData = useMemo(() => {
 		return data.filter((row) => {
+			if (tableSourceType != null && row.source_type !== tableSourceType) return false;
 			if (tableLessonTypeId != null && row.lesson_type_id !== tableLessonTypeId) return false;
 			if (tableAgeCategory != null && row.age_category !== tableAgeCategory) return false;
 			return true;
 		});
-	}, [data, tableLessonTypeId, tableAgeCategory]);
+	}, [data, tableSourceType, tableLessonTypeId, tableAgeCategory]);
 
 	// Same as DataTable: filter by search query so summary matches visible rows
 	const dataVisibleInTable = useMemo(() => {
@@ -335,7 +378,8 @@ export default function Reports() {
 		if (query === '') return filteredData;
 		const searchFields = [
 			(r: ReportRow) => r.teacher_name,
-			(r: ReportRow) => r.lesson_type_name,
+			(r: ReportRow) => r.lesson_type_name ?? '',
+			(r: ReportRow) => r.project_name ?? '',
 			(r: ReportRow) => AGE_LABELS[r.age_category],
 		];
 		return filteredData.filter((row) =>
@@ -351,29 +395,35 @@ export default function Reports() {
 		const seen = new Set<string>();
 		return data
 			.filter((r) => {
+				if (r.source_type !== 'lesson' || !r.lesson_type_id) return false;
 				if (seen.has(r.lesson_type_id)) return false;
 				seen.add(r.lesson_type_id);
 				return true;
 			})
 			.map((r) => ({
-				id: r.lesson_type_id,
-				label: r.lesson_type_name,
-				icon: r.lesson_type_icon,
-				color: r.lesson_type_color,
+				id: r.lesson_type_id!,
+				label: r.lesson_type_name!,
+				icon: r.lesson_type_icon!,
+				color: r.lesson_type_color!,
 			}));
 	}, [data]);
 
 	// Summary stats: based on rows currently visible in table (quick filter + search)
 	const summary = useMemo(() => {
 		const totalMinutes = dataVisibleInTable.reduce((sum, r) => sum + r.total_minutes, 0);
-		const totalLessons = dataVisibleInTable.reduce((sum, r) => sum + r.lesson_count, 0);
+		const totalLessons = dataVisibleInTable
+			.filter((r) => r.source_type === 'lesson')
+			.reduce((sum, r) => sum + r.lesson_count, 0);
 		const under18Minutes = dataVisibleInTable
 			.filter((r) => r.age_category === 'under_18')
 			.reduce((sum, r) => sum + r.total_minutes, 0);
 		const over18Minutes = dataVisibleInTable
 			.filter((r) => r.age_category === '18_plus')
 			.reduce((sum, r) => sum + r.total_minutes, 0);
-		return { totalMinutes, totalLessons, under18Minutes, over18Minutes };
+		const projectMinutes = dataVisibleInTable
+			.filter((r) => r.source_type === 'project')
+			.reduce((sum, r) => sum + r.total_minutes, 0);
+		return { totalMinutes, totalLessons, under18Minutes, over18Minutes, projectMinutes };
 	}, [dataVisibleInTable]);
 
 	// Redirect if no access
@@ -452,7 +502,7 @@ export default function Reports() {
 			)}
 
 			{/* Summary cards */}
-			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
 				<Card>
 					<CardHeader className="pb-2">
 						<CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -499,6 +549,17 @@ export default function Reports() {
 						<p className="text-xs text-muted-foreground">BTW-plichtig</p>
 					</CardContent>
 				</Card>
+				<Card>
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+							<LuFolderOpen className="h-4 w-4" />
+							Project-uren
+						</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className="text-2xl font-bold">{formatDurationMinutes(summary.projectMinutes)}</div>
+					</CardContent>
+				</Card>
 			</div>
 
 			{/* Results: DataTable with search, quick filter (lesson type, age), client-side pagination */}
@@ -515,6 +576,8 @@ export default function Reports() {
 					onTableLessonTypeChange={setTableLessonTypeId}
 					tableAgeCategory={tableAgeCategory}
 					onTableAgeCategoryChange={setTableAgeCategory}
+					tableSourceType={tableSourceType}
+					onTableSourceTypeChange={setTableSourceType}
 					reportLessonTypeOptions={reportLessonTypeOptions}
 				/>
 			)}
