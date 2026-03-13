@@ -84,6 +84,8 @@ export function useAgendaEventForm({
 	occurrenceParticipantIds,
 	occurrenceOverrides,
 	readonlyParticipantIds = [],
+	sourceType: externalSourceType,
+	sourceId: externalSourceId,
 	onSuccess,
 	onOpenChange,
 }: UseAgendaEventFormOptions) {
