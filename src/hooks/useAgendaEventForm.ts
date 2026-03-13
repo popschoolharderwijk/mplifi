@@ -279,9 +279,12 @@ export function useAgendaEventForm({
 		async (scope: RecurrenceScope = 'all') => {
 			if (!userId || !startDate || !startTime) return;
 
+			const resolvedSourceType = externalSourceType ?? (event?.source_type as AgendaEventSourceType) ?? 'manual';
+			const resolvedSourceId = externalSourceId ?? event?.source_id ?? null;
+
 			const payload: AgendaEventInsert = {
-				source_type: 'manual',
-				source_id: null,
+				source_type: resolvedSourceType,
+				source_id: resolvedSourceId,
 				owner_user_id: userId,
 				title: title.trim(),
 				description: description.trim() || null,
