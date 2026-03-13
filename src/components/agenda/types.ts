@@ -40,6 +40,10 @@ export interface CalendarEventResource {
 	teacherName?: string;
 	/** True when the viewer is the teacher of this lesson */
 	viewerIsTeacher?: boolean;
+	/** Project ID when source_type is 'project' */
+	projectId?: string;
+	/** Project name when source_type is 'project' */
+	projectName?: string;
 }
 
 export interface CalendarEvent extends Event {
