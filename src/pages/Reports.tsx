@@ -395,15 +395,16 @@ export default function Reports() {
 		const seen = new Set<string>();
 		return data
 			.filter((r) => {
+				if (r.source_type !== 'lesson' || !r.lesson_type_id) return false;
 				if (seen.has(r.lesson_type_id)) return false;
 				seen.add(r.lesson_type_id);
 				return true;
 			})
 			.map((r) => ({
-				id: r.lesson_type_id,
-				label: r.lesson_type_name,
-				icon: r.lesson_type_icon,
-				color: r.lesson_type_color,
+				id: r.lesson_type_id!,
+				label: r.lesson_type_name!,
+				icon: r.lesson_type_icon!,
+				color: r.lesson_type_color!,
 			}));
 	}, [data]);
 
