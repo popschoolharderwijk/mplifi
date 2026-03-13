@@ -10,7 +10,7 @@ import {
 	getOccurrenceIndex,
 } from '@/lib/lessonHelpers';
 import { applyTimeToDate, hasTimeChange } from '@/lib/time/time-format';
-import type { AgendaEventDeviationRow, AgendaEventRow } from '@/types/agenda-events';
+import type { AgendaEventDeviationRow, AgendaEventRow, AgendaEventSourceType } from '@/types/agenda-events';
 import type {
 	LessonAgreementWithStudent,
 	LessonAppointmentDeviationWithAgreement,
@@ -280,6 +280,7 @@ export function generateAgendaEvents(
 	const events: CalendarEvent[] = [];
 
 	for (const ev of agendaEvents) {
+		const sourceType = ev.source_type as AgendaEventSourceType;
 		const eventDeviations = deviationsByEventId.get(ev.id);
 		const recurringList = recurringByEventId?.get(ev.id) ?? [];
 
@@ -307,7 +308,7 @@ export function generateAgendaEvents(
 						isDeviation: false,
 						isCancelled: false,
 						isGroupLesson: false,
-						sourceType: ev.source_type as 'manual' | 'lesson_agreement',
+					sourceType,
 						color: ev.color ?? null,
 						isLesson: isLessonEvent,
 					},
@@ -425,7 +426,7 @@ export function generateAgendaEvents(
 					originalStartTime: resourceOriginalStartTime ?? effective?.original_start_time,
 					reason: effective?.reason ?? null,
 					isRecurring: ev.recurring || (effective?.recurring ?? false),
-					sourceType: ev.source_type as 'manual' | 'lesson_agreement',
+					sourceType,
 					color: displayColor,
 					isLesson: isLessonEvent,
 				},
