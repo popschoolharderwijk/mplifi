@@ -26,6 +26,9 @@ export interface UseAgendaEventFormOptions {
 	/** When editing one occurrence that has a deviation, pass its title/description/color so the form shows them */
 	occurrenceOverrides?: OccurrenceOverrides | null;
 	readonlyParticipantIds?: string[];
+	/** When creating a project event, pass source info */
+	sourceType?: AgendaEventSourceType;
+	sourceId?: string | null;
 	onSuccess?: () => void;
 	onOpenChange: (open: boolean) => void;
 }
