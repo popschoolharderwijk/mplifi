@@ -308,7 +308,7 @@ export function generateAgendaEvents(
 						isDeviation: false,
 						isCancelled: false,
 						isGroupLesson: false,
-						sourceType: ev.source_type as 'manual' | 'lesson_agreement',
+					sourceType,
 						color: ev.color ?? null,
 						isLesson: isLessonEvent,
 					},
