@@ -110,6 +110,8 @@ function ReportsDataTable({
 	onTableLessonTypeChange,
 	tableAgeCategory,
 	onTableAgeCategoryChange,
+	tableSourceType,
+	onTableSourceTypeChange,
 	reportLessonTypeOptions,
 }: {
 	data: ReportRow[];
@@ -121,6 +123,8 @@ function ReportsDataTable({
 	onTableLessonTypeChange: (id: string | null) => void;
 	tableAgeCategory: string | null;
 	onTableAgeCategoryChange: (cat: string | null) => void;
+	tableSourceType: string | null;
+	onTableSourceTypeChange: (t: string | null) => void;
 	reportLessonTypeOptions: ReportLessonTypeOption[];
 }) {
 	const columns: DataTableColumn<ReportRow>[] = useMemo(() => {
@@ -145,43 +149,53 @@ function ReportsDataTable({
 		}
 		cols.push(
 			{
-				key: 'lesson_type_name',
-				label: 'Lessoort',
+				key: 'category',
+				label: 'Lessoort / Project',
 				sortable: true,
-				sortValue: (r) => r.lesson_type_name.toLowerCase(),
-				render: (row) => (
-					<LessonTypeBadge
-						lessonType={{
-							name: row.lesson_type_name,
-							icon: row.lesson_type_icon,
-							color: row.lesson_type_color,
-						}}
-						size="sm"
-					/>
-				),
+				sortValue: (r) =>
+					(r.source_type === 'project' ? r.project_name ?? '' : r.lesson_type_name ?? '').toLowerCase(),
+				render: (row) =>
+					row.source_type === 'project' ? (
+						<Badge variant="outline" className="gap-1">
+							<LuFolderOpen className="h-3 w-3" />
+							{row.project_name}
+						</Badge>
+					) : row.lesson_type_name ? (
+						<LessonTypeBadge
+							lessonType={{
+								name: row.lesson_type_name,
+								icon: row.lesson_type_icon ?? '',
+								color: row.lesson_type_color ?? '',
+							}}
+							size="sm"
+						/>
+					) : null,
 			},
 			{
 				key: 'age_category',
 				label: 'Leeftijd',
 				sortable: true,
 				sortValue: (r) => r.age_category,
-				render: (row) => (
-					<Badge
-						variant={
-							row.age_category === 'under_18'
-								? 'secondary'
-								: row.age_category === '18_plus'
-									? 'outline'
-									: 'default'
-						}
-					>
-						{AGE_LABELS[row.age_category]}
-					</Badge>
-				),
+				render: (row) =>
+					row.source_type === 'project' ? (
+						<span className="text-muted-foreground">—</span>
+					) : (
+						<Badge
+							variant={
+								row.age_category === 'under_18'
+									? 'secondary'
+									: row.age_category === '18_plus'
+										? 'outline'
+										: 'default'
+							}
+						>
+							{AGE_LABELS[row.age_category]}
+						</Badge>
+					),
 			},
 			{
 				key: 'lesson_count',
-				label: 'Lessen',
+				label: 'Aantal',
 				sortable: true,
 				sortValue: (r) => r.lesson_count,
 				className: 'text-right tabular-nums',
@@ -203,6 +217,17 @@ function ReportsDataTable({
 
 	const quickFilter: QuickFilterGroup[] = useMemo(() => {
 		const groups: QuickFilterGroup[] = [
+			{
+				label: 'Type',
+				value: tableSourceType,
+				options: [
+					{ id: 'lesson', label: 'Lessen' },
+					{ id: 'project', label: 'Projecten' },
+				],
+				onChange: onTableSourceTypeChange,
+				showAllOption: true,
+				allOptionLabel: 'Alle',
+			},
 			{
 				label: 'Lessoort',
 				value: tableLessonTypeId,
@@ -230,9 +255,11 @@ function ReportsDataTable({
 		];
 		return groups;
 	}, [
+		tableSourceType,
 		tableLessonTypeId,
 		tableAgeCategory,
 		reportLessonTypeOptions,
+		onTableSourceTypeChange,
 		onTableLessonTypeChange,
 		onTableAgeCategoryChange,
 	]);
@@ -244,10 +271,19 @@ function ReportsDataTable({
 			columns={columns}
 			searchQuery={tableSearchQuery}
 			onSearchChange={onTableSearchChange}
-			searchPlaceholder="Zoeken op docent of lessoort..."
-			searchFields={[(r) => r.teacher_name, (r) => r.lesson_type_name, (r) => AGE_LABELS[r.age_category]]}
+			searchPlaceholder="Zoeken op docent, lessoort of project..."
+			searchFields={[
+				(r) => r.teacher_name,
+				(r) => r.lesson_type_name ?? '',
+				(r) => r.project_name ?? '',
+				(r) => AGE_LABELS[r.age_category],
+			]}
 			loading={loading}
-			getRowKey={(row) => `${row.teacher_user_id}-${row.lesson_type_id}-${row.age_category}`}
+			getRowKey={(row) =>
+				row.source_type === 'project'
+					? `project-${row.teacher_user_id}-${row.project_id}`
+					: `lesson-${row.teacher_user_id}-${row.lesson_type_id}-${row.age_category}`
+			}
 			emptyMessage="Geen gegevens gevonden voor de geselecteerde periode en filters."
 			initialSortColumn="total_minutes"
 			initialSortDirection="desc"
