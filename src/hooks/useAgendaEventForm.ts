@@ -4,7 +4,7 @@ import type { RecurrenceScope } from '@/components/agenda/RecurrenceChoiceDialog
 import { supabase } from '@/integrations/supabase/client';
 import { addDaysToDateStr, formatDateToDb, now } from '@/lib/date/date-format';
 import { formatTime, formatTimeFromDate, normalizeTime } from '@/lib/time/time-format';
-import type { AgendaEventInsert, AgendaEventRow } from '@/types/agenda-events';
+import type { AgendaEventInsert, AgendaEventRow, AgendaEventSourceType } from '@/types/agenda-events';
 import type { LessonFrequency } from '@/types/lesson-agreements';
 
 /** Overrides from a deviation for a single occurrence (title/description/color). Null means use base event. */
