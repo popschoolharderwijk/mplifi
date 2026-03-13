@@ -260,15 +260,18 @@ export default function Projects() {
 				rowActions={{
 					onEdit: canEdit ? handleEdit : undefined,
 					onDelete: canEdit ? handleDelete : undefined,
-					custom: canSchedule
-						? [
-								{
-									label: 'Tijdslot plannen',
-									icon: <LuCalendarPlus className="h-4 w-4" />,
-									onClick: handleSchedule,
-									show: (p) => p.is_active,
-								},
-							]
+					render: canSchedule
+						? (project) =>
+								project.is_active ? (
+									<Button
+										variant="ghost"
+										size="icon"
+										onClick={() => handleSchedule(project)}
+										title="Tijdslot plannen"
+									>
+										<LuCalendarPlus className="h-4 w-4" />
+									</Button>
+								) : null
 						: undefined,
 				}}
 			/>
