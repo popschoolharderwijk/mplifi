@@ -257,7 +257,7 @@ export function DetailModal({
 					)}
 				</div>
 
-				{isManualAgendaEvent && canEdit && eventId && (onEditAgenda || onDeleteAgenda) && (
+				{(isManualAgendaEvent || isProjectEvent) && canEdit && eventId && (onEditAgenda || onDeleteAgenda) && (
 					<DialogFooter>
 						{onEditAgenda && (
 							<Button variant="outline" onClick={() => onEditAgenda(eventId)}>
