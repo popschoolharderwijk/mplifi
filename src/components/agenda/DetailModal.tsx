@@ -98,7 +98,7 @@ export function DetailModal({
 				</DialogHeader>
 
 				<div className="space-y-4">
-					{isManualAgendaEvent && (
+					{(isManualAgendaEvent || isProjectEvent) && (
 						<div className="rounded-lg bg-muted p-4 space-y-2">
 							<div className="flex justify-between">
 								<span className="text-sm text-muted-foreground">Datum</span>
