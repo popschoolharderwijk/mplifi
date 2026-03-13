@@ -10,7 +10,7 @@ import {
 	getOccurrenceIndex,
 } from '@/lib/lessonHelpers';
 import { applyTimeToDate, hasTimeChange } from '@/lib/time/time-format';
-import type { AgendaEventDeviationRow, AgendaEventRow } from '@/types/agenda-events';
+import type { AgendaEventDeviationRow, AgendaEventRow, AgendaEventSourceType } from '@/types/agenda-events';
 import type {
 	LessonAgreementWithStudent,
 	LessonAppointmentDeviationWithAgreement,
