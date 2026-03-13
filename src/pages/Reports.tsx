@@ -576,6 +576,8 @@ export default function Reports() {
 					onTableLessonTypeChange={setTableLessonTypeId}
 					tableAgeCategory={tableAgeCategory}
 					onTableAgeCategoryChange={setTableAgeCategory}
+					tableSourceType={tableSourceType}
+					onTableSourceTypeChange={setTableSourceType}
 					reportLessonTypeOptions={reportLessonTypeOptions}
 				/>
 			)}
