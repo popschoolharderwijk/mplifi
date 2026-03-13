@@ -9,7 +9,7 @@ import {
 	subQuarters,
 } from 'date-fns';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { LuClock, LuTrash2, LuUsers } from 'react-icons/lu';
+import { LuClock, LuFolderOpen, LuTrash2, LuUsers } from 'react-icons/lu';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
