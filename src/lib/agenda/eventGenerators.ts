@@ -280,6 +280,7 @@ export function generateAgendaEvents(
 	const events: CalendarEvent[] = [];
 
 	for (const ev of agendaEvents) {
+		const sourceType = ev.source_type as AgendaEventSourceType;
 		const eventDeviations = deviationsByEventId.get(ev.id);
 		const recurringList = recurringByEventId?.get(ev.id) ?? [];
 
