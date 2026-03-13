@@ -33,16 +33,21 @@ import { formatDurationMinutes } from '@/lib/time/time-format';
 
 // --- Types ---
 
+type ReportSourceType = 'lesson' | 'project';
+
 interface ReportRow {
+	source_type: ReportSourceType;
 	teacher_user_id: string;
 	teacher_name: string;
-	lesson_type_id: string;
-	lesson_type_name: string;
-	lesson_type_color: string;
-	lesson_type_icon: string;
+	lesson_type_id: string | null;
+	lesson_type_name: string | null;
+	lesson_type_color: string | null;
+	lesson_type_icon: string | null;
 	age_category: 'under_18' | '18_plus' | 'unknown';
 	total_minutes: number;
 	lesson_count: number;
+	project_id: string | null;
+	project_name: string | null;
 }
 
 type PeriodPreset = 'this_month' | 'last_month' | 'this_quarter' | 'last_quarter' | 'this_year' | 'custom';
