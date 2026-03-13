@@ -502,7 +502,7 @@ export default function Reports() {
 			)}
 
 			{/* Summary cards */}
-			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
 				<Card>
 					<CardHeader className="pb-2">
 						<CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -547,6 +547,17 @@ export default function Reports() {
 					<CardContent>
 						<div className="text-2xl font-bold">{formatDurationMinutes(summary.over18Minutes)}</div>
 						<p className="text-xs text-muted-foreground">BTW-plichtig</p>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+							<LuFolderOpen className="h-4 w-4" />
+							Project-uren
+						</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className="text-2xl font-bold">{formatDurationMinutes(summary.projectMinutes)}</div>
 					</CardContent>
 				</Card>
 			</div>
