@@ -411,14 +411,19 @@ export default function Reports() {
 	// Summary stats: based on rows currently visible in table (quick filter + search)
 	const summary = useMemo(() => {
 		const totalMinutes = dataVisibleInTable.reduce((sum, r) => sum + r.total_minutes, 0);
-		const totalLessons = dataVisibleInTable.reduce((sum, r) => sum + r.lesson_count, 0);
+		const totalLessons = dataVisibleInTable
+			.filter((r) => r.source_type === 'lesson')
+			.reduce((sum, r) => sum + r.lesson_count, 0);
 		const under18Minutes = dataVisibleInTable
 			.filter((r) => r.age_category === 'under_18')
 			.reduce((sum, r) => sum + r.total_minutes, 0);
 		const over18Minutes = dataVisibleInTable
 			.filter((r) => r.age_category === '18_plus')
 			.reduce((sum, r) => sum + r.total_minutes, 0);
-		return { totalMinutes, totalLessons, under18Minutes, over18Minutes };
+		const projectMinutes = dataVisibleInTable
+			.filter((r) => r.source_type === 'project')
+			.reduce((sum, r) => sum + r.total_minutes, 0);
+		return { totalMinutes, totalLessons, under18Minutes, over18Minutes, projectMinutes };
 	}, [dataVisibleInTable]);
 
 	// Redirect if no access
