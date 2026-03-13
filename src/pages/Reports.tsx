@@ -313,6 +313,7 @@ export default function Reports() {
 	const [tableSearchQuery, setTableSearchQuery] = useState('');
 	const [tableLessonTypeId, setTableLessonTypeId] = useState<string | null>(null);
 	const [tableAgeCategory, setTableAgeCategory] = useState<string | null>(null);
+	const [tableSourceType, setTableSourceType] = useState<string | null>(null);
 
 	// Data state
 	const [data, setData] = useState<ReportRow[]>([]);
